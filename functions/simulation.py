@@ -58,3 +58,14 @@ def get_dataset(key, n_points, prior_simulator, data_simulator, discrepancy, eps
     ys = jnp.append(jnp.zeros(n_points), jnp.ones(n_points)).astype(int)
     Xs = jnp.concatenate([thetas, zs], axis=1)
     return Xs, ys, key
+
+def get_newdataset(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data):
+    n_points = n_points//2
+    zs0, thetas0, _, key = ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
+    key, subkey = random.split(key)
+    thetas1 = vmap(prior_simulator)(random.split(subkey, n_points))
+    zs = jnp.concatenate([zs0, zs0], axis=0)
+    thetas = jnp.concatenate([thetas0, thetas1], axis=0)
+    ys = jnp.append(jnp.zeros(n_points), jnp.ones(n_points)).astype(int)
+    Xs = jnp.concatenate([thetas, zs], axis=1)
+    return Xs, ys, key
