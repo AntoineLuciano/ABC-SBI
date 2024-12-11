@@ -14,9 +14,7 @@ def plot_SBC(ranks, L, B = 0, err = .01, show = True, ax = None, save_name = "",
     N_sample = len(ranks)
     quantiles_lower = stats.binom.ppf(err/2, N_sample, 1/(B))
     quantiles_upper = stats.binom.ppf(1-err/2, N_sample, 1/(B))
-    # Create a histogram
     ax.hist(ranks, bins=np.arange(0, L+2, (L+2)//B), color='brown', edgecolor='darkred', align='mid')
-    # Add error bounds as a shaded region
     ax.fill_between(range(L+2), quantiles_lower, quantiles_upper, color='gray', alpha=0.3)
     ax.plot(range(L+2), N_sample/B * np.ones(L+2), color = "black", linestyle = "--")
     # Labels and title
@@ -54,6 +52,7 @@ def logratio_z(params, mus, z):
 logratio_batch_z = (vmap(logratio_z, in_axes = (None, 0,  None)))
 
 def post_pdf_z(params, mus, z, prior_logpdf):
+
     return jnp.exp(prior_logpdf(mus)+logratio_batch_z(params, mus, z))
 
 

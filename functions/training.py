@@ -5,7 +5,7 @@ from flax import linen as nn
 import time
 from jax import value_and_grad, jit, random
 import jax.numpy as jnp
-from functions.simulation import get_dataset
+from functions.simulation import get_dataset, get_newdataset
 
 import numpy as np
 
@@ -31,7 +31,7 @@ def train_loop(key, num_epoch_max, num_layers, hidden_size, num_classes, batch_s
         if inputs is None:
             # print("Simulation of {} batches of size {}".format(num_batch, batch_size))
             for i in range(num_batch):
-                inputs_batch, labels_batch, key = get_dataset(key, batch_size, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
+                inputs_batch, labels_batch, key = get_newdataset(key, batch_size, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
                 yield inputs_batch, labels_batch
         else:
             permutation = random.permutation(key, len(inputs))
@@ -75,15 +75,14 @@ def train_loop(key, num_epoch_max, num_layers, hidden_size, num_classes, batch_s
        
        
     if X_test is None:
-        X_test, y_test, key = get_dataset(key, N_POINTS_TEST, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
+        X_test, y_test, key = get_newdataset(key, N_POINTS_TEST, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
 
 
 
     net = MLP()
     key, subkey = random.split(key)
-    X_train_shape, y_train_shape, key = get_dataset(key, 1, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
     
-    fake_data = jnp.ones((N_POINTS_TRAIN, X_train_shape.shape[1]))
+    fake_data = jnp.ones((N_POINTS_TRAIN, X_test.shape[1]))
     params = net.init({"params": subkey}, fake_data)["params"]
     opt = optax.chain(optax.adamw(learning_rate, weight_decay=wdecay),
                       reduce_on_plateau(patience=patience, cooldown=cooldown, factor=factor, rtol=rtol, accumulation_size=accumulation_size))
