@@ -123,3 +123,6 @@ def SBC_epsilon(key, N_SBC, L, params, epsilon, true_data, prior_simulator, prio
     thetas, key = post_sample_batch(key, grids, pdf_values, L)
     ranks = jnp.sum(thetas < thetas_tilde, axis = 1)
     return ranks, thetas_tilde, thetas, key
+
+
+
