@@ -1,0 +1,7 @@
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+Traceback (most recent call last):
+  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Linear-Reg/cluster_linear.py", line 150, in <module>
+    trace = pm.sample(1000, tune=1000)
+  File "/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/site-packages/pymc/sampling/mcmc.py", line 702, in sample
+    rngs = get_random_generator(random_seed).spawn(chains)
+AttributeError: 'numpy.random._generator.Generator' object has no attribute 'spawn'

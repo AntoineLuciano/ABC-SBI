@@ -2,7 +2,11 @@ from jax import random, jit, vmap
 import os
 path = os.getcwd()
 print("Old path:", path)
+path+='/ABC-SBI'
 path = (path.split('/'))
+if path.index("ABC-SBI")==-1:
+    path.append('ABC-SBI')
+    
 path = path[:path.index("ABC-SBI")+1]
 path = '/'.join(path)
 print("New path:", path)
@@ -52,7 +56,7 @@ N_POINTS_EPS = 10000
 sim_args = None
 
 
-N_EPOCHS = 1
+N_EPOCHS = 100
 LEARNING_RATE = 0.001
 PATIENCE = 7
 COOLDOWN = 0
@@ -71,7 +75,7 @@ N_GRID_FINAL = 10000
 N_GRID_EXPLO = 1000
 L = 63
 B = 16
-N_SBC = (L+1)*1
+N_SBC = (L+1)*100
 
 PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/results/"
 if not os.path.exists(PATH_RESULTS):
@@ -79,7 +83,7 @@ if not os.path.exists(PATH_RESULTS):
     
 
 
-SIGMAS0 = [2*SIGMA, 5*SIGMA, 10*SIGMA, 20*SIGMA]
+SIGMAS0 = [5*SIGMA]
 ACCEPT_RATES = [1., .999, .99, .975, .95, .925, .9, .85, .8, .75]
 
 
