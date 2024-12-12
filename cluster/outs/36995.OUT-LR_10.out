@@ -2250,3 +2250,264 @@ Learning rate reached 1.00E-06, stopping training
 Time to train the neural network: 205.97s
 
 Simulation Based Calibration...
+Time to perform SBC: 1032.20s
+
+Data saved in  /mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Linear-Reg/results/K_25/beta_random/pickles/LinearReg_K_25_beta_random_acc_0.9_eps_4.46e+03.xz
+
+
+--------------------
+ITERATION (ACC = 0.9) DONE IN 1250.1865935325623 SECONDS!
+--------------------
+
+
+
+
+--------------------
+K = 25, TRUE_BETA = random, ACCEPT_RATE = 0.85
+--------------------
+
+
+Selection of epsilon star...
+epsilon:  4403.08251953125 acceptance rate:  0.8796
+epsilon:  4353.70654296875 acceptance rate:  0.8753
+epsilon:  4310.2216796875 acceptance rate:  0.86139995
+epsilon:  4269.58544921875 acceptance rate:  0.858
+epsilon:  4227.51708984375 acceptance rate:  0.8522
+epsilon:  4192.97314453125 acceptance rate:  0.8516
+epsilon:  4155.740234375 acceptance rate:  0.8296
+Time to select epsilon star: 13.02s
+
+Simulations of the testing dataset...
+Time to simulate the testing dataset: 1.35s
+
+Simulations of the training dataset...
+Time to simulate the training dataset: 2.62s
+
+Training the neural network...
+Initial accuracy: 50.12%, Initial test accuracy: 49.98%
+Training for 100 epochs...
+Epoch 1/100, mean train accuracy: 49.84%, mean test accuracy: 50.00%, lr scale: 1.0 in 8.45 sec
+Epoch 2/100, mean train accuracy: 50.12%, mean test accuracy: 50.02%, lr scale: 1.0 in 8.44 sec
+Epoch 3/100, mean train accuracy: 49.88%, mean test accuracy: 50.03%, lr scale: 1.0 in 8.41 sec
+Epoch 4/100, mean train accuracy: 51.39%, mean test accuracy: 59.38%, lr scale: 0.5 in 8.42 sec
+Epoch 5/100, mean train accuracy: 76.46%, mean test accuracy: 83.15%, lr scale: 0.5 in 8.42 sec
+Epoch 6/100, mean train accuracy: 87.51%, mean test accuracy: 88.71%, lr scale: 0.5 in 8.41 sec
+Epoch 7/100, mean train accuracy: 90.27%, mean test accuracy: 90.97%, lr scale: 0.5 in 8.41 sec
+Epoch 8/100, mean train accuracy: 91.51%, mean test accuracy: 92.97%, lr scale: 0.5 in 8.37 sec
+Epoch 9/100, mean train accuracy: 92.12%, mean test accuracy: 92.59%, lr scale: 0.5 in 8.38 sec
+Epoch 10/100, mean train accuracy: 92.76%, mean test accuracy: 92.81%, lr scale: 0.5 in 8.38 sec
+Epoch 11/100, mean train accuracy: 93.14%, mean test accuracy: 91.95%, lr scale: 0.5 in 8.36 sec
+Epoch 12/100, mean train accuracy: 93.44%, mean test accuracy: 93.19%, lr scale: 0.5 in 8.38 sec
+Epoch 13/100, mean train accuracy: 93.76%, mean test accuracy: 92.81%, lr scale: 0.5 in 8.37 sec
+Epoch 14/100, mean train accuracy: 93.97%, mean test accuracy: 93.90%, lr scale: 0.5 in 8.39 sec
+Epoch 15/100, mean train accuracy: 94.04%, mean test accuracy: 95.21%, lr scale: 0.25 in 8.40 sec
+Epoch 16/100, mean train accuracy: 95.76%, mean test accuracy: 96.45%, lr scale: 0.25 in 8.38 sec
+Epoch 17/100, mean train accuracy: 96.05%, mean test accuracy: 96.49%, lr scale: 0.25 in 8.63 sec
+Epoch 18/100, mean train accuracy: 96.26%, mean test accuracy: 96.82%, lr scale: 0.25 in 8.38 sec
+Epoch 19/100, mean train accuracy: 96.37%, mean test accuracy: 96.36%, lr scale: 0.25 in 8.37 sec
+Epoch 20/100, mean train accuracy: 96.59%, mean test accuracy: 97.61%, lr scale: 0.125 in 8.37 sec
+Epoch 21/100, mean train accuracy: 97.45%, mean test accuracy: 97.59%, lr scale: 0.125 in 8.37 sec
+Epoch 22/100, mean train accuracy: 97.60%, mean test accuracy: 97.75%, lr scale: 0.125 in 8.39 sec
+Epoch 23/100, mean train accuracy: 97.73%, mean test accuracy: 97.84%, lr scale: 0.125 in 8.39 sec
+Epoch 24/100, mean train accuracy: 97.77%, mean test accuracy: 97.46%, lr scale: 0.125 in 8.39 sec
+Epoch 25/100, mean train accuracy: 97.77%, mean test accuracy: 97.73%, lr scale: 0.0625 in 8.39 sec
+Epoch 26/100, mean train accuracy: 98.39%, mean test accuracy: 98.45%, lr scale: 0.0625 in 8.40 sec
+Epoch 27/100, mean train accuracy: 98.47%, mean test accuracy: 98.46%, lr scale: 0.0625 in 8.39 sec
+Epoch 28/100, mean train accuracy: 98.55%, mean test accuracy: 98.47%, lr scale: 0.0625 in 8.41 sec
+Epoch 29/100, mean train accuracy: 98.51%, mean test accuracy: 98.09%, lr scale: 0.0625 in 8.41 sec
+Epoch 30/100, mean train accuracy: 98.68%, mean test accuracy: 98.89%, lr scale: 0.03125 in 8.04 sec
+Epoch 31/100, mean train accuracy: 98.97%, mean test accuracy: 98.75%, lr scale: 0.03125 in 8.09 sec
+Epoch 32/100, mean train accuracy: 98.95%, mean test accuracy: 98.96%, lr scale: 0.03125 in 8.10 sec
+Epoch 33/100, mean train accuracy: 98.98%, mean test accuracy: 98.86%, lr scale: 0.03125 in 8.11 sec
+Epoch 34/100, mean train accuracy: 99.01%, mean test accuracy: 99.00%, lr scale: 0.03125 in 8.30 sec
+Epoch 35/100, mean train accuracy: 98.99%, mean test accuracy: 99.00%, lr scale: 0.03125 in 8.36 sec
+Epoch 36/100, mean train accuracy: 99.12%, mean test accuracy: 99.14%, lr scale: 0.015625 in 8.36 sec
+Epoch 37/100, mean train accuracy: 99.23%, mean test accuracy: 99.04%, lr scale: 0.015625 in 8.40 sec
+Epoch 38/100, mean train accuracy: 99.21%, mean test accuracy: 99.16%, lr scale: 0.015625 in 8.38 sec
+Epoch 39/100, mean train accuracy: 99.28%, mean test accuracy: 99.29%, lr scale: 0.0078125 in 8.34 sec
+Epoch 40/100, mean train accuracy: 99.30%, mean test accuracy: 99.34%, lr scale: 0.00390625 in 8.30 sec
+Epoch 41/100, mean train accuracy: 99.38%, mean test accuracy: 99.35%, lr scale: 0.00390625 in 8.32 sec
+Epoch 42/100, mean train accuracy: 99.38%, mean test accuracy: 99.35%, lr scale: 0.001953125 in 8.51 sec
+Epoch 43/100, mean train accuracy: 99.42%, mean test accuracy: 99.36%, lr scale: 0.001953125 in 8.30 sec
+Epoch 44/100, mean train accuracy: 99.42%, mean test accuracy: 99.34%, lr scale: 0.001953125 in 8.57 sec
+Epoch 45/100, mean train accuracy: 99.43%, mean test accuracy: 99.38%, lr scale: 0.0009765625 in 8.53 sec
+Learning rate reached 1.00E-06, stopping training
+Time to train the neural network: 419.00s
+
+Simulation Based Calibration...
+Time to perform SBC: 1020.42s
+
+Data saved in  /mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Linear-Reg/results/K_25/beta_random/pickles/LinearReg_K_25_beta_random_acc_0.85_eps_4.16e+03.xz
+
+
+--------------------
+ITERATION (ACC = 0.85) DONE IN 1458.5644109249115 SECONDS!
+--------------------
+
+
+
+
+--------------------
+K = 25, TRUE_BETA = random, ACCEPT_RATE = 0.8
+--------------------
+
+
+Selection of epsilon star...
+epsilon:  4124.697265625 acceptance rate:  0.83449996
+epsilon:  4092.154052734375 acceptance rate:  0.8225
+epsilon:  4063.09765625 acceptance rate:  0.8174
+epsilon:  4033.5341796875 acceptance rate:  0.80359995
+epsilon:  4003.010009765625 acceptance rate:  0.80249995
+epsilon:  3976.171875 acceptance rate:  0.802
+epsilon:  3948.78857421875 acceptance rate:  0.79679996
+Time to select epsilon star: 13.58s
+
+Simulations of the testing dataset...
+Time to simulate the testing dataset: 1.34s
+
+Simulations of the training dataset...
+Time to simulate the training dataset: 2.65s
+
+Training the neural network...
+Initial accuracy: 49.89%, Initial test accuracy: 50.01%
+Training for 100 epochs...
+Epoch 1/100, mean train accuracy: 49.80%, mean test accuracy: 49.99%, lr scale: 1.0 in 8.39 sec
+Epoch 2/100, mean train accuracy: 49.89%, mean test accuracy: 49.99%, lr scale: 1.0 in 8.35 sec
+Epoch 3/100, mean train accuracy: 49.95%, mean test accuracy: 49.99%, lr scale: 1.0 in 8.34 sec
+Epoch 4/100, mean train accuracy: 50.07%, mean test accuracy: 50.00%, lr scale: 0.5 in 8.38 sec
+Epoch 5/100, mean train accuracy: 49.75%, mean test accuracy: 49.99%, lr scale: 0.5 in 8.37 sec
+Epoch 6/100, mean train accuracy: 49.99%, mean test accuracy: 50.00%, lr scale: 0.25 in 8.35 sec
+Epoch 7/100, mean train accuracy: 50.03%, mean test accuracy: 49.99%, lr scale: 0.25 in 8.36 sec
+Epoch 8/100, mean train accuracy: 49.92%, mean test accuracy: 49.99%, lr scale: 0.125 in 8.35 sec
+Epoch 9/100, mean train accuracy: 49.93%, mean test accuracy: 50.28%, lr scale: 0.125 in 8.34 sec
+Epoch 10/100, mean train accuracy: 55.11%, mean test accuracy: 71.77%, lr scale: 0.125 in 8.36 sec
+Epoch 11/100, mean train accuracy: 81.64%, mean test accuracy: 86.43%, lr scale: 0.125 in 8.34 sec
+Epoch 12/100, mean train accuracy: 87.99%, mean test accuracy: 90.09%, lr scale: 0.125 in 8.61 sec
+Epoch 13/100, mean train accuracy: 90.56%, mean test accuracy: 91.46%, lr scale: 0.125 in 8.35 sec
+Epoch 14/100, mean train accuracy: 92.03%, mean test accuracy: 92.50%, lr scale: 0.125 in 8.35 sec
+Epoch 15/100, mean train accuracy: 92.89%, mean test accuracy: 93.56%, lr scale: 0.125 in 8.37 sec
+Epoch 16/100, mean train accuracy: 93.39%, mean test accuracy: 93.48%, lr scale: 0.125 in 8.36 sec
+Epoch 17/100, mean train accuracy: 93.86%, mean test accuracy: 94.63%, lr scale: 0.125 in 8.36 sec
+Epoch 18/100, mean train accuracy: 94.14%, mean test accuracy: 93.66%, lr scale: 0.125 in 8.36 sec
+Epoch 19/100, mean train accuracy: 94.24%, mean test accuracy: 94.33%, lr scale: 0.125 in 8.38 sec
+Epoch 20/100, mean train accuracy: 94.46%, mean test accuracy: 94.92%, lr scale: 0.125 in 8.36 sec
+Epoch 21/100, mean train accuracy: 94.66%, mean test accuracy: 94.95%, lr scale: 0.125 in 8.37 sec
+Epoch 22/100, mean train accuracy: 94.74%, mean test accuracy: 94.94%, lr scale: 0.125 in 8.37 sec
+Epoch 23/100, mean train accuracy: 94.94%, mean test accuracy: 95.42%, lr scale: 0.125 in 8.37 sec
+Epoch 24/100, mean train accuracy: 94.95%, mean test accuracy: 94.86%, lr scale: 0.125 in 8.35 sec
+Epoch 25/100, mean train accuracy: 95.20%, mean test accuracy: 94.69%, lr scale: 0.125 in 8.35 sec
+Epoch 26/100, mean train accuracy: 95.23%, mean test accuracy: 94.99%, lr scale: 0.125 in 8.31 sec
+Epoch 27/100, mean train accuracy: 95.37%, mean test accuracy: 95.81%, lr scale: 0.125 in 7.75 sec
+Epoch 28/100, mean train accuracy: 95.44%, mean test accuracy: 95.51%, lr scale: 0.125 in 7.58 sec
+Epoch 29/100, mean train accuracy: 95.44%, mean test accuracy: 95.96%, lr scale: 0.125 in 7.58 sec
+Epoch 30/100, mean train accuracy: 96.32%, mean test accuracy: 96.65%, lr scale: 0.0625 in 7.58 sec
+Epoch 31/100, mean train accuracy: 96.84%, mean test accuracy: 96.18%, lr scale: 0.0625 in 7.56 sec
+Epoch 32/100, mean train accuracy: 97.00%, mean test accuracy: 96.77%, lr scale: 0.0625 in 7.55 sec
+Epoch 33/100, mean train accuracy: 97.08%, mean test accuracy: 97.86%, lr scale: 0.03125 in 7.58 sec
+Epoch 34/100, mean train accuracy: 97.83%, mean test accuracy: 97.98%, lr scale: 0.03125 in 7.59 sec
+Epoch 35/100, mean train accuracy: 98.00%, mean test accuracy: 98.37%, lr scale: 0.015625 in 7.57 sec
+Epoch 36/100, mean train accuracy: 98.40%, mean test accuracy: 98.47%, lr scale: 0.015625 in 7.59 sec
+Epoch 37/100, mean train accuracy: 98.41%, mean test accuracy: 98.50%, lr scale: 0.015625 in 7.80 sec
+Epoch 38/100, mean train accuracy: 98.52%, mean test accuracy: 98.62%, lr scale: 0.0078125 in 7.56 sec
+Epoch 39/100, mean train accuracy: 98.69%, mean test accuracy: 98.63%, lr scale: 0.0078125 in 7.58 sec
+Epoch 40/100, mean train accuracy: 98.73%, mean test accuracy: 98.72%, lr scale: 0.0078125 in 7.58 sec
+Epoch 41/100, mean train accuracy: 98.74%, mean test accuracy: 98.53%, lr scale: 0.0078125 in 7.60 sec
+Epoch 42/100, mean train accuracy: 98.80%, mean test accuracy: 98.79%, lr scale: 0.00390625 in 7.61 sec
+Epoch 43/100, mean train accuracy: 98.91%, mean test accuracy: 98.83%, lr scale: 0.00390625 in 7.61 sec
+Epoch 44/100, mean train accuracy: 98.90%, mean test accuracy: 98.86%, lr scale: 0.00390625 in 7.61 sec
+Epoch 45/100, mean train accuracy: 98.92%, mean test accuracy: 98.91%, lr scale: 0.001953125 in 7.62 sec
+Epoch 46/100, mean train accuracy: 98.97%, mean test accuracy: 98.92%, lr scale: 0.001953125 in 7.62 sec
+Epoch 47/100, mean train accuracy: 98.96%, mean test accuracy: 98.88%, lr scale: 0.001953125 in 7.62 sec
+Epoch 48/100, mean train accuracy: 99.00%, mean test accuracy: 98.93%, lr scale: 0.0009765625 in 7.61 sec
+Learning rate reached 1.00E-06, stopping training
+Time to train the neural network: 433.54s
+
+Simulation Based Calibration...
+Time to perform SBC: 965.82s
+
+Data saved in  /mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Linear-Reg/results/K_25/beta_random/pickles/LinearReg_K_25_beta_random_acc_0.8_eps_3.95e+03.xz
+
+
+--------------------
+ITERATION (ACC = 0.8) DONE IN 1418.7714767456055 SECONDS!
+--------------------
+
+
+
+
+--------------------
+K = 25, TRUE_BETA = random, ACCEPT_RATE = 0.75
+--------------------
+
+
+Selection of epsilon star...
+epsilon:  3922.400390625 acceptance rate:  0.7909
+epsilon:  3893.363037109375 acceptance rate:  0.7743
+epsilon:  3867.747314453125 acceptance rate:  0.76669997
+epsilon:  3841.737060546875 acceptance rate:  0.7619
+epsilon:  3818.124267578125 acceptance rate:  0.7506
+epsilon:  3792.98095703125 acceptance rate:  0.7369
+Time to select epsilon star: 11.07s
+
+Simulations of the testing dataset...
+Time to simulate the testing dataset: 1.26s
+
+Simulations of the training dataset...
+Time to simulate the training dataset: 2.48s
+
+Training the neural network...
+Initial accuracy: 49.99%, Initial test accuracy: 49.99%
+Training for 100 epochs...
+Epoch 1/100, mean train accuracy: 49.77%, mean test accuracy: 50.00%, lr scale: 1.0 in 7.66 sec
+Epoch 2/100, mean train accuracy: 50.06%, mean test accuracy: 50.00%, lr scale: 1.0 in 7.61 sec
+Epoch 3/100, mean train accuracy: 50.14%, mean test accuracy: 49.99%, lr scale: 1.0 in 7.59 sec
+Epoch 4/100, mean train accuracy: 50.26%, mean test accuracy: 50.58%, lr scale: 1.0 in 7.61 sec
+Epoch 5/100, mean train accuracy: 54.97%, mean test accuracy: 70.49%, lr scale: 1.0 in 7.62 sec
+Epoch 6/100, mean train accuracy: 81.48%, mean test accuracy: 85.51%, lr scale: 1.0 in 7.83 sec
+Epoch 7/100, mean train accuracy: 88.06%, mean test accuracy: 89.36%, lr scale: 1.0 in 7.65 sec
+Epoch 8/100, mean train accuracy: 90.23%, mean test accuracy: 91.68%, lr scale: 1.0 in 7.64 sec
+Epoch 9/100, mean train accuracy: 91.34%, mean test accuracy: 92.84%, lr scale: 1.0 in 7.63 sec
+Epoch 10/100, mean train accuracy: 91.96%, mean test accuracy: 92.21%, lr scale: 1.0 in 7.63 sec
+Epoch 11/100, mean train accuracy: 92.00%, mean test accuracy: 92.62%, lr scale: 1.0 in 7.64 sec
+Epoch 12/100, mean train accuracy: 92.89%, mean test accuracy: 93.37%, lr scale: 1.0 in 7.63 sec
+Epoch 13/100, mean train accuracy: 93.16%, mean test accuracy: 93.93%, lr scale: 1.0 in 7.61 sec
+Epoch 14/100, mean train accuracy: 93.49%, mean test accuracy: 93.04%, lr scale: 1.0 in 7.60 sec
+Epoch 15/100, mean train accuracy: 94.51%, mean test accuracy: 95.98%, lr scale: 0.5 in 7.62 sec
+Epoch 16/100, mean train accuracy: 95.59%, mean test accuracy: 95.40%, lr scale: 0.5 in 7.60 sec
+Epoch 17/100, mean train accuracy: 95.76%, mean test accuracy: 96.14%, lr scale: 0.5 in 7.59 sec
+Epoch 18/100, mean train accuracy: 95.94%, mean test accuracy: 95.97%, lr scale: 0.5 in 7.60 sec
+Epoch 19/100, mean train accuracy: 96.03%, mean test accuracy: 95.77%, lr scale: 0.5 in 7.59 sec
+Epoch 20/100, mean train accuracy: 96.12%, mean test accuracy: 97.00%, lr scale: 0.25 in 7.61 sec
+Epoch 21/100, mean train accuracy: 97.14%, mean test accuracy: 97.36%, lr scale: 0.25 in 7.59 sec
+Epoch 22/100, mean train accuracy: 97.32%, mean test accuracy: 96.43%, lr scale: 0.25 in 7.61 sec
+Epoch 23/100, mean train accuracy: 97.44%, mean test accuracy: 97.23%, lr scale: 0.25 in 7.61 sec
+Epoch 24/100, mean train accuracy: 97.51%, mean test accuracy: 97.65%, lr scale: 0.25 in 7.60 sec
+Epoch 25/100, mean train accuracy: 97.89%, mean test accuracy: 98.13%, lr scale: 0.125 in 7.63 sec
+Epoch 26/100, mean train accuracy: 98.20%, mean test accuracy: 98.36%, lr scale: 0.125 in 7.62 sec
+Epoch 27/100, mean train accuracy: 98.32%, mean test accuracy: 98.48%, lr scale: 0.125 in 7.60 sec
+Epoch 28/100, mean train accuracy: 98.38%, mean test accuracy: 98.42%, lr scale: 0.125 in 7.59 sec
+Epoch 29/100, mean train accuracy: 98.61%, mean test accuracy: 98.68%, lr scale: 0.0625 in 7.60 sec
+Epoch 30/100, mean train accuracy: 98.83%, mean test accuracy: 98.84%, lr scale: 0.0625 in 7.57 sec
+Epoch 31/100, mean train accuracy: 98.88%, mean test accuracy: 98.90%, lr scale: 0.0625 in 7.59 sec
+Epoch 32/100, mean train accuracy: 98.91%, mean test accuracy: 98.85%, lr scale: 0.0625 in 7.58 sec
+Epoch 33/100, mean train accuracy: 98.92%, mean test accuracy: 98.82%, lr scale: 0.0625 in 7.58 sec
+Epoch 34/100, mean train accuracy: 99.11%, mean test accuracy: 99.10%, lr scale: 0.03125 in 7.60 sec
+Epoch 35/100, mean train accuracy: 99.16%, mean test accuracy: 99.19%, lr scale: 0.03125 in 7.58 sec
+Epoch 36/100, mean train accuracy: 99.25%, mean test accuracy: 99.27%, lr scale: 0.015625 in 7.57 sec
+Epoch 37/100, mean train accuracy: 99.30%, mean test accuracy: 99.26%, lr scale: 0.015625 in 7.77 sec
+Epoch 38/100, mean train accuracy: 99.34%, mean test accuracy: 99.30%, lr scale: 0.015625 in 7.58 sec
+Epoch 39/100, mean train accuracy: 99.33%, mean test accuracy: 99.26%, lr scale: 0.015625 in 7.58 sec
+Epoch 40/100, mean train accuracy: 99.36%, mean test accuracy: 99.35%, lr scale: 0.0078125 in 7.56 sec
+Epoch 41/100, mean train accuracy: 99.43%, mean test accuracy: 99.37%, lr scale: 0.0078125 in 7.58 sec
+Epoch 42/100, mean train accuracy: 99.44%, mean test accuracy: 99.37%, lr scale: 0.0078125 in 7.60 sec
+Epoch 43/100, mean train accuracy: 99.43%, mean test accuracy: 99.39%, lr scale: 0.00390625 in 7.58 sec
+Epoch 44/100, mean train accuracy: 99.48%, mean test accuracy: 99.39%, lr scale: 0.00390625 in 7.58 sec
+Epoch 45/100, mean train accuracy: 99.47%, mean test accuracy: 99.42%, lr scale: 0.00390625 in 7.61 sec
+Epoch 46/100, mean train accuracy: 99.48%, mean test accuracy: 99.43%, lr scale: 0.001953125 in 7.61 sec
+Epoch 47/100, mean train accuracy: 99.47%, mean test accuracy: 99.41%, lr scale: 0.001953125 in 7.60 sec
+Epoch 48/100, mean train accuracy: 99.50%, mean test accuracy: 99.42%, lr scale: 0.001953125 in 7.61 sec
+Epoch 49/100, mean train accuracy: 99.49%, mean test accuracy: 99.42%, lr scale: 0.0009765625 in 7.60 sec
+Learning rate reached 1.00E-06, stopping training
+Time to train the neural network: 430.60s
+
+Simulation Based Calibration...

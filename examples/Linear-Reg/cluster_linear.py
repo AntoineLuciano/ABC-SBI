@@ -122,7 +122,6 @@ for N_VAR in N_VARS:
         INDEX_BETAS = [0, N_VAR-1]
     for INDEX_BETA in INDEX_BETAS:
         TRUE_BETA = TRUE_BETAS[INDEX_BETA]
-
         if INDEX_BETA == 0:
             beta_mode = "max"
             PATH_BETA = PATH_N_VAR + "beta_max/"
