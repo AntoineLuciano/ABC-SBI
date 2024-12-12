@@ -6,7 +6,7 @@ path+='/ABC-SBI'
 path = (path.split('/'))
 if path.index("ABC-SBI")==-1:
     path.append('ABC-SBI')
-import numpy as np
+    
 path = path[:path.index("ABC-SBI")+1]
 path = '/'.join(path)
 print("New path:", path)
@@ -26,30 +26,33 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import scipy.stats as stats
-# import theano
+import pytensor
+
 @jit
 def prior_simulator(key):
     return random.normal(key, (1,))*SIGMA0 + MU0
 
-@jit
-def data_simulator(key, beta):
-    key, key_betas= random.split(key)
-    betas = jnp.insert(random.normal(key_betas, (N_VAR-1,))*SIGMA0 + MU0, INDEX_BETA, beta)
-    return random.normal(key, (N_DATA,))*SIGMA + jnp.dot(X_DESIGN, betas)
+
+def data_simulator_raw(key, beta, x_design, index_beta):
+    key, subkey = random.split(key)
+    betas = jnp.insert(random.normal(subkey, (x_design.shape[1]-1,))*SIGMA0 + MU0, index_beta, beta)
+    return random.normal(key, (x_design.shape[0],))*SIGMA+ jnp.dot(x_design, betas)
+
+def beta_simulator_raw(key, beta, x_design, index_beta):
+    return jnp.insert(random.normal(key, (x_design.shape[1]-1,))*SIGMA0 + MU0, index_beta, beta)
 
 @jit
 def discrepancy(y, y_true):
     return jnp.mean((y-y_true)**2)
 
-def x_design_simulator(key):
-    return random.normal(key, (N_DATA, N_VAR))
 
+def x_design_simulator(key, n_data, n_var):
+    return random.normal(key, (n_data, n_var))
 
-# import pymc3 as pm
 
 key = random.PRNGKey(0)
 
-N_DATA = 1000
+N_DATA = 500
 
 MU0, SIGMA0 = 0., 10.
 PRIOR_ARGS = [MU0, SIGMA0]
@@ -70,7 +73,7 @@ N_POINTS_EPS = 10000
 sim_args = None
 
 
-N_EPOCHS = 100
+N_EPOCHS = 3
 LEARNING_RATE = 0.001
 PATIENCE = 7
 COOLDOWN = 0
@@ -87,42 +90,36 @@ NUM_LAYERS = 7
 WDECAY = .001
 N_GRID_FINAL = 10000
 N_GRID_EXPLO = 1000
-L = 63
+L = 15
 B = 16
 N_SBC = (L+1)*100
 
-PATH_RESULTS = os.getcwd() + "/examples/Linear-Reg/results/"
+PATH_RESULTS = os.getcwd() + f"/examples/Linear-Reg/new_results_{N_DATA}/"
 if not os.path.exists(PATH_RESULTS):
     os.makedirs(PATH_RESULTS)
     
 
+INDEX_BETA = 0
+ACCEPT_RATES = [1., .999, .99, .975, .95, .925, .9, .85, .8, .75, .7]
 
-ACCEPT_RATES = [1., .999, .99, .975, .95, .925, .9, .85, .8, .75]
-
-N_VARS = [50]
+N_VARS = [2,3,5,10,25]
 for N_VAR in N_VARS:
-    
-    key, key_beta = random.split(key)
-    TRUE_BETAS = jnp.append(jnp.array([15.]), random.normal(key_beta, (N_VAR-2,))*5. + MU0)
-    TRUE_BETAS = jnp.append(TRUE_BETAS, jnp.array([.1]))
-    
-    key, key_design = random.split(key)
-    X_DESIGN = x_design_simulator(key_design)
-    
-    MODEL_ARGS = [SIGMA, X_DESIGN]
-    key, key_data = random.split(key)
-    TRUE_DATA = random.normal(key_data, (N_DATA,))*SIGMA + jnp.dot(X_DESIGN, TRUE_BETAS)
-
+    key = random.PRNGKey(0)
     PATH_N_VAR = PATH_RESULTS+ "K_{}/".format(N_VAR)
-    if not os.path.exists(PATH_N_VAR):
-        os.makedirs(PATH_N_VAR)
+    with open(PATH_N_VAR + "data.pkl", "rb") as f:
+        dico = pickle.load(f)
+    TRUE_BETAS = dico["TRUE_BETAS"]
+    X_DESIGN = dico["X_DESIGN"]
+    TRUE_DATA = dico["TRUE_DATA"]
+    beta_post = dico["true_post"]
+
     if N_VAR > 2:
         INDEX_BETAS = [0, N_VAR-1, N_VAR//2]
     else: 
         INDEX_BETAS = [0, N_VAR-1]
     for INDEX_BETA in INDEX_BETAS:
+        data_simulator = jit(lambda key, beta: data_simulator_raw(key, beta, X_DESIGN, INDEX_BETA)) 
         TRUE_BETA = TRUE_BETAS[INDEX_BETA]
-
         if INDEX_BETA == 0:
             beta_mode = "max"
             PATH_BETA = PATH_N_VAR + "beta_max/"
@@ -133,26 +130,9 @@ for N_VAR in N_VARS:
             beta_mode = "random"
             PATH_BETA = PATH_N_VAR + "beta_random/"
         if not os.path.exists(PATH_BETA):
-            os.makedirs(PATH_BETA)
-        # trace_path = PATH_N_VAR + "post_pymc.pkl"
-        # print(trace_path)
-
-        # if not os.path.exists(trace_path):
-        #     with pm.Model() as model:
-        #         # Convert X_DESIGN to a tensor variable
-        #         X_DESIGN_shared = theano.shared(X_DESIGN)
-        #         # Priors for unknown model parameters
-        #         betas = pm.Normal('betas', mu=MU0, sigma=SIGMA0, shape=N_VAR)
-        #         # Likelihood (sampling distribution) of observations
-        #         y_obs = pm.Normal('y_obs', mu=theano.tensor.dot(X_DESIGN_shared, betas), sigma=SIGMA, observed=TRUE_DATA)
-        #         # Sample from the posterior
-        #         trace = pm.sample(1000, tune=1000)
-        #         with open(trace_path, "wb") as f:
-        #             pickle.dump(trace, f)
-        # else:
-        #     with open(trace_path, "rb") as f:
-        #         trace = pickle.load(f)
-        # beta_post = np.array(trace.posterior.betas).reshape(-1, N_VAR)
+                os.makedirs(PATH_BETA)
+    
+    
         EPSILON_STAR = jnp.inf
 
         
@@ -210,7 +190,7 @@ for N_VAR in N_VARS:
             print("Data saved in ", NAMEFILE)
 
             title = "Linear Regression with K = {}, beta = {}, accept rate = {}, epsilon = {:.3}".format(N_VAR, beta_mode, ACCEPT_RATE, EPSILON_STAR)
-    
+
             
             f, ax = plt.subplots(1,3, figsize = (15,5))
             sns.kdeplot(thetas_tilde, label = "Thetas_tilde", ax = ax[0])
@@ -223,8 +203,9 @@ for N_VAR in N_VARS:
 
             
             Z_approx = np.trapz(pdf_approx, grid_approx)
-            ax[1].plot(grid_approx, pdf_approx/Z_approx, label = "Approx (NRE)")
-            # sns.kdeplot(beta_post[:,INDEX_BETA], label = "True (PyMC)", ax = ax[1])
+            ax[1].plot(grid_approx, pdf_approx/Z_approx, label = "Approx posterior (NRE)")
+            sns.kdeplot(beta_post[:,INDEX_BETA], label = "True posterior (PyMC)", ax = ax[1])
+            ax[1].axvline(TRUE_BETA, color = "red", label = "True parameter", linestyle = "--")
             # ax[1].plot(grid_true, pdf_true, label = "True")
             ax[1].legend()
             ax[1].set_title("Posterior comparison of the true data")
@@ -232,6 +213,10 @@ for N_VAR in N_VARS:
             ax[2].set_title("SBC with Rank Statistics")
             f.savefig(NAMEFIG)
             plt.close(f)
+            
+            
+            
+            
             
             print("\n\n--------------------")
             print("ITERATION (ACC = {}) DONE IN {} SECONDS!".format(ACCEPT_RATE, time.time()-time_eps))
