@@ -112,7 +112,7 @@ for N_VAR in N_VARS:
     X_DESIGN = dico["X_DESIGN"]
     TRUE_DATA = dico["TRUE_DATA"]
     beta_post = dico["true_post"]
-
+    MODEL_ARGS = [SIGMA, X_DESIGN]
     if N_VAR > 2:
         INDEX_BETAS = [0, N_VAR-1, N_VAR//2]
     else: 
