@@ -31,7 +31,7 @@ def train_loop(key, num_epoch_max, num_layers, hidden_size, num_classes, batch_s
         if inputs is None:
             # print("Simulation of {} batches of size {}".format(num_batch, batch_size))
             for i in range(num_batch):
-                inputs_batch, labels_batch, key = get_newdataset(key, batch_size, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
+                inputs_batch, labels_batch, key = get_dataset(key, batch_size, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
                 yield inputs_batch, labels_batch
         else:
             permutation = random.permutation(key, len(inputs))
@@ -75,7 +75,7 @@ def train_loop(key, num_epoch_max, num_layers, hidden_size, num_classes, batch_s
        
        
     if X_test is None:
-        X_test, y_test, key = get_newdataset(key, N_POINTS_TEST, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
+        X_test, y_test, key = get_dataset(key, N_POINTS_TEST, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
 
 
 
