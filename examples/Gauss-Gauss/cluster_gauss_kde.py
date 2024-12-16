@@ -17,12 +17,12 @@ sys.path.append(path)
 
 from functions.simulation import get_dataset, get_epsilon_star, get_newdataset
 from functions.training import train_loop
-from functions.SBC import SBC_epsilon, plot_SBC, find_grid_explorative, post_pdf_z
+from functions.SBC import SBC_epsilon, plot_SBC, find_grid_explorative, new_post_pdf_z
 import jax.numpy as jnp
 import time
 import pickle 
 import lzma
-from jax.scipy.stats import norm
+from jax.scipy.stats import norm, gaussian_kde
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -56,7 +56,7 @@ N_POINTS_EPS = 10000
 sim_args = None
 
 
-N_EPOCHS = 100
+N_EPOCHS = 1
 LEARNING_RATE = 0.001
 PATIENCE = 7
 COOLDOWN = 0
@@ -75,9 +75,9 @@ N_GRID_FINAL = 10000
 N_GRID_EXPLO = 1000
 L = 63
 B = 16
-N_SBC = (L+1)*100
+N_SBC = (L+1)*1
 
-PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/old_results/"
+PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/new_results/"
 if not os.path.exists(PATH_RESULTS):
     os.makedirs(PATH_RESULTS)
     
@@ -92,7 +92,7 @@ for SIGMA0 in SIGMAS0:
     if not os.path.exists(PATH_SIGMA0):
         os.makedirs(PATH_SIGMA0)
         
-    TRUE_MUS = [0, .1*SIGMA0, .5*SIGMA0, SIGMA0, 2.*SIGMA0]
+    TRUE_MUS = [.1*SIGMA0, .5*SIGMA0, SIGMA0, 2.*SIGMA0]
     PRIOR_ARGS = [MU0, SIGMA0]
     PRIOR_LOGPDF = lambda x: norm.logpdf(x, loc = MU0, scale = SIGMA0)
     MINN, MAXX = norm.ppf(1e-5, loc = MU0, scale = SIGMA0), norm.ppf(1-1e-5, loc = MU0, scale = SIGMA0)
@@ -134,8 +134,10 @@ for SIGMA0 in SIGMAS0:
 
             print("Simulation Based Calibration...")
             time_sbc = time.time()
-
-            ranks, thetas_tilde, thetas, key = SBC_epsilon(key = key, N_SBC = N_SBC, L = L, params = params, epsilon = EPSILON_STAR, true_data = TRUE_DATA, prior_simulator = prior_simulator, prior_logpdf = PRIOR_LOGPDF, data_simulator = data_simulator, discrepancy = discrepancy, n_grid_explo = N_GRID_EXPLO, n_grid_final = N_GRID_FINAL, minn = MINN, maxx = MAXX)
+            
+            kde_pseudo_post = gaussian_kde(X_train[:, 0].reshape(-1))
+            
+            ranks, thetas_tilde, thetas, key = SBC_epsilon(key = key, N_SBC = N_SBC, L = L, params = params, epsilon = EPSILON_STAR, true_data = TRUE_DATA, prior_simulator = prior_simulator, prior_logpdf = PRIOR_LOGPDF, data_simulator = data_simulator, discrepancy = discrepancy, n_grid_explo = N_GRID_EXPLO, n_grid_final = N_GRID_FINAL, minn = MINN, maxx = MAXX, new_method= True, kde_estimator = kde_pseudo_post)
 
             print('Time to perform SBC: {:.2f}s\n'.format(time.time()-time_sbc))
 
@@ -167,10 +169,11 @@ for SIGMA0 in SIGMAS0:
 
             ax[0].legend()
             f.suptitle(f'GaussGauss with sigma = {SIGMA} sigma0 = {SIGMA0} mu = {TRUE_MU} alpha = {ACCEPT_RATE:.1%}, epsilon = {EPSILON_STAR:.3} accuracy = {test_accuracy[-1]:.2%}')
-
-            grid_approx, pdf_approx = find_grid_explorative(lambda x: post_pdf_z(params, x, TRUE_DATA, PRIOR_LOGPDF), N_GRID_EXPLO, N_GRID_FINAL, MINN, MAXX)
+            print("Posterior comparison...")
+            grid_approx, pdf_approx = find_grid_explorative(lambda x: new_post_pdf_z(params, x, TRUE_DATA, kde_pseudo_post), N_GRID_EXPLO, N_GRID_FINAL, MINN, MAXX)
+            print("Posterior comparison...")
             grid_true, pdf_true = find_grid_explorative(lambda x: true_post(TRUE_DATA).pdf(x), N_GRID_EXPLO, N_GRID_FINAL, MINN, MAXX)
-            
+            print("Done! Plotting...")
             Z_approx = np.trapz(pdf_approx, grid_approx)
             ax[1].plot(grid_approx, pdf_approx/Z_approx, label = "Approx")
             ax[1].plot(grid_true, pdf_true, label = "True")

@@ -52,9 +52,11 @@ def logratio_z(params, mus, z):
 logratio_batch_z = (vmap(logratio_z, in_axes = (None, 0,  None)))
 
 def post_pdf_z(params, mus, z, prior_logpdf):
-
     return jnp.exp(prior_logpdf(mus)+logratio_batch_z(params, mus, z))
 
+def new_post_pdf_z(params, mus, z, kde_estimator):
+    return kde_estimator(mus)*jnp.exp(logratio_batch_z(params, mus, z))
+    
 
 def find_grid_explorative(func, n_eval_explo, n_eval_final, min_grid, max_grid, threshold_factor=0.01, max_expansion=1000, expansion_factor=0.1):
     expand = True
@@ -104,7 +106,7 @@ def find_grid_explorative(func, n_eval_explo, n_eval_final, min_grid, max_grid, 
     
     return grid_opt, pdf_values
 
-def SBC_epsilon(key, N_SBC, L, params, epsilon, true_data, prior_simulator, prior_logpdf, data_simulator, discrepancy, n_grid_explo = 100, n_grid_final = 1000, minn = -50, maxx = 50, X = np.array([])):
+def SBC_epsilon(key, N_SBC, L, params, epsilon, true_data, prior_simulator, prior_logpdf, data_simulator, discrepancy, n_grid_explo = 100, n_grid_final = 1000, minn = -50, maxx = 50, X = np.array([]), new_method = False, kde_estimator = None):
     if len(X) == 0:
         datas, thetas_tilde, _, key = ABC_epsilon(key, N_SBC, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
     else:
@@ -117,7 +119,10 @@ def SBC_epsilon(key, N_SBC, L, params, epsilon, true_data, prior_simulator, prio
     grids, pdf_values = jnp.zeros((N_SBC, n_grid_final)), jnp.zeros((N_SBC, n_grid_final))
     thetas = jnp.zeros((N_SBC, L))
     for i in tqdm(range(N_SBC), mininterval= N_SBC//20):
-        grid, pdf_value = find_grid_explorative(lambda x: post_pdf_z(params, x, datas[i], prior_logpdf), n_grid_explo, n_grid_final, minn, maxx)
+        if new_method and epsilon != np.inf:
+            grid, pdf_value = find_grid_explorative(lambda x: new_post_pdf_z(params, x, datas[i], kde_estimator), n_grid_explo, n_grid_final, minn, maxx)
+        else:
+            grid, pdf_value = find_grid_explorative(lambda x: post_pdf_z(params, x, datas[i], prior_logpdf), n_grid_explo, n_grid_final, minn, maxx)
         grids = grids.at[i].set(grid)
         pdf_values = pdf_values.at[i].set(pdf_value)
     thetas, key = post_sample_batch(key, grids, pdf_values, L)
