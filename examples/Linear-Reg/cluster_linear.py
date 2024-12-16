@@ -57,6 +57,7 @@ N_DATA = 500
 MU0, SIGMA0 = 0., 10.
 PRIOR_ARGS = [MU0, SIGMA0]
 
+
 SIGMA = 1.
 
 
@@ -73,7 +74,7 @@ N_POINTS_EPS = 10000
 sim_args = None
 
 
-N_EPOCHS = 3
+N_EPOCHS = 100
 LEARNING_RATE = 0.001
 PATIENCE = 7
 COOLDOWN = 0
@@ -90,11 +91,11 @@ NUM_LAYERS = 7
 WDECAY = .001
 N_GRID_FINAL = 10000
 N_GRID_EXPLO = 1000
-L = 15
+L = 31
 B = 16
 N_SBC = (L+1)*100
 
-PATH_RESULTS = os.getcwd() + f"/examples/Linear-Reg/new_results_{N_DATA}/"
+PATH_RESULTS = os.getcwd() + f"/examples/Linear-Reg/old_results_{N_DATA}_cluster/"
 if not os.path.exists(PATH_RESULTS):
     os.makedirs(PATH_RESULTS)
     
@@ -102,7 +103,13 @@ if not os.path.exists(PATH_RESULTS):
 INDEX_BETA = 0
 ACCEPT_RATES = [1., .999, .99, .975, .95, .925, .9, .85, .8, .75, .7]
 
-N_VARS = [2,3,5,10,25]
+
+import sys
+if len(sys.argv)>1:
+    N_VAR = int(sys.argv[1])
+N_VARS = [N_VAR]
+print('N_VARS', N_VARS)
+
 for N_VAR in N_VARS:
     key = random.PRNGKey(0)
     PATH_N_VAR = PATH_RESULTS+ "K_{}/".format(N_VAR)
@@ -148,12 +155,12 @@ for N_VAR in N_VARS:
 
             print("Simulations of the testing dataset...")
             time_sim = time.time()
-            X_test, y_test, key = get_newdataset(key, N_POINTS_TEST, prior_simulator, data_simulator, discrepancy, EPSILON_STAR, TRUE_DATA)
+            X_test, y_test, key = get_dataset(key, N_POINTS_TEST, prior_simulator, data_simulator, discrepancy, EPSILON_STAR, TRUE_DATA)
             print('Time to simulate the testing dataset: {:.2f}s\n'.format(time.time()-time_sim))
 
             print("Simulations of the training dataset...")
             time_sim = time.time()
-            X_train, y_train, key = get_newdataset(key, N_POINTS_TRAIN, prior_simulator, data_simulator, discrepancy, EPSILON_STAR, TRUE_DATA)
+            X_train, y_train, key = get_dataset(key, N_POINTS_TRAIN, prior_simulator, data_simulator, discrepancy, EPSILON_STAR, TRUE_DATA)
             print('Time to simulate the training dataset: {:.2f}s\n'.format(time.time()-time_sim))
 
 
