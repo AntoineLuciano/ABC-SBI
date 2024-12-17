@@ -83,7 +83,7 @@ if not os.path.exists(PATH_RESULTS):
     
 
 
-SIGMAS0 = [5*SIGMA]
+SIGMAS0 = [20*SIGMA]
 ACCEPT_RATES = [1., .999, .99, .975, .95, .925, .9, .85, .8, .75]
 
 

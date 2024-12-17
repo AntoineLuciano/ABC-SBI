@@ -1,0 +1,7 @@
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+Traceback (most recent call last):
+  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py", line 82, in <module>
+    os.makedirs(PATH_RESULTS)
+  File "/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/os.py", line 225, in makedirs
+    mkdir(name, mode)
+FileExistsError: [Errno 17] File exists: '/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/old_results/'
