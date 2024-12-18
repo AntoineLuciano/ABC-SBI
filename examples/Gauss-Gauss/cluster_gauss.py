@@ -1,4 +1,13 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 from jax import random, jit, vmap
+import jax 
+import jax
+print(jax.devices("cpu"))
+print(jax.default_backend(), jax.default_device())
+jax.config.update('jax_default_device', jax.devices('cpu')[0])
+jax.config.update("jax_enable_x64", True)
+jax.config.update('jax_platform_name', 'cpu')
 import os
 path = os.getcwd()
 print("Old path:", path)
@@ -77,13 +86,19 @@ L = 63
 B = 16
 N_SBC = (L+1)*100
 
-PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/old_results/"
+PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/results_without_kde/"
 if not os.path.exists(PATH_RESULTS):
     os.makedirs(PATH_RESULTS)
     
 
+if len(sys.argv) > 1:
+    sigma0_factor = float(sys.argv[1])
+else:
+    sigma0_factor = 10.
+    
 
-SIGMAS0 = [20*SIGMA]
+SIGMAS0 = [sigma0_factor*SIGMA]
+print("SIGMA0 =",SIGMAS0)
 ACCEPT_RATES = [1., .999, .99, .975, .95, .925, .9, .85, .8, .75]
 
 

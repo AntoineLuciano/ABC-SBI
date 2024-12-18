@@ -1,0 +1,11 @@
+WARNING:2024-12-18 02:42:19,137:jax._src.xla_bridge:969: An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+Traceback (most recent call last):
+  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py", line 8, in <module>
+    jax.config.update('jax_default_device', jax.devices('cpu'))
+  File "/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/site-packages/jax/_src/config.py", line 88, in update
+    self._value_holders[name]._set(val)
+  File "/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/site-packages/jax/_src/config.py", line 278, in _set
+    self._validator(value)
+  File "/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/site-packages/jax/_src/config.py", line 1320, in _validate_default_device
+    raise ValueError('jax.default_device must be passed either a Device object (e.g. '
+ValueError: jax.default_device must be passed either a Device object (e.g. `jax.devices('cpu')[0]`) or a platform name string like 'cpu' or 'gpu', got: [CpuDevice(id=0)]
