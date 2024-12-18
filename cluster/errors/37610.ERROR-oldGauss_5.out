@@ -1,0 +1,13 @@
+WARNING:2024-12-18 02:41:15,929:jax._src.xla_bridge:969: An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+Traceback (most recent call last):
+  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py", line 7, in <module>
+    print(jax.devices("gpu"))
+  File "/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/site-packages/jax/_src/xla_bridge.py", line 1115, in devices
+    return get_backend(backend).devices()
+  File "/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/site-packages/jax/_src/xla_bridge.py", line 1049, in get_backend
+    return _get_backend_uncached(platform)
+  File "/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/site-packages/jax/_src/xla_bridge.py", line 1030, in _get_backend_uncached
+    platform = canonicalize_platform(platform)
+  File "/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/site-packages/jax/_src/xla_bridge.py", line 833, in canonicalize_platform
+    raise RuntimeError(f"Unknown backend: '{platform}' requested, but no "
+RuntimeError: Unknown backend: 'gpu' requested, but no platforms that are instances of gpu are present. Platforms present are: cpu

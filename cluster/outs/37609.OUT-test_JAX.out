@@ -1,0 +1,4 @@
+Host clust4
+
+[CpuDevice(id=0)]
+cpu <contextlib._GeneratorContextManager object at 0x7f2886fd7790>

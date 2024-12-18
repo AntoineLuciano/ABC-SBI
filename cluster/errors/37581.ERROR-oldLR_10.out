@@ -1,5 +1,0 @@
-An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-Traceback (most recent call last):
-  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Linear-Reg/cluster_linear.py", line 116, in <module>
-    with open(PATH_N_VAR + "data.pkl", "rb") as f:
-FileNotFoundError: [Errno 2] No such file or directory: '/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Linear-Reg/old_results/K_10/data.pkl'

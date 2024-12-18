@@ -1,0 +1,2 @@
+WARNING:2024-12-18 02:44:37,685:jax._src.xla_bridge:969: An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+slurmstepd-clust1: error: *** JOB 37613 ON clust1 CANCELLED AT 2024-12-18T02:44:44 ***
