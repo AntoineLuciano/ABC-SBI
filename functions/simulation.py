@@ -30,7 +30,7 @@ def ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, eps
 
 ABC_epsilon = jit(ABC_epsilon, static_argnums=(1,2,3,4,5))
 
-def get_epsilon_star(key, acceptance_rate, n_points, prior_simulator, data_simulator, discrepancy, true_data, quantile_rate = .9, epsilon = jnp.inf):
+def get_epsilon_star(key, acceptance_rate, n_points, prior_simulator, data_simulator, discrepancy, true_data, quantile_rate = .9, epsilon = jnp.inf, return_accept = False):
     new_epsilon = epsilon
     accept = 1.
     datas, thetas, dists, key = ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
@@ -47,6 +47,8 @@ def get_epsilon_star(key, acceptance_rate, n_points, prior_simulator, data_simul
         accept = jnp.mean(new_dists < new_epsilon)
         epsilon = new_epsilon
         print("epsilon: ", epsilon, "acceptance rate: ", accept)
+    if return_accept: 
+        return epsilon, accept, key
     return epsilon, key
 
 def get_dataset(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data):

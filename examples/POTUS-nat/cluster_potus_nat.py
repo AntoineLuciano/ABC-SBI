@@ -1,6 +1,20 @@
-
 from jax import random, jit, vmap
-from functions.simulation import get_dataset, get_epsilon_star
+import os
+oldpath = os.getcwd()
+print("Old path:", oldpath)
+path=oldpath+'/ABC-SBI'
+newpath = (path.split('/'))
+if newpath.index("ABC-SBI")==-1:
+    newpath.append('ABC-SBI')
+    
+newpath = newpath[:newpath.index("ABC-SBI")+1]
+newpath = '/'.join(newpath)
+print("New path:", newpath)
+os.chdir(newpath)
+
+import sys
+sys.path.append(newpath)
+from functions.simulation import get_dataset, get_epsilon_star, get_newdataset
 from functions.training import train_loop
 from functions.SBC import SBC_epsilon, plot_SBC
 import jax.numpy as jnp
@@ -11,8 +25,8 @@ from jax.scipy.special import expit
 import json 
 import numpy as np
 
-
-data = json.load(open("./data/potus_data.json"))
+path = newpath
+data = json.load(open(path+"/examples/POTUS-nat/data/potus_data.json"))
 
 np_data = {x: np.squeeze(np.array(y)) for x, y in data.items()}
 
@@ -149,38 +163,57 @@ def data_simulator(key, theta):
 
     # y_state = random.binomial(key, np_data["n_two_share_state"], prob_state)
     y_nat = random.binomial(key, np_data["n_two_share_national"], prob_nat)
-    return y_nat
+    return y_nat/np_data["n_two_share_national"]
 
 @jit
 def discrepancy(y, y_true):
-    return (jnp.mean(((y-y_true)/np_data["n_two_share_national"])**2))
+    return jnp.mean((y-y_true)**2)
 
 
 from jax.scipy.stats import norm
 PRIOR_LOGPDF = lambda x: norm.logpdf(x, loc=mu_b_T_loc_prior, scale=jnp.sqrt(mu_b_T_scale_prior))
 
-TRUE_DATA = y_obs_nat
+TRUE_DATA = y_obs_nat/np_data["n_two_share_national"]
 N_DATA = len(TRUE_DATA)
 MODEL_ARGS = []
 PRIOR_ARGS = []
-
-
-
 key = random.PRNGKey(0)
-
-
+import matplotlib.pyplot as plt
+import seaborn as sns
+from functions.SBC import find_grid_explorative, post_pdf_z, plot_SBC
 TRUE_THETA = []
 
+
+os.chdir(newpath+"/examples/POTUS-nat")
+from potus_nat_pymc import get_potus_model
+import pymc as pm
+model = get_potus_model(newpath+"/examples/POTUS-nat/data/potus_data.json")
+os.chdir(newpath)
+
+force_rerun = False
+
+if not os.path.exists(newpath+"/examples/POTUS-nat/pymc.pkl") or force_rerun:
+    with model:
+        trace = pm.sample(1000, tune=1000)
+
+    pymc = np.array(trace.posterior["national_mu_b_average"])[:,-1,0].flatten()
+    with open("pymc.pkl", "wb") as f:
+        pickle.dump(pymc, f)
+else:
+    with open(newpath+"/examples/POTUS-nat/pymc.pkl", "rb") as f:
+        pymc = pickle.load(f)
+        
+        
 
 N_POINTS_TRAIN = 1000000
 N_POINTS_TEST = 100000
 
 
-import sys
-if len(sys.argv) > 1:
-    ACCEPT_RATE = float(sys.argv[1])
-else: 
-    ACCEPT_RATE = 1.
+# import sys
+# if len(sys.argv) > 1:
+#     ACCEPT_RATE = float(sys.argv[1])
+# else: 
+#     ACCEPT_RATE = 1.
 N_POINTS_EPS = 10000
 sim_args = None
 
@@ -209,54 +242,92 @@ WDECAY = .001
 N_GRID_FINAL = 10000
 N_GRID_EXPLO = 1000
 MINN, MAXX = -50.,50. 
-L = 127
+L =63
+B = 16
 N_SBC = (L+1)*100
-
-for ACCEPT_RATE in [1., .999, .99, .975, .95, .9]:
-
+PATH_RESULTS = os.getcwd() + f"/examples/POTUS-nat/results_norm/"
+EPSILON_STAR = jnp.inf
+ACCEPT_RATES = [1. , .999,.99,.975,.95,.925,.9,.85,.8,.75, .5]
+for ACCEPT_RATE in ACCEPT_RATES:
     print("\n\n--------------------")
-    print("ACCEPT RATE: ", ACCEPT_RATE)
+    print(f"ITERATION WITH ACCEPT RATE {ACCEPT_RATE}")
     print("--------------------\n\n")
+    
     time_eps = time.time()
     print("Selection of epsilon star...")
-    EPSILON_STAR, key = get_epsilon_star(key, ACCEPT_RATE, N_POINTS_EPS, prior_simulator, data_simulator, discrepancy, TRUE_DATA)
+    EPSILON_STAR, key = get_epsilon_star(key, ACCEPT_RATE, N_POINTS_EPS, prior_simulator, data_simulator, discrepancy, TRUE_DATA, quantile_rate = .99, epsilon = EPSILON_STAR)
     print('Time to select epsilon star: {:.2f}s\n'.format(time.time()-time_eps))
 
     print("Simulations of the testing dataset...")
     time_sim = time.time()
-    X_test, y_test, key = get_dataset(key, N_POINTS_TEST, prior_simulator, data_simulator, discrepancy, EPSILON_STAR, TRUE_DATA)
+    X_test, y_test, key = get_newdataset(key, N_POINTS_TEST, prior_simulator, data_simulator, discrepancy, EPSILON_STAR, TRUE_DATA)
     print('Time to simulate the testing dataset: {:.2f}s\n'.format(time.time()-time_sim))
-    print("Simulations of the training dataset...")
-    time_sim = time.time()
-    X_train, y_train, key = get_dataset(key, N_POINTS_TRAIN, prior_simulator, data_simulator, discrepancy, EPSILON_STAR, TRUE_DATA)
-    print('Time to simulate the training dataset: {:.2f}s\n'.format(time.time()-time_sim))
+
+    # print("Simulations of the training dataset...")
+    # time_sim = time.time()
+    # X_train, y_train, key = get_newdataset(key, N_POINTS_TRAIN, prior_simulator, data_simulator, discrepancy, EPSILON_STAR, TRUE_DATA)
+    # print('Time to simulate the training dataset: {:.2f}s\n'.format(time.time()-time_sim))
+
 
     print("Training the neural network...")
     time_nn = time.time()
-    params, train_accuracy, train_losses, test_accuracy, test_losses, key = train_loop(key, N_EPOCHS, NUM_LAYERS, HIDDEN_SIZE, NUM_CLASSES, BATCH_SIZE, NUM_BATCH, LEARNING_RATE, WDECAY, PATIENCE, COOLDOWN, FACTOR, RTOL, ACCUMULATION_SIZE, LEARNING_RATE_MIN, prior_simulator, data_simulator, discrepancy, true_data = TRUE_DATA, X_train = X_train, y_train = y_train, X_test = X_test, y_test =  y_test, N_POINTS_TRAIN = N_POINTS_TRAIN, N_POINTS_TEST = N_POINTS_TEST, epsilon = EPSILON_STAR, verbose = True)
+    params, train_accuracy, train_losses, test_accuracy, test_losses, key = train_loop(key, N_EPOCHS, NUM_LAYERS, HIDDEN_SIZE, NUM_CLASSES, BATCH_SIZE, NUM_BATCH, LEARNING_RATE, WDECAY, PATIENCE, COOLDOWN, FACTOR, RTOL, ACCUMULATION_SIZE, LEARNING_RATE_MIN, prior_simulator, data_simulator, discrepancy, true_data = TRUE_DATA, X_train = None, y_train = None, X_test = X_test, y_test =  y_test, N_POINTS_TRAIN = N_POINTS_TRAIN, N_POINTS_TEST = N_POINTS_TEST, epsilon = EPSILON_STAR, verbose = True)
     print('Time to train the neural network: {:.2f}s\n'.format(time.time()-time_nn))
 
 
     print("Simulation Based Calibration...")
     time_sbc = time.time()
 
-    ranks, thetas_tilde, thetas, key = SBC_epsilon(key = key, N_SBC = N_SBC, L = L, params = params, epsilon = EPSILON_STAR, true_data = TRUE_DATA, prior_simulator = prior_simulator, prior_logpdf = PRIOR_LOGPDF, data_simulator = data_simulator, discrepancy = discrepancy, n_grid_explo = N_GRID_EXPLO, n_grid_final = N_GRID_FINAL, minn = MINN, maxx = MAXX, X = X_test[y_test == 0][:N_SBC])
+    ranks, thetas_tilde, thetas, key = SBC_epsilon(key = key, N_SBC = N_SBC, L = L, params = params, epsilon = EPSILON_STAR, true_data = TRUE_DATA, prior_simulator = prior_simulator, prior_logpdf = PRIOR_LOGPDF, data_simulator = data_simulator, discrepancy = discrepancy, n_grid_explo = N_GRID_EXPLO, n_grid_final = N_GRID_FINAL, minn = MINN, maxx = MAXX)
 
     print('Time to perform SBC: {:.2f}s\n'.format(time.time()-time_sbc))
 
 
+    pickle_dico = {"ACCEPT_RATE":ACCEPT_RATE, "ranks": ranks, "thetas_tilde": thetas_tilde, "thetas": thetas, "epsilon":EPSILON_STAR, "KEY":key, "N_SBC":N_SBC, "L":L, "N_GRID_EXPLO": N_GRID_EXPLO, 'N_GRID_FINAL': N_GRID_FINAL,"TRUE_DATA": TRUE_DATA, "TRUE_THETA": [], "params": params, "train_accuracy":train_accuracy, "test_accuracy":test_accuracy, "MODEL_ARGS":MODEL_ARGS, "PRIOR_ARGS":PRIOR_ARGS, "N_POINTS_TRAIN":N_POINTS_TRAIN, "N_POINTS_TEST":N_POINTS_TEST, "N_DATA":N_DATA, "N_EPOCHS":N_EPOCHS, "LEARNING_RATE":LEARNING_RATE, "PATIENCE":PATIENCE, "COOLDOWN":COOLDOWN, "FACTOR":FACTOR, "RTOL":RTOL, "ACCUMULATION_SIZE":ACCUMULATION_SIZE, "LEARNING_RATE_MIN":LEARNING_RATE_MIN, "BATCH_SIZE":BATCH_SIZE, "NUM_BATCH":NUM_BATCH, "NUM_CLASSES":NUM_CLASSES, "HIDDEN_SIZE":HIDDEN_SIZE, "NUM_LAYERS":NUM_LAYERS, "WDECAY":WDECAY}
 
-    pickle_dico = {"ranks": ranks, "thetas_tilde": thetas_tilde, "thetas": thetas, "epsilon":EPSILON_STAR, "KEY":key, "N_SBC":N_SBC, "L":L, "N_GRID_EXPLO": N_GRID_EXPLO, 'N_GRID_FINAL': N_GRID_FINAL,"TRUE_DATA": TRUE_DATA, "TRUE_THETA": TRUE_THETA, "params": params, "train_accuracy":train_accuracy, "test_accuracy":test_accuracy, "MODEL_ARGS":MODEL_ARGS, "PRIOR_ARGS":PRIOR_ARGS, "N_POINTS_TRAIN":N_POINTS_TRAIN, "N_POINTS_TEST":N_POINTS_TEST, "N_DATA":N_DATA, "N_EPOCHS":N_EPOCHS, "LEARNING_RATE":LEARNING_RATE, "PATIENCE":PATIENCE, "COOLDOWN":COOLDOWN, "FACTOR":FACTOR, "RTOL":RTOL, "ACCUMULATION_SIZE":ACCUMULATION_SIZE, "LEARNING_RATE_MIN":LEARNING_RATE_MIN, "BATCH_SIZE":BATCH_SIZE, "NUM_BATCH":NUM_BATCH, "NUM_CLASSES":NUM_CLASSES, "HIDDEN_SIZE":HIDDEN_SIZE, "NUM_LAYERS":NUM_LAYERS, "WDECAY":WDECAY}
 
-    name = "./pickle/POTUS_nat_RAW_acc_{}_eps_{:.5}.xz".format(ACCEPT_RATE, EPSILON_STAR)
-
-    with lzma.open(name, "wb") as f:
+    NAME = "POTUS_nat_norm_acc_{}_eps_{:.3}".format(ACCEPT_RATE, EPSILON_STAR)
+    NAMEFIG = PATH_RESULTS + "figures/" + NAME + ".png"
+    NAMEFILE = PATH_RESULTS + "pickles/" + NAME + ".xz"
+    
+    
+    if not os.path.exists(PATH_RESULTS + "figures/"):
+        os.makedirs(PATH_RESULTS + "figures/")
+    if not os.path.exists(PATH_RESULTS + "pickles/"):
+        os.makedirs(PATH_RESULTS + "pickles/")
+        
+    
+    with lzma.open(NAMEFILE, "wb") as f:
         pickle.dump(pickle_dico, f)
-    print("Data saved in ", name)
+    print("Data saved in ", NAMEFILE)
 
-    title = "POTUS National RAW\nalpha = {:.2%} epsilon = {:.3} accuracy = {:.2%}".format(ACCEPT_RATE, EPSILON_STAR, test_accuracy[-1])
+    title = "POTUS National normalized\nAcceptance Rate = {:.3} Epsilon = {:2}".format(ACCEPT_RATE, EPSILON_STAR)
+    
+    f, ax = plt.subplots(1,3, figsize = (15,5))
+    sns.kdeplot(thetas_tilde, label = "Thetas_tilde", ax = ax[0])
+    sns.kdeplot(thetas[:,0], label = "Thetas", ax = ax[0])
 
-    name_plot = "./fig/POTUS_nat_RAW_acc_{}_eps_{:.5}.png".format(ACCEPT_RATE, EPSILON_STAR)
+    ax[0].legend()
+    f.suptitle(f'{title}')
 
-    plot_SBC(ranks, L, B = 16, title = title, save_name = name_plot)
-    print("Plot saved in ", name_plot)
+    grid_approx, pdf_approx = find_grid_explorative(lambda x: post_pdf_z(params, x, TRUE_DATA, PRIOR_LOGPDF), N_GRID_EXPLO, N_GRID_FINAL, MINN, MAXX)
+
+    
+    Z_approx = np.trapz(pdf_approx, grid_approx)
+    ax[1].plot(grid_approx, pdf_approx/Z_approx, label = "Approx posterior (NRE)")
+    sns.kdeplot(pymc, label = "True posterior (PyMC)", ax = ax[1])
+    # ax[1].plot(grid_true, pdf_true, label = "True")
+    ax[1].legend()
+    ax[1].set_title("Posterior comparison of the true data")
+    plot_SBC(ranks, L, B, ax = ax[2])
+    ax[2].set_title("SBC with Rank Statistics")
+    f.savefig(NAMEFIG)
+    plt.close(f)
+    
+    
+    
+    
+    
+    print("\n\n--------------------")
+    print("ITERATION (ACC = {}) DONE IN {} SECONDS!".format(ACCEPT_RATE, time.time()-time_eps))
+    print("--------------------\n\n")
