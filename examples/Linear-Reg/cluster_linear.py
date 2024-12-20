@@ -95,7 +95,7 @@ L = 31
 B = 16
 N_SBC = (L+1)*100
 
-PATH_RESULTS = os.getcwd() + f"/examples/Linear-Reg/old_results/"
+PATH_RESULTS = os.getcwd() + f"/examples/Linear-Reg/results_without_kde/"
 if not os.path.exists(PATH_RESULTS):
     os.makedirs(PATH_RESULTS)
     
