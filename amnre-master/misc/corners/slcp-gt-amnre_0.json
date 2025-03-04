@@ -1,0 +1,14 @@
+{
+    "items": [
+        {
+            "marginalize": true,
+            "files": "samples/slcp-test_0.pth"
+        },
+        {"files": "**/results/slcp-amnre_0_*.pth"}
+    ],
+    "legend": ["Ground-truth (MCMC)", "AMNRE (1d, 2d)"],
+    "star": ["samples/slcp-test.h5", 0],
+    "masks": {
+        "11111": {"size": 4.8}
+    }
+}

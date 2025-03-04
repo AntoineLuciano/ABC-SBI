@@ -1,0 +1,19 @@
+name: amnre
+channels:
+  - defaults
+dependencies:
+  - pip=21.0.1
+  - python=3.8.5
+  - pip:
+    - h5py==3.2.1
+    - matplotlib==3.4.1
+    - nflows==0.14
+    - numpy==1.19.5
+    - pandas==1.2.3
+    - psutil==5.8.0
+    - scikit-learn==0.24.2
+    - seaborn==0.11.1
+    - torch==1.8.1
+    - torchist==0.1.7
+    - tqdm==4.59.0
+    - UMNN==1.68

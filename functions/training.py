@@ -5,7 +5,7 @@ from flax import linen as nn
 import time
 from jax import value_and_grad, jit, random
 import jax.numpy as jnp
-from functions.simulation import get_dataset, get_newdataset
+from functions.simulation import get_dataset
 
 import numpy as np
 

@@ -30,26 +30,26 @@ def ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, eps
 
 ABC_epsilon = jit(ABC_epsilon, static_argnums=(1,2,3,4,5))
 
-# def get_epsilon_star(key, acceptance_rate, n_points, prior_simulator, data_simulator, discrepancy, true_data, quantile_rate = .9, epsilon = jnp.inf, return_accept = False):
-#     new_epsilon = epsilon
-#     accept = 1.
-#     datas, thetas, dists, key = ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
-#     if epsilon == jnp.inf:
-#         print("Distances: min = ", jnp.min(dists), "max = ", jnp.max(dists), "mean = ", jnp.mean(dists), "std = ", jnp.std(dists))
-#     while accept > acceptance_rate:
-#         epsilon = new_epsilon
-#         new_epsilon = float(jnp.quantile(dists, quantile_rate))
-#         datas, thetas, dists, key = ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, new_epsilon, true_data)
-#         key, subkey = random.split(key)
-#         keys_pred = random.split(subkey, n_points)
-#         datas_pred = vmap(data_simulator, in_axes=(0, 0))(keys_pred, thetas)
-#         new_dists = vmap(discrepancy, in_axes=(0, None))(datas_pred, true_data)
-#         accept = jnp.mean(new_dists < new_epsilon)
-#         epsilon = new_epsilon
-#         print("epsilon: ", epsilon, "acceptance rate: ", accept)
-#     if return_accept: 
-#         return epsilon, accept, key
-#     return epsilon, key
+def get_epsilon_star(key, acceptance_rate, n_points, prior_simulator, data_simulator, discrepancy, true_data, quantile_rate = .9, epsilon = jnp.inf, return_accept = False):
+    new_epsilon = epsilon
+    accept = 1.
+    datas, thetas, dists, key = ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
+    if epsilon == jnp.inf:
+        print("Distances: min = ", jnp.min(dists), "max = ", jnp.max(dists), "mean = ", jnp.mean(dists), "std = ", jnp.std(dists))
+    while accept > acceptance_rate:
+        epsilon = new_epsilon
+        new_epsilon = float(jnp.quantile(dists, quantile_rate))
+        datas, thetas, dists, key = ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, new_epsilon, true_data)
+        key, subkey = random.split(key)
+        keys_pred = random.split(subkey, n_points)
+        datas_pred = vmap(data_simulator, in_axes=(0, 0))(keys_pred, thetas)
+        new_dists = vmap(discrepancy, in_axes=(0, None))(datas_pred, true_data)
+        accept = jnp.mean(new_dists < new_epsilon)
+        epsilon = new_epsilon
+        print("epsilon: ", epsilon, "acceptance rate: ", accept)
+    if return_accept: 
+        return epsilon, accept, key
+    return epsilon, key
 
 def get_dataset(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data):
     n_points = n_points//2

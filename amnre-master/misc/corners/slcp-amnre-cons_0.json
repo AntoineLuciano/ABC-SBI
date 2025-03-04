@@ -1,0 +1,27 @@
+{
+    "items": [
+        {
+            "files": [
+                "**/results/slcp-amnre_0_00100.pth",
+                "**/results/slcp-amnre_0_00010.pth",
+                "**/results/slcp-amnre_0_00001.pth"
+            ]
+        },
+        {
+            "marginalize": true,
+            "files": "**/results/slcp-amnre_0_00110.pth"
+        },
+        {
+            "marginalize": true,
+            "files": "**/results/slcp-amnre_0_00101.pth"
+        },
+        {
+            "marginalize": true,
+            "files": "**/results/slcp-amnre_0_00011.pth"
+        }
+    ],
+    "legend": ["1-d", null, null, null],
+    "masks": {
+        "00111": {"size": 3.2}
+    }
+}
