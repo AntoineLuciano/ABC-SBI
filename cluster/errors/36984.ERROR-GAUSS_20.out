@@ -1,43 +1,0 @@
-An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-  0%|          | 0/6400 [00:00<?, ?it/s] 42%|████▏     | 2664/6400 [05:20<07:28,  8.32it/s] 42%|████▏     | 2664/6400 [05:40<07:28,  8.32it/s] 83%|████████▎ | 5332/6400 [10:40<02:08,  8.33it/s] 83%|████████▎ | 5332/6400 [11:00<02:08,  8.33it/s]100%|██████████| 6400/6400 [12:48<00:00,  8.33it/s]
-/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py:174: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  Z_approx = np.trapz(pdf_approx, grid_approx)
-  0%|          | 0/6400 [00:00<?, ?it/s] 42%|████▏     | 2676/6400 [05:20<07:25,  8.36it/s] 42%|████▏     | 2676/6400 [05:32<07:25,  8.36it/s] 83%|████████▎ | 5332/6400 [10:40<02:08,  8.32it/s] 83%|████████▎ | 5332/6400 [10:52<02:08,  8.32it/s]100%|██████████| 6400/6400 [12:49<00:00,  8.32it/s]
-/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py:174: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  Z_approx = np.trapz(pdf_approx, grid_approx)
-  0%|          | 0/6400 [00:00<?, ?it/s] 40%|███▉      | 2550/6400 [05:20<08:03,  7.97it/s] 40%|███▉      | 2550/6400 [05:33<08:03,  7.97it/s] 77%|███████▋  | 4906/6400 [10:40<03:16,  7.61it/s] 77%|███████▋  | 4906/6400 [10:53<03:16,  7.61it/s]100%|██████████| 6400/6400 [14:06<00:00,  7.56it/s]
-/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py:174: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  Z_approx = np.trapz(pdf_approx, grid_approx)
-  0%|          | 0/6400 [00:00<?, ?it/s] 36%|███▌      | 2290/6400 [05:20<09:34,  7.15it/s] 36%|███▌      | 2290/6400 [05:38<09:34,  7.15it/s] 72%|███████▏  | 4604/6400 [10:40<04:09,  7.20it/s] 72%|███████▏  | 4604/6400 [10:58<04:09,  7.20it/s]100%|██████████| 6400/6400 [14:43<00:00,  7.24it/s]
-/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py:174: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  Z_approx = np.trapz(pdf_approx, grid_approx)
-  0%|          | 0/6400 [00:00<?, ?it/s] 36%|███▌      | 2276/6400 [05:20<09:40,  7.11it/s] 36%|███▌      | 2276/6400 [05:37<09:40,  7.11it/s] 71%|███████   | 4555/6400 [10:40<04:19,  7.12it/s] 71%|███████   | 4555/6400 [10:57<04:19,  7.12it/s]100%|██████████| 6400/6400 [14:55<00:00,  7.15it/s]
-/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py:174: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  Z_approx = np.trapz(pdf_approx, grid_approx)
-  0%|          | 0/6400 [00:00<?, ?it/s] 35%|███▌      | 2266/6400 [05:20<09:43,  7.08it/s] 35%|███▌      | 2266/6400 [05:37<09:43,  7.08it/s] 71%|███████   | 4535/6400 [10:40<04:23,  7.09it/s] 71%|███████   | 4535/6400 [10:57<04:23,  7.09it/s]100%|██████████| 6400/6400 [15:03<00:00,  7.08it/s]
-/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py:174: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  Z_approx = np.trapz(pdf_approx, grid_approx)
-  0%|          | 0/6400 [00:00<?, ?it/s] 36%|███▌      | 2307/6400 [05:20<09:27,  7.21it/s] 36%|███▌      | 2307/6400 [05:33<09:27,  7.21it/s] 72%|███████▏  | 4581/6400 [10:40<04:14,  7.15it/s] 72%|███████▏  | 4581/6400 [10:53<04:14,  7.15it/s]100%|██████████| 6400/6400 [14:55<00:00,  7.15it/s]
-/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py:174: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  Z_approx = np.trapz(pdf_approx, grid_approx)
-  0%|          | 0/6400 [00:00<?, ?it/s] 36%|███▌      | 2294/6400 [05:20<09:32,  7.17it/s] 36%|███▌      | 2294/6400 [05:38<09:32,  7.17it/s] 71%|███████▏  | 4575/6400 [10:40<04:15,  7.14it/s] 71%|███████▏  | 4575/6400 [10:58<04:15,  7.14it/s]100%|██████████| 6400/6400 [14:55<00:00,  7.14it/s]
-/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py:174: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  Z_approx = np.trapz(pdf_approx, grid_approx)
-  0%|          | 0/6400 [00:00<?, ?it/s] 36%|███▌      | 2282/6400 [05:20<09:37,  7.13it/s] 36%|███▌      | 2282/6400 [05:33<09:37,  7.13it/s] 71%|███████▏  | 4565/6400 [10:40<04:17,  7.13it/s] 71%|███████▏  | 4565/6400 [10:53<04:17,  7.13it/s]100%|██████████| 6400/6400 [14:57<00:00,  7.13it/s]
-/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py:174: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  Z_approx = np.trapz(pdf_approx, grid_approx)
-  0%|          | 0/6400 [00:00<?, ?it/s] 35%|███▌      | 2258/6400 [05:20<09:47,  7.06it/s] 35%|███▌      | 2258/6400 [05:39<09:47,  7.06it/s] 71%|███████   | 4547/6400 [10:40<04:20,  7.11it/s] 71%|███████   | 4547/6400 [11:00<04:20,  7.11it/s]100%|██████████| 6400/6400 [14:54<00:00,  7.15it/s]
-/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py:174: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  Z_approx = np.trapz(pdf_approx, grid_approx)
-  0%|          | 0/6400 [00:00<?, ?it/s] 36%|███▋      | 2333/6400 [05:20<09:17,  7.29it/s] 36%|███▋      | 2333/6400 [05:37<09:17,  7.29it/s] 73%|███████▎  | 4653/6400 [10:40<04:00,  7.27it/s] 73%|███████▎  | 4653/6400 [10:57<04:00,  7.27it/s]100%|██████████| 6400/6400 [14:46<00:00,  7.22it/s]
-/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py:174: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  Z_approx = np.trapz(pdf_approx, grid_approx)
-  0%|          | 0/6400 [00:00<?, ?it/s] 36%|███▋      | 2335/6400 [05:20<09:17,  7.30it/s] 36%|███▋      | 2335/6400 [05:37<09:17,  7.30it/s] 73%|███████▎  | 4646/6400 [10:40<04:01,  7.25it/s] 73%|███████▎  | 4646/6400 [10:57<04:01,  7.25it/s]100%|██████████| 6400/6400 [14:43<00:00,  7.24it/s]
-/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/cluster_gauss.py:174: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  Z_approx = np.trapz(pdf_approx, grid_approx)
-JIT session error: Cannot allocate memory
-JIT session error: Cannot allocate memory
-JIT session error: Cannot allocate memory
-terminate called after throwing an instance of 'std::bad_alloc'
-  what():  std::bad_alloc
-Aborted (core dumped)

@@ -1,0 +1,19 @@
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+jax.errors.SimplifiedTraceback: For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/cluster_gauss_1D_known.py", line 219, in <module>
+    grid_kde_nn, pdf_kde_nn = find_grid_explorative(lambda x: new_post_pdf_z(params, x, TRUE_DATA, kde_approx), N_GRID_EXPLO, N_GRID_FINAL, MINN, MAXX)
+  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/functions/SBC.py", line 74, in find_grid_explorative
+    pdf_initial = func(grid_initial)
+  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/cluster_gauss_1D_known.py", line 219, in <lambda>
+    grid_kde_nn, pdf_kde_nn = find_grid_explorative(lambda x: new_post_pdf_z(params, x, TRUE_DATA, kde_approx), N_GRID_EXPLO, N_GRID_FINAL, MINN, MAXX)
+  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/functions/SBC.py", line 58, in new_post_pdf_z
+    return kde_estimator(mus)*jnp.exp(logratio_batch_z(params, mus, z))
+  File "/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/site-packages/jax/_src/scipy/stats/kde.py", line 134, in __call__
+    return self.evaluate(points)
+  File "/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/site-packages/jax/_src/scipy/stats/kde.py", line 129, in evaluate
+    result = _gaussian_kernel_eval(False, self.dataset.T, self.weights[:, None],
+jaxlib.xla_extension.XlaRuntimeError: RESOURCE_EXHAUSTED: Out of memory allocating 412500000016 bytes.

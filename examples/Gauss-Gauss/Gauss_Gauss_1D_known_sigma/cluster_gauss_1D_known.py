@@ -108,9 +108,9 @@ MU0 = 0.
 SIGMA = 1.
 MODEL_ARGS = [SIGMA]
 
-N_POINTS_TRAIN = 1000000
-N_POINTS_TEST = 100000
-N_POINTS_EPS = 10000
+N_POINTS_TRAIN = 100000
+N_POINTS_TEST = 10000
+N_POINTS_EPS = 1000000
 N_MUS = 10
 N_C2ST = 10000
 sim_args = None
@@ -135,13 +135,14 @@ N_GRID_FINAL = 10000
 N_GRID_EXPLO = 1000
 
 
-PATH_RESULTS = os.getcwd() + "/examples/Gauss_Gauss_1D_known_sigma/results_for_paper/"
+PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/results/cluster/"
 if not os.path.exists(PATH_RESULTS):
     os.makedirs(PATH_RESULTS)
     
 
-N_DATAS = [5, 10, 50]
-SIGMAS0 = [5*SIGMA, 10*SIGMA, 20*SIGMA]
+N_DATAS = [50]
+print("N_DATA = ", N_DATAS)
+SIGMAS0 = [20*SIGMA]
 ALPHAS = [1., .99, .9,  .5, .1, .01, .001]
 
 
@@ -159,7 +160,7 @@ for N_DATA in N_DATAS:
         PRIOR_ARGS = [MU0, SIGMA0]
         PRIOR_LOGPDF = lambda x: norm.logpdf(x, loc = MU0, scale = SIGMA0)
         prior = stats.norm(loc = MU0, scale = SIGMA0)
-        TRUE_MUS = np.append(np.sort(stats.norm.rvs(size = N_MUS-1, random_state = 0)*SIGMA0), 3*SIGMA0)
+        TRUE_MUS = np.array([-2.7*SIGMA0, -2*SIGMA0, 2.1*SIGMA0, 3*SIGMA0])
 
         MINN, MAXX = prior.interval(1-1e-5)
         dico_sigma0 = {"SIGMA0": SIGMA0, "TRUE_MUS": TRUE_MUS, "N_DATA":N_DATA}
@@ -214,12 +215,15 @@ for N_DATA in N_DATAS:
                 print('Time to train the neural network: {:.2f}s\n'.format(time.time()-time_nn))
                 
                 kde_approx = gaussian_kde(X_train[:,0], bw_method = "scott")
-
+                print("Find grid...")
                 grid_kde_nn, pdf_kde_nn = find_grid_explorative(lambda x: new_post_pdf_z(params, x, TRUE_DATA, kde_approx), N_GRID_EXPLO, N_GRID_FINAL, MINN, MAXX)
+                print("Sample...")
                 key, subkey = random.split(key)
                 sample_kde_nn = post_sample(subkey, grid_kde_nn, pdf_kde_nn, N_C2ST)
-                
-                accuracy_c2st = c2st(torch.tensor(true_sample[:,None]), torch.tensor(sample_kde_nn[:,None]))
+                if np.isnan(sample_kde_nn).any() or np.isnan(true_sample).any():
+                    accuracy_c2st = [np.inf]
+                else: 
+                    accuracy_c2st = c2st(torch.tensor(true_sample[:,None]), torch.tensor(sample_kde_nn[:,None]))
                 print("C2ST accuracy: ", np.array(accuracy_c2st)[0])
                 
 
