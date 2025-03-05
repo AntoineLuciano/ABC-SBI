@@ -53,10 +53,11 @@ def get_epsilon_star(key, acceptance_rate, n_points, prior_simulator, data_simul
 
 def get_dataset(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data):
     n_points = n_points//2
-    zs0, thetas0, _, key = ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
-    _, thetas1, _, key = ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
-    zs = jnp.concatenate([zs0, zs0], axis=0)
-    thetas = jnp.concatenate([thetas0, thetas1], axis=0)
+    zs, thetas, _, key = ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
+    key, key_perm = random.split(key)
+    thetas_prime = thetas[random.permutation(key_perm, thetas.shape[0])]
+    zs = jnp.concatenate([zs, zs], axis=0)
+    thetas = jnp.concatenate([thetas, thetas_prime], axis=0)
     ys = jnp.append(jnp.zeros(n_points), jnp.ones(n_points)).astype(int)
     Xs = jnp.concatenate([thetas, zs], axis=1)
     return Xs, ys, key

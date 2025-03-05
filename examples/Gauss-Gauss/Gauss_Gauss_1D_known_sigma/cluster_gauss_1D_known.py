@@ -135,13 +135,13 @@ N_GRID_FINAL = 10000
 N_GRID_EXPLO = 1000
 
 
-PATH_RESULTS = os.getcwd() + "/examples/Gauss_Gauss_1D_known_sigma/results_for_paper/"
+PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/results/local/"
 if not os.path.exists(PATH_RESULTS):
     os.makedirs(PATH_RESULTS)
     
 
-N_DATAS = [5, 10, 50]
-SIGMAS0 = [5*SIGMA, 10*SIGMA, 20*SIGMA]
+N_DATAS = [10]
+SIGMAS0 = [10*SIGMA, 20*SIGMA, 5*SIGMA]
 ALPHAS = [1., .99, .9,  .5, .1, .01, .001]
 
 
@@ -213,7 +213,7 @@ for N_DATA in N_DATAS:
                 params, train_accuracy, train_losses, test_accuracy, test_losses, key = train_loop(key, N_EPOCHS, NUM_LAYERS, HIDDEN_SIZE, NUM_CLASSES, BATCH_SIZE, NUM_BATCH, LEARNING_RATE, WDECAY, PATIENCE, COOLDOWN, FACTOR, RTOL, ACCUMULATION_SIZE, LEARNING_RATE_MIN, prior_simulator, data_simulator, discrepancy, true_data = TRUE_DATA, X_train = X_train, y_train = y_train, X_test = X_test, y_test =  y_test, N_POINTS_TRAIN = N_POINTS_TRAIN, N_POINTS_TEST = N_POINTS_TEST, epsilon = EPSILON, verbose = True)
                 print('Time to train the neural network: {:.2f}s\n'.format(time.time()-time_nn))
                 
-                kde_approx = gaussian_kde(X_train[:,0], bw_method = "scott")
+                kde_approx = gaussian_kde(X_test[:,0], bw_method = "scott")
 
                 grid_kde_nn, pdf_kde_nn = find_grid_explorative(lambda x: new_post_pdf_z(params, x, TRUE_DATA, kde_approx), N_GRID_EXPLO, N_GRID_FINAL, MINN, MAXX)
                 key, subkey = random.split(key)
