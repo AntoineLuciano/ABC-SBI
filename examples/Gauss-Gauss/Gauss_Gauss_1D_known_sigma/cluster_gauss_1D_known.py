@@ -108,9 +108,9 @@ MU0 = 0.
 SIGMA = 1.
 MODEL_ARGS = [SIGMA]
 
-N_POINTS_TRAIN = 1000000
-N_POINTS_TEST = 100000
-N_POINTS_EPS = 10000
+N_POINTS_TRAIN = 100000
+N_POINTS_TEST = 10000
+N_POINTS_EPS = 1000000
 N_MUS = 10
 N_C2ST = 10000
 sim_args = None
@@ -135,13 +135,23 @@ N_GRID_FINAL = 10000
 N_GRID_EXPLO = 1000
 
 
+<<<<<<< HEAD
 PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/results/local/"
+=======
+PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/results/cluster/"
+>>>>>>> e9a9a6dc7e43f9c867082b515581cd309de9a3ae
 if not os.path.exists(PATH_RESULTS):
     os.makedirs(PATH_RESULTS)
     
 
+<<<<<<< HEAD
 N_DATAS = [10]
 SIGMAS0 = [10*SIGMA, 20*SIGMA, 5*SIGMA]
+=======
+N_DATAS = [50]
+print("N_DATA = ", N_DATAS)
+SIGMAS0 = [20*SIGMA]
+>>>>>>> e9a9a6dc7e43f9c867082b515581cd309de9a3ae
 ALPHAS = [1., .99, .9,  .5, .1, .01, .001]
 
 
@@ -159,7 +169,7 @@ for N_DATA in N_DATAS:
         PRIOR_ARGS = [MU0, SIGMA0]
         PRIOR_LOGPDF = lambda x: norm.logpdf(x, loc = MU0, scale = SIGMA0)
         prior = stats.norm(loc = MU0, scale = SIGMA0)
-        TRUE_MUS = np.append(np.sort(stats.norm.rvs(size = N_MUS-1, random_state = 0)*SIGMA0), 3*SIGMA0)
+        TRUE_MUS = np.array([-2.7*SIGMA0, -2*SIGMA0, 2.1*SIGMA0, 3*SIGMA0])
 
         MINN, MAXX = prior.interval(1-1e-5)
         dico_sigma0 = {"SIGMA0": SIGMA0, "TRUE_MUS": TRUE_MUS, "N_DATA":N_DATA}
@@ -213,13 +223,21 @@ for N_DATA in N_DATAS:
                 params, train_accuracy, train_losses, test_accuracy, test_losses, key = train_loop(key, N_EPOCHS, NUM_LAYERS, HIDDEN_SIZE, NUM_CLASSES, BATCH_SIZE, NUM_BATCH, LEARNING_RATE, WDECAY, PATIENCE, COOLDOWN, FACTOR, RTOL, ACCUMULATION_SIZE, LEARNING_RATE_MIN, prior_simulator, data_simulator, discrepancy, true_data = TRUE_DATA, X_train = X_train, y_train = y_train, X_test = X_test, y_test =  y_test, N_POINTS_TRAIN = N_POINTS_TRAIN, N_POINTS_TEST = N_POINTS_TEST, epsilon = EPSILON, verbose = True)
                 print('Time to train the neural network: {:.2f}s\n'.format(time.time()-time_nn))
                 
+<<<<<<< HEAD
                 kde_approx = gaussian_kde(X_test[:,0], bw_method = "scott")
 
+=======
+                kde_approx = gaussian_kde(X_train[:,0], bw_method = "scott")
+                print("Find grid...")
+>>>>>>> e9a9a6dc7e43f9c867082b515581cd309de9a3ae
                 grid_kde_nn, pdf_kde_nn = find_grid_explorative(lambda x: new_post_pdf_z(params, x, TRUE_DATA, kde_approx), N_GRID_EXPLO, N_GRID_FINAL, MINN, MAXX)
+                print("Sample...")
                 key, subkey = random.split(key)
                 sample_kde_nn = post_sample(subkey, grid_kde_nn, pdf_kde_nn, N_C2ST)
-                
-                accuracy_c2st = c2st(torch.tensor(true_sample[:,None]), torch.tensor(sample_kde_nn[:,None]))
+                if np.isnan(sample_kde_nn).any() or np.isnan(true_sample).any():
+                    accuracy_c2st = [np.inf]
+                else: 
+                    accuracy_c2st = c2st(torch.tensor(true_sample[:,None]), torch.tensor(sample_kde_nn[:,None]))
                 print("C2ST accuracy: ", np.array(accuracy_c2st)[0])
                 
 
