@@ -22,7 +22,7 @@ import seaborn as sns
 import scipy.stats as stats
 from sbibm.metrics import c2st
 import torch
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 
 @jit
 def prior_simulator(key):
@@ -136,7 +136,6 @@ key = random.PRNGKey(0)
 N_KDE = 100000
 N_POINTS_TRAIN = 1000000
 N_POINTS_TEST = 100000
-N_POINTS_EPS = 100000
 N_SAMPLE = 10000
 N_SAMPLES = 10
 
@@ -154,7 +153,7 @@ BATCH_SIZE = 256
 NUM_BATCH = 1024
 NUM_CLASSES = 2
 HIDDEN_SIZE = 256
-NUM_LAYERS = 7
+NUM_LAYERS = 2
 WDECAY = .001
 N_GRID_FINAL = 10000
 N_GRID_EXPLO = 1000
@@ -198,10 +197,21 @@ for alpha in tqdm(ALPHAS):
     X = np.concatenate([X_train, X_test], axis=0)
     key, subkey = random.split(key)
     kde_approx_empiric = gaussian_kde(X[random.choice(subkey, X.shape[0], (N_KDE,)),0])
+    print("Find grid KDE NN approx...", end ="")
+    time_grid = time.time()
     grid_kde_nn, pdf_kde_nn = find_grid_explorative(lambda x: new_post_pdf_z(params, x, TRUE_DATA, kde_approx), 10000, 10000, MINN, MAXX)
+    print("Done in {:.2} sec.".format(time.time()-time_grid))
+    print("Find grid KDE NN empiric approx...", end ="")
+    time_grid = time.time()
     grid_kde_nn_empiric, pdf_kde_nn_empiric = find_grid_explorative(lambda x: new_post_pdf_z(params, x, TRUE_DATA, kde_approx_empiric), 10000, 10000, MINN, MAXX)
+    print("Done in {:.2} sec.".format(time.time()-time_grid))
+    print("Find grid NN approx...", end = "")
+    time_grid= time.time()
     grid_nn, pdf_nn = find_grid_explorative(lambda x: post_pdf_z(params, x, TRUE_DATA, PRIOR_LOGPDF), 10000, 10000, MINN, MAXX)
+    print("Done in {:.2} sec.".format(time.time()-time_grid))
     accuraccy_abc, accuraccy_nn, accuraccy_kde_nn, accuraccy_kde_nn_empiric = [], [], [], []
+    print("Sampling {} times...".format(N_SAMPLES), end ="")
+    time_sample = time.time()
     for _ in range(N_SAMPLES):
         sample_true = true_post(TRUE_DATA).rvs(N_SAMPLE)
         key, key_abc, key_nn, key_kde_nn = random.split(key, 4)
@@ -217,13 +227,13 @@ for alpha in tqdm(ALPHAS):
         else: accuraccy_abc.append(np.array(c2st(torch.tensor(sample_true)[:,None], torch.tensor(sample_abc)[:,None]))[0])
         if np.isnan(sample_kde_nn_empiric).any(): accuraccy_kde_nn_empiric.append(1)
         else: accuraccy_kde_nn_empiric.append(np.array(c2st(torch.tensor(sample_true)[:,None], torch.tensor(sample_kde_nn_empiric)[:,None]))[0])
-        
+    print("Done in {:.2} sec.".format(time.time()-time_sample)) 
     C2ST_ABC[alpha] = np.array(accuraccy_abc)
     C2ST_NN[alpha] = np.array(accuraccy_nn)
     C2ST_KDE_NN[alpha] = np.array(accuraccy_kde_nn)
     C2ST_KDE_NN_EMPIRIC[alpha] = np.array(accuraccy_kde_nn_empiric)
 
-
+    print("\n---------------------------------------nITERATION ALPHA = {} DONE IN {:.2} SECONDS!\n---------------------------------------".format(alpha, time.time()-time_sim))
 
 mean_abc = np.array([C2ST_ABC[alpha].mean() for alpha in ALPHAS])
 std_abc = np.array([C2ST_ABC[alpha].std() for alpha in ALPHAS])
@@ -254,5 +264,7 @@ plt.xscale("log")
 plt.ylabel("C2ST accuracy")
 plt.axhline(.5, color = "grey", linestyle = "--")
 plt.legend(loc = "upper center")
-plt.savefig("examples/Gauss-Gauss/figures/method_comparison_outlier_mu_{:.2}_sigma0_{}.png".format(TRUE_MU,int(SIGMA0)))
+plt.savefig("examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/figures/method_comparison_single_outlier_mu_{:.2}_sigma0_{}.png".format(TRUE_MU,int(SIGMA0)))
 plt.show()
+
+print("Figure saved in :","examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/figures/method_comparison_single_outlier_mu_{:.2}_sigma0_{}.png".format(TRUE_MU,int(SIGMA0)))
