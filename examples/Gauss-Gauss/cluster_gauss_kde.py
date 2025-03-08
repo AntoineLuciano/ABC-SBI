@@ -77,7 +77,7 @@ L = 63
 B = 16
 N_SBC = (L+1)*1
 
-PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/new_results/"
+PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/results/"
 if not os.path.exists(PATH_RESULTS):
     os.makedirs(PATH_RESULTS)
     

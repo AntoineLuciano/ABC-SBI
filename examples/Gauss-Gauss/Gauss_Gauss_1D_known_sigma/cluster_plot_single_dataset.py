@@ -7,6 +7,7 @@ path = path[:path.index("ABC-SBI")+1]
 path = '/'.join(path)
 print("New path:", path)
 os.chdir(path)
+sys.path.append(path)
 from functions.simulation import get_dataset, ABC_epsilon, get_epsilon_star
 from functions.training import train_loop
 from functions.SBC import SBC_epsilon, plot_SBC, find_grid_explorative, post_pdf_z,post_sample, new_post_pdf_z

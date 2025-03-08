@@ -135,23 +135,13 @@ N_GRID_FINAL = 10000
 N_GRID_EXPLO = 1000
 
 
-<<<<<<< HEAD
 PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/results/local/"
-=======
-PATH_RESULTS = os.getcwd() + "/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/results/cluster/"
->>>>>>> e9a9a6dc7e43f9c867082b515581cd309de9a3ae
 if not os.path.exists(PATH_RESULTS):
     os.makedirs(PATH_RESULTS)
     
 
-<<<<<<< HEAD
 N_DATAS = [10]
 SIGMAS0 = [10*SIGMA, 20*SIGMA, 5*SIGMA]
-=======
-N_DATAS = [50]
-print("N_DATA = ", N_DATAS)
-SIGMAS0 = [20*SIGMA]
->>>>>>> e9a9a6dc7e43f9c867082b515581cd309de9a3ae
 ALPHAS = [1., .99, .9,  .5, .1, .01, .001]
 
 
@@ -223,13 +213,8 @@ for N_DATA in N_DATAS:
                 params, train_accuracy, train_losses, test_accuracy, test_losses, key = train_loop(key, N_EPOCHS, NUM_LAYERS, HIDDEN_SIZE, NUM_CLASSES, BATCH_SIZE, NUM_BATCH, LEARNING_RATE, WDECAY, PATIENCE, COOLDOWN, FACTOR, RTOL, ACCUMULATION_SIZE, LEARNING_RATE_MIN, prior_simulator, data_simulator, discrepancy, true_data = TRUE_DATA, X_train = X_train, y_train = y_train, X_test = X_test, y_test =  y_test, N_POINTS_TRAIN = N_POINTS_TRAIN, N_POINTS_TEST = N_POINTS_TEST, epsilon = EPSILON, verbose = True)
                 print('Time to train the neural network: {:.2f}s\n'.format(time.time()-time_nn))
                 
-<<<<<<< HEAD
                 kde_approx = gaussian_kde(X_test[:,0], bw_method = "scott")
 
-=======
-                kde_approx = gaussian_kde(X_train[:,0], bw_method = "scott")
-                print("Find grid...")
->>>>>>> e9a9a6dc7e43f9c867082b515581cd309de9a3ae
                 grid_kde_nn, pdf_kde_nn = find_grid_explorative(lambda x: new_post_pdf_z(params, x, TRUE_DATA, kde_approx), N_GRID_EXPLO, N_GRID_FINAL, MINN, MAXX)
                 print("Sample...")
                 key, subkey = random.split(key)

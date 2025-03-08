@@ -24,38 +24,6 @@ def plot_SBC(ranks, L, B = 0, err = .01, show = True, ax = None, save_name = "",
     if title != "": ax.set_title(title)
     if save_name != "": plt.savefig(save_name)
     if show:plt.show()
-
-def post_sample(key, grid, pdf_values, L):
-    cdf = jnp.cumsum(pdf_values)
-    cdf = cdf/cdf[-1]
-    us = random.uniform(key, shape = (L,))
-    thetas = jnp.interp(us, cdf, grid)
-    return thetas
-
-def post_sample_batch(key, grids, pdf_values, L):
-    keys = random.split(key, grids.shape[0]+1)
-    return vmap(post_sample, in_axes = (0, 0, 0, None))(keys[1:], grids, pdf_values, L), keys[0]
-
-def elu(x):
-    return jnp.where(x > 0, x, jnp.expm1(x))
-
-@jit
-def logratio_z(params, mus, z):
-    activations = jnp.append(jnp.array([mus]),z)
-    for w, b in params[:-1]:
-        outputs = jnp.dot(w, activations) + b
-        activations = elu(outputs)
-    final_w, final_b = params[-1]
-    logits = jnp.dot(final_w, activations) + final_b
-    return logits[0]-logits[1]
-
-logratio_batch_z = (vmap(logratio_z, in_axes = (None, 0,  None)))
-
-def post_pdf_z(params, mus, z, prior_logpdf):
-    return jnp.exp(prior_logpdf(mus)+logratio_batch_z(params, mus, z))
-
-def new_post_pdf_z(params, mus, z, kde_estimator):
-    return kde_estimator(mus)*jnp.exp(logratio_batch_z(params, mus, z))
     
 
 def find_grid_explorative(func, n_eval_explo, n_eval_final, min_grid, max_grid, threshold_factor=0.01, max_expansion=1000, expansion_factor=0.1):
