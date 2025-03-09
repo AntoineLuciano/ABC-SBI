@@ -56,7 +56,7 @@ def x_design_simulator(key, n_data, K):
 def true_posterior_sample(key, TRUE_DATA, N_SAMPLE):
     COV0 = jnp.diag(np.array([SIGMA0**2]*K))
     PREC0 = jnp.linalg.inv(COV0)
-    PREC_n = PREC0 + (1 / SIGMA**2) * (X_DESIGN.T @ X)
+    PREC_n = PREC0 + (1 / SIGMA**2) * (X_DESIGN.T @ X_DESIGN)
     Sigma_n = jnp.linalg.inv(PREC_n)
     mu_n = Sigma_n @ (PREC0 @ jnp.ones(X_DESIGN.shape[1])* MU0 + (1 / SIGMA**2) * (X_DESIGN.T @ TRUE_DATA))
     return random.normal(key, (N_SAMPLE,)) * np.sqrt(Sigma_n[INDEX_MARGINAL, INDEX_MARGINAL]) + mu_n[INDEX_MARGINAL]
@@ -64,7 +64,7 @@ def true_posterior_sample(key, TRUE_DATA, N_SAMPLE):
 def true_posterior_pdf(theta, TRUE_DATA):
     COV0 = jnp.diag(np.array([SIGMA0**2]*K))
     PREC0 = jnp.linalg.inv(COV0)
-    PREC_n = PREC0 + (1 / SIGMA**2) * (X_DESIGN.T @ X)
+    PREC_n = PREC0 + (1 / SIGMA**2) * (X_DESIGN.T @ X_DESIGN)
     Sigma_n = jnp.linalg.inv(PREC_n)
     mu_n = Sigma_n @ (PREC0 @ jnp.ones(X_DESIGN.shape[1])* MU0 + (1 / SIGMA**2) * (X_DESIGN.T @ TRUE_DATA))
     return norm.pdf(theta, loc=mu_n[INDEX_MARGINAL], scale=np.sqrt(Sigma_n[INDEX_MARGINAL, INDEX_MARGINAL]))
