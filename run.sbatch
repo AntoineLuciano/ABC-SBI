@@ -2,7 +2,6 @@
 #SBATCH -n 2
 #SBATCH -c 2
 #SBATCH --job-name=Linear_Reg_25
-
 #SBATCH --output=./cluster/outs/%J.OUT-%x.out
 #SBATCH --error=./cluster/errors/%J.ERROR-%x.out
 
