@@ -1,6 +1,8 @@
 import pandas as pd
 import pickle
 import lzma
+import numpy as np
+
 
 def create_csv_for_a_dataset(
     i_datasets,

@@ -1,66 +1,102 @@
-from functions.simulation import get_dataset, ABC_epsilon, NRE_corrected_posterior_sample, NRE_posterior_sample
-from function.training import train_loop
-from jax import random, jit
 import os
 import sys
+path = os.getcwd()
+print("Old path:", path)
+path = path.split("/")
+path = path[: path.index("ABC-SBI") + 1]
+path = "/".join(path)
+print("New path:", path)
+os.chdir(path)
+sys.path.append(path)
+from functions.simulation import (
+    get_dataset,
+    NRE_corrected_posterior_sample,
+    NRE_posterior_sample,
+)
+from functions.training import train_loop
+from functions.plots import plot_metric_for_a_dataset, plot_metric_for_many_datasets, plot_posterior_comparison
+from functions.metrics import evaluate_metrics
+from functions.save import create_csv_for_a_dataset, create_pickle_for_a_dataset
+from jax import random, jit, vmap
 from sklearn.model_selection import train_test_split
-import time 
-from scipy.stats import gaussian_kde, ranksums
+import time
+from scipy.stats import norm
 import numpy as np
 import jax.numpy as jnp
-import torch
-import pickle
-from sbibm.metrics import c2st
-@jit 
+
+if len(sys.argv)>1:
+    K = int(sys.argv[1])
+else: 
+    K = 5
+INDEX_MARGINAL = 0
+PATH_RESULTS = (
+    os.getcwd()
+    + "/examples/..."
+)
+
+@jit
 def prior_simulator(key):
     return ...
 
 @jit
-def data_simulator(key, theta):
+def data_simulator(key, betas):
     return ...
 
 @jit
-def discrepancy(data, true_data):
+def discrepancy(y, y_true):
     return ...
 
-def true_posterior_sample(key):
+
+
+
+def true_posterior_sample(key, TRUE_DATA, N_SAMPLE):
     return ...
+
+def true_posterior_pdf(theta, TRUE_DATA):
+    return ...
+
+
+
+PRIOR_DIST = ...
+MODEL_ARGS = ...
+PRIOR_ARGS = ...
+
 
 key = random.PRNGKey(0)
 
-N_KDE = 1000
-N_POINTS = 1000000
-N_SAMPLE = 100000
+
+N_DATA = 100
+N_KDE = 10000
+N_POINTS = 500000
+N_SAMPLE = 10000
 N_SAMPLES = 1
-N_EPSILON = 1000
-N_DATASETS = 2
-N_EPOCHS = 1   
-N_GRID = 10000
-ALPHAS = [1., .99]
-
-#HYPERPARAMETERS PRIOR AND DATA SIMULATOR
-...
-
-PRIOR_DIST = ...
+N_DATASETS = 10
+N_EPOCHS = 100
+N_GRID = 1000
+ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001, .0005, .0001]
 
 
-
-PATH_RESULTS = os.getcwd() + "/examples/..."
 PATH_FIGURES = PATH_RESULTS + "figures/"
+PATH_POSTERIORS = PATH_FIGURES + "posterior_check/"
 PATH_PICKLES = PATH_RESULTS + "pickles/"
+PATH_CSV = PATH_RESULTS + "csv/"
+ 
 if not os.path.exists(PATH_RESULTS):
     os.makedirs(PATH_RESULTS)
 if not os.path.exists(PATH_FIGURES):
     os.makedirs(PATH_FIGURES)
 if not os.path.exists(PATH_PICKLES):
     os.makedirs(PATH_PICKLES)
-    
+if not os.path.exists(PATH_CSV):
+    os.makedirs(PATH_CSV)
+if not os.path.exists(PATH_POSTERIORS):
+    os.makedirs(PATH_POSTERIORS)
     
 LEARNING_RATE = 0.001
 PATIENCE = 7
 COOLDOWN = 0
-FACTOR = .5
-RTOL = 1e-4  
+FACTOR = 0.5
+RTOL = 1e-4
 ACCUMULATION_SIZE = 200
 LEARNING_RATE_MIN = 1e-6
 
@@ -69,121 +105,218 @@ NUM_BATCH = 1024
 NUM_CLASSES = 2
 HIDDEN_SIZE = 256
 NUM_LAYERS = 2
-WDECAY = .001
+WDECAY = 0.001
 
 
-def ABC_NRE(key, N_POINTS, prior_simulator, data_simulator, discrepancy, TRUE_DATA, EPSILON, index_marginal = 0):
+def ABC_NRE(
+    key,
+    N_POINTS,
+    prior_simulator,
+    data_simulator,
+    discrepancy,
+    TRUE_DATA,
+    EPSILON,
+    index_marginal=0,
+):
     key, key_data = random.split(key)
     time_start = time.time()
-    X,y, dists, key = get_dataset(key_data, N_POINTS, prior_simulator, data_simulator, discrepancy, EPSILON, TRUE_DATA, index_marginal)
+    print("Simulation of the training dataset...")
+    X, y, dists, key = get_dataset(
+        key_data,
+        N_POINTS,
+        prior_simulator,
+        data_simulator,
+        discrepancy,
+        EPSILON,
+        TRUE_DATA,
+        index_marginal,
+    )
 
-    
-    key, key_split = random.split(key)  
-    
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=key_split)
+    key, key_split = random.split(key)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=np.random.RandomState(key_split)
+    )
     time_simulations = time.time() - time_start
-    
-    params, train_accuracy, train_losses, test_accuracy, test_losses, key = train_loop(key, N_EPOCHS, NUM_LAYERS, HIDDEN_SIZE, NUM_CLASSES, BATCH_SIZE, NUM_BATCH, LEARNING_RATE, WDECAY, PATIENCE, COOLDOWN, FACTOR, RTOL, ACCUMULATION_SIZE, LEARNING_RATE_MIN, prior_simulator, data_simulator, discrepancy, true_data = TRUE_DATA, X_train = X_train, y_train = y_train, X_test = X_test, y_test =  y_test, N_POINTS_TRAIN = N_POINTS_TRAIN, N_POINTS_TEST = N_POINTS_TEST, epsilon = EPSILON, verbose = True)
+    print("Done in {} seconds.".format(time_simulations))
+    N_POINTS_TRAIN = len(X_train)
+    N_POINTS_TEST = len(X_test)
+
+    print("Training the neural network...")
+    params, train_accuracy, train_losses, test_accuracy, test_losses, key = train_loop(
+        key,
+        N_EPOCHS,
+        NUM_LAYERS,
+        HIDDEN_SIZE,
+        NUM_CLASSES,
+        BATCH_SIZE,
+        NUM_BATCH,
+        LEARNING_RATE,
+        WDECAY,
+        PATIENCE,
+        COOLDOWN,
+        FACTOR,
+        RTOL,
+        ACCUMULATION_SIZE,
+        LEARNING_RATE_MIN,
+        prior_simulator,
+        data_simulator,
+        discrepancy,
+        true_data=TRUE_DATA,
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+        N_POINTS_TRAIN=N_POINTS_TRAIN,
+        N_POINTS_TEST=N_POINTS_TEST,
+        epsilon=EPSILON,
+        verbose=True,
+    )
     time_training = time.time() - time_simulations
+    print("Done in {} seconds!".format(time_training))
+    return (
+        X,
+        y,
+        dists,
+        params,
+        train_accuracy,
+        train_losses,
+        test_accuracy,
+        test_losses,
+        key,
+        time_simulations,
+        time_training,
+    )
     
-    return X, y, dists, params, train_accuracy, train_losses, test_accuracy, test_losses, key, time_simulations, time_training
 
 
-def evaluate_metrics(key, TRUE_DATA, params, X, PRIOR_DIST, N_GRID, N_SAMPLE, N_SAMPLES, N_KDE):
+def for_an_epsilon(
+    i_dataset,
+    alpha,
+    key,
+    N_POINTS,
+    prior_simulator,
+    data_simulator,
+    discrepancy,
+    TRUE_DATA,
+    EPSILON,
+    PRIOR_DIST,
+    N_GRID,
+    N_KDE,
+    index_marginal=0,
+):
+    print("\n---------------------------------\nDATASET {} ALPHA {}\n---------------------------------".format(i_dataset, alpha))
+    key, key_nre, key_kde, key_evaluate = random.split(key, 4)
+    (
+        X,
+        y,
+        dists,
+        params,
+        train_accuracy,
+        train_losses,
+        test_accuracy,
+        test_losses,
+        key,
+        time_simulations,
+        time_training,
+    ) = ABC_NRE(
+        key_nre, 
+        N_POINTS,
+        prior_simulator,
+        data_simulator,
+        discrepancy,
+        TRUE_DATA,
+        EPSILON,
+        index_marginal,
+    )
+    THETAS_ABC = X[:, 0]
     
-    METRICS_ABC_ij, METRICS_NRE_ij, METRICS_CORRECTED_NRE_ij = {}, {}, {}
-    time_start = time.time()   
-    PRIOR_LOGPDF = lambda theta: PRIOR_DIST.logpdf(theta)
-    KDE_APPROX = gaussian_kde(X[:N_KDE,0])
-    MIN_INIT, MAX_INIT = PRIOR_DIST.interval(0.999)
+    print("Plotting the posterior...")
+    plot_posterior_comparison(params, TRUE_DATA, THETAS_ABC, PRIOR_DIST, true_posterior_pdf=true_posterior_pdf, show = False, N_GRID = 10000, file_name = PATH_POSTERIORS + "{}_alpha_{}.png".format(i_dataset, alpha), N_KDE = 10000)
     
-    for j in range(N_SAMPLES):
-        key, key_true, key_nre, key_corrected_nre, key_abc = random.split(key, 5)
-        sample_true = true_posterior_sample(key_true, TRUE_DATA, N_SAMPLE)
-        sample_nre = NRE_posterior_sample(key_nre, params, TRUE_DATA, PRIOR_LOGPDF, N_GRID, MIN_INIT, MAX_INIT, N_SAMPLE)
-        sample_corrected_nre = NRE_corrected_posterior_sample(key_corrected_nre, params, TRUE_DATA, KDE_APPROX, N_GRID, MIN_INIT, MAX_INIT, N_SAMPLE)
-        sample_abc = X[random.choice(key_abc, np.arange(len(X)), (N_SAMPLE)),0]
-        if np.isnan(sample_abc).any(): 
-            METRICS_ABC_ij["C2ST"][j] = 1.
-            METRICS_ABC_ij["RS_pvalue"][j] = 0.
-            METRICS_ABC_ij["RS_stat"][j]
-        else:
-            METRICS_ABC_ij["C2ST"][j] = c2st(torch.tensor(sample_true)[:,None], torch.tensor(sample_abc)[:,None])
-            METRICS_ABC_ij["RS_stat"][j], METRICS_ABC_ij["RS_pvalue"][j] = ranksums(sample_true, sample_abc)
-        
-        if np.isnan(sample_nre).any():
-            METRICS_NRE_ij["C2ST"][j] = 1.
-            METRICS_NRE_ij["RS_pvalue"][j] = 0.
-            METRICS_NRE_ij["RS_stat"][j]
-        else:
-            METRICS_NRE_ij["C2ST"][j] = c2st(torch.tensor(sample_true)[:,None], torch.tensor(sample_nre)[:,None])
-            METRICS_NRE_ij["RS_stat"][j], METRICS_NRE_ij["RS_pvalue"][j] = ranksums(sample_true, sample_nre)
-        
-        if np.isnan(sample_corrected_nre).any():
-            METRICS_CORRECTED_NRE_ij["C2ST"][j] = 1.
-            METRICS_CORRECTED_NRE_ij["RS_pvalue"][j] = 0.
-            METRICS_CORRECTED_NRE_ij["RS_stat"][j]
-        else:
-            METRICS_CORRECTED_NRE_ij["C2ST"][j] = c2st(torch.tensor(sample_true)[:,None], torch.tensor(sample_corrected_nre)[:,None])
-            METRICS_CORRECTED_NRE_ij["RS_stat"][j], METRICS_CORRECTED_NRE_ij["RS_pvalue"][j] = ranksums(sample_true, sample_corrected_nre)
-    return METRICS_ABC_ij, METRICS_NRE_ij, METRICS_CORRECTED_NRE_ij, time.time() - time_start
+    
+    METRICS_ABC_ij, METRICS_NRE_ij, METRICS_CORRECTED_NRE_ij, time_eval = evaluate_metrics(key_evaluate, TRUE_DATA, params, THETAS_ABC, PRIOR_DIST, N_GRID, N_SAMPLE, N_SAMPLES, true_posterior_sample, N_KDE)
+    return (
+        dists,
+        params,
+        train_accuracy,
+        train_losses,
+        test_accuracy,
+        test_losses,
+        time_simulations,
+        time_training,
+        time_eval,
+        METRICS_ABC_ij,
+        METRICS_NRE_ij,
+        METRICS_CORRECTED_NRE_ij,
+    )
 
 
-def create_csv_for_a_dataset(i_datasets,TEST_ACCURACY, TRAIN_ACCURACY, TEST_LOSSES, TRAIN_LOSSES, TIME_SIMULATIONS, TIME_TRAINING, TIME_EVAL, METRICS_ABC, METRICS_NRE, METRICS_CORRECTED_NRE, TRUE_DATA, TRUE_THETA):
-        df = pd.DataFrame()
-        df["ALPHAS"] = ALPHAS
-        
-        df["TRUE_DATA"] = TRUE_DATA
-        df["TRUE_THETA"] = TRUE_THETA
-        df["TEST_ACCURACY"] = np.array([TEST_ACCURACY[a] for a in ALPHAS])
-        df["TRAIN_ACCURACY"] = np.array([TRAIN_ACCURACY[a] for a in ALPHAS])
-        df["TEST_LOSSES"] = np.array([TEST_LOSSES[a] for a in ALPHAS])
-        df["TRAIN_LOSSES"] = np.array([TRAIN_LOSSES[a] for a in ALPHAS])
-        df["TIME_SIMULATIONS"] = np.array([TIME_SIMULATIONS[a] for a in ALPHAS])
-        df["TIME_TRAINING"] = np.array([TIME_TRAINING[a] for a in ALPHAS])
-        df["TIME_EVAL"] = np.array([TIME_EVAL[a] for a in ALPHAS])
-        df["RANKSUMS_STAT_ABC"] = np.array([METRICS_ABC[a]["RS_stat"] for a in ALPHAS])
-        df["RANKSUMS_PVALUE_ABC"] = np.array([METRICS_ABC[a]["RS_pvalue"] for a in ALPHAS])
-        df["C2ST_ABC"] = np.array([METRICS_ABC[a]["C2ST"] for a in ALPHAS])
-        df["RANKSUMS_STAT_NRE"] = np.array([METRICS_NRE[a]["RS_stat"] for a in ALPHAS])
-        df["RANKSUMS_PVALUE_NRE"] = np.array([METRICS_NRE[a]["RS_pvalue"] for a in ALPHAS])
-        df["C2ST_NRE"] = np.array([METRICS_NRE[a]["C2ST"] for a in ALPHAS])
-        df["RANKSUMS_STAT_CORRECTED_NRE"] = np.array([METRICS_CORRECTED_NRE[a]["RS_stat"] for a in ALPHAS])
-        df["RANKSUMS_PVALUE_CORRECTED_NRE"] = np.array([METRICS_CORRECTED_NRE[a]["RS_pvalue"] for a in ALPHAS])
-        df["C2ST_CORRECTED_NRE"] = np.array([METRICS_CORRECTED_NRE[a]["C2ST"] for a in ALPHAS])
-        df.to_csv(PATH_RESULTS + "{}_results.csv".format(i_datasets))
-        print("CSV CREATED at {}".format(PATH_RESULTS + "{}_results.csv".format(i_datasets)))
-        
-        
-        
-
-def for_an_epsilon(key, N_POINTS, prior_simulator, data_simulator, discrepancy, TRUE_DATA, EPSILON, PRIOR_DIST, N_GRID, N_KDE, index_marginal = 0):
-    X, y, dists, params, train_accuracy, train_losses, test_accuracy, test_losses, key, time_simulations, time_training = ABC_NRE(key, N_POINTS, prior_simulator, data_simulator, discrepancy, TRUE_DATA, EPSILON, index_marginal)
-    METRICS_ABC_ij, METRICS_NRE_ij, METRICS_CORRECTED_NRE_ij, time_eval = evaluate_metrics(key, TRUE_DATA, params, X, PRIOR_DIST, N_GRID, N_SAMPLE, N_SAMPLES, N_KDE)
-    return dists, params, train_accuracy, train_losses, test_accuracy, test_losses, time_simulations, time_training, time_eval, METRICS_ABC_ij, METRICS_NRE_ij, METRICS_CORRECTED_NRE_ij
-        
-
-def for_a_dataset(key, N_POINTS, prior_simulator, data_simulator, discrepancy, TRUE_DATA, ALPHAS, PRIOR_DIST, index_marginal = 0):
-    PARAMS_i, TEST_ACCURACY_i, TRAIN_ACCURACY_i, TEST_LOSSES_i, TRAIN_LOSSES_i = {}, {}, {}, {}, {}
+def for_a_dataset(
+    i_dataset,
+    key,
+    N_POINTS,
+    prior_simulator,
+    data_simulator,
+    discrepancy,
+    ALPHAS,
+    PRIOR_DIST,
+    index_marginal=0,
+):  
+    print("\n---------------------------------\nDATASET {}\n---------------------------------".format(i_dataset))
+    PARAMS_i, TEST_ACCURACY_i, TRAIN_ACCURACY_i, TEST_LOSSES_i, TRAIN_LOSSES_i = (
+        {},
+        {},
+        {},
+        {},
+        {},
+    )
     TIME_SIMULATIONS_i, TIME_TRAINING_i, TIME_EVAL_i = {}, {}, {}
     METRICS_ABC_i, METRICS_NRE_i, METRICS_CORRECTED_NRE_i = {}, {}, {}
-    
+
     key, key_theta, key_data = random.split(key, 3)
     TRUE_THETA = prior_simulator(key_theta)
     TRUE_DATA = data_simulator(key_data, TRUE_THETA)
     key, key_epsilon = random.split(key)
     time_iterations = {}
-    EPSILONS_i = {1.: np.inf}
+    EPSILONS_i = {1.0: np.inf}
     for alpha in ALPHAS:
         time_iteration = time.time()
         EPSILON = EPSILONS_i[alpha]
         key, key_epsilon = random.split(key_epsilon)
-        dists, params, train_accuracy, train_losses, test_accuracy, test_losses, time_simulations, time_training, time_eval, METRICS_ABC_ij, METRICS_NRE_ij, METRICS_CORRECTED_NRE_ij = for_an_epsilon(key_epsilon, N_POINTS, prior_simulator, data_simulator, discrepancy, TRUE_DATA, EPSILON, PRIOR_DIST, N_GRID, N_KDE, index_marginal)
-        
+        (
+            dists,
+            params,
+            train_accuracy,
+            train_losses,
+            test_accuracy,
+            test_losses,
+            time_simulations,
+            time_training,
+            time_eval,
+            METRICS_ABC_ij,
+            METRICS_NRE_ij,
+            METRICS_CORRECTED_NRE_ij,
+        ) = for_an_epsilon(
+            i_dataset,
+            alpha,
+            key_epsilon,
+            N_POINTS,
+            prior_simulator,
+            data_simulator,
+            discrepancy,
+            TRUE_DATA,
+            EPSILON,
+            PRIOR_DIST,
+            N_GRID,
+            N_KDE,
+            index_marginal,
+        )
+
         if alpha == 1:
             for alpha_not_1 in ALPHAS[1:]:
-                EPSILONS_i[alpha_not_1] = jnp.quantile(dists, alpha_not_1)
-        
+                EPSILONS_i[alpha_not_1] = float(jnp.quantile(dists, alpha_not_1))
+
         PARAMS_i[alpha] = params
         TEST_ACCURACY_i[alpha] = test_accuracy
         TRAIN_ACCURACY_i[alpha] = train_accuracy
@@ -194,19 +327,28 @@ def for_a_dataset(key, N_POINTS, prior_simulator, data_simulator, discrepancy, T
         TIME_EVAL_i[alpha] = time_eval
         METRICS_ABC_i[alpha] = METRICS_ABC_ij
         METRICS_NRE_i[alpha] = METRICS_NRE_ij
-        METRICS_CORRECTED_NRE_i[alpha] = METRICS_ABC_ij
-        
+        METRICS_CORRECTED_NRE_i[alpha] = METRICS_CORRECTED_NRE_ij
         time_iterations[alpha] = time.time() - time_iteration
         
-    
-    return PARAMS_i, TEST_ACCURACY_i, TRAIN_ACCURACY_i, TEST_LOSSES_i, TRAIN_LOSSES_i, TIME_SIMULATIONS_i, TIME_TRAINING_i, TIME_EVAL_i, METRICS_ABC_i, METRICS_NRE_i, METRICS_CORRECTED_NRE_i, TRUE_DATA, TRUE_THETA
-
-
-
-            
-        
-    
-
+    plot_metric_for_a_dataset("C2ST", ALPHAS, METRICS_ABC_i, METRICS_NRE_i, METRICS_CORRECTED_NRE_i, N_SAMPLES, PATH_FIGURES + "c2st_{}.png".format(i_dataset), show = False, title = "$\\theta  =s {:.3}".format(float(TRUE_THETA[index_marginal])))
+    plot_metric_for_a_dataset("RS_stat", ALPHAS, METRICS_ABC_i, METRICS_NRE_i, METRICS_CORRECTED_NRE_i, N_SAMPLES, PATH_FIGURES + "ranksums_{}.png".format(i_dataset), show = False, title = "$\\theta  =s {:.3}".format(float(TRUE_THETA[index_marginal])))
+    create_csv_for_a_dataset(i_dataset, ALPHAS, TEST_ACCURACY_i, TRAIN_ACCURACY_i, TEST_LOSSES_i, TRAIN_LOSSES_i, TIME_SIMULATIONS_i, TIME_TRAINING_i, TIME_EVAL_i, METRICS_ABC_i, METRICS_NRE_i, METRICS_CORRECTED_NRE_i, TRUE_DATA, TRUE_THETA, PATH_CSV + "{}_theta_{:.3}.csv".format(i_dataset,float(TRUE_THETA[index_marginal])))
+    create_pickle_for_a_dataset(ALPHAS, PARAMS_i, METRICS_ABC_i, METRICS_NRE_i, METRICS_CORRECTED_NRE_i, TRUE_DATA, TRUE_THETA, TIME_SIMULATIONS_i, TIME_TRAINING_i, TIME_EVAL_i, MODEL_ARGS, PRIOR_ARGS, PATH_PICKLES + "{}_theta_{:.3}.pkl".format(i_dataset,float(TRUE_THETA[index_marginal])))
+    return (
+        PARAMS_i,
+        TEST_ACCURACY_i,
+        TRAIN_ACCURACY_i,
+        TEST_LOSSES_i,
+        TRAIN_LOSSES_i,
+        TIME_SIMULATIONS_i,
+        TIME_TRAINING_i,
+        TIME_EVAL_i,
+        METRICS_ABC_i,
+        METRICS_NRE_i,
+        METRICS_CORRECTED_NRE_i,
+        TRUE_DATA,
+        TRUE_THETA,
+    )
 
 
 PARAMS = {}
@@ -217,13 +359,45 @@ TRAIN_LOSSES = {}
 
 TIME_SIMULATIONS = {}
 TIME_TRAINING = {}
-TIME_SAMPLING = {}
+TIME_EVAL = {}
 EPSILONS = {}
 
 TRUE_DATAS = {}
 TRUE_THETAS = {}
 
+METRICS_ABC = {}
+METRICS_NRE = {}
+METRICS_CORRECTED_NRE = {}
+
+
 for i_dataset in range(N_DATASETS):
     key, key_i = random.split(key)
-    PARAMS[i_dataset], TEST_ACCURACY[i_dataset], TRAIN_ACCURACY[i_dataset], TEST_LOSSES[i_dataset], TRAIN_LOSSES[i_dataset], TIME_SIMULATIONS[i_dataset], TIME_TRAINING[i_dataset], TIME_SAMPLING[i_dataset], METRICS_ABC[i_dataset], METRICS_NRE[i_dataset], METRICS_CORRECTED_NRE[i_dataset], TRUE_DATAS[i_dataset], TRUE_THETAS[i_dataset] = for_a_dataset(key_i, N_POINTS, prior_simulator, data_simulator, discrepancy, TRUE_DATA, ALPHAS, PRIOR_DIST, PRIOR_LOGPDF, N_GRID, N_KDE, index_marginal = 0)
-    create_csv_for_a_dataset(i_dataset, TEST_ACCURACY[i_dataset], TRAIN_ACCURACY[i_dataset], TEST_LOSSES[i_dataset], TRAIN_LOSSES[i_dataset], TIME_SIMULATIONS[i_dataset], TIME_TRAINING[i_dataset], TIME_SAMPLING[i_dataset], METRICS_ABC[i_dataset], METRICS_NRE[i_dataset], METRICS_CORRECTED_NRE[i_dataset], TRUE_DATAS[i_dataset], TRUE_THETAS[i_dataset])
+    (
+        PARAMS[i_dataset],
+        TEST_ACCURACY[i_dataset],
+        TRAIN_ACCURACY[i_dataset],
+        TEST_LOSSES[i_dataset],
+        TRAIN_LOSSES[i_dataset],
+        TIME_SIMULATIONS[i_dataset],
+        TIME_TRAINING[i_dataset],
+        TIME_EVAL[i_dataset],
+        METRICS_ABC[i_dataset],
+        METRICS_NRE[i_dataset],
+        METRICS_CORRECTED_NRE[i_dataset],
+        TRUE_DATAS[i_dataset],
+        TRUE_THETAS[i_dataset],
+    ) = for_a_dataset(
+        i_dataset,
+        key_i,
+        N_POINTS,
+        prior_simulator,
+        data_simulator,
+        discrepancy,
+        ALPHAS,
+        PRIOR_DIST,
+        INDEX_MARGINAL,
+    )
+
+plot_metric_for_many_datasets("C2ST", ALPHAS, METRICS_ABC, METRICS_NRE, METRICS_CORRECTED_NRE, N_SAMPLES, N_DATASETS, PATH_FIGURES + "c2st.png", show = False, title = "For 10 differents $\\theta$")
+plot_metric_for_many_datasets("RS_stat", ALPHAS, METRICS_ABC, METRICS_NRE, METRICS_CORRECTED_NRE, N_SAMPLES, N_DATASETS, PATH_FIGURES + "ranksums.png", show = False, title = "For 10 differents $\\theta$")
+    

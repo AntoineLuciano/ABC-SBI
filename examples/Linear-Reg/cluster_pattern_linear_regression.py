@@ -24,7 +24,10 @@ from scipy.stats import norm
 import numpy as np
 import jax.numpy as jnp
 
-K = 5
+if len(sys.argv)>1:
+    K = int(sys.argv[1])
+else: 
+    K = 5
 INDEX_MARGINAL = 0
 PATH_RESULTS = (
     os.getcwd()
@@ -38,8 +41,6 @@ def prior_simulator(key):
 @jit
 def data_simulator(key, betas):
     return random.normal(key, (X_DESIGN.shape[0],))*SIGMA+ jnp.dot(X_DESIGN, betas)
-    
-
 
 @jit
 def discrepancy(y, y_true):
@@ -81,7 +82,7 @@ N_SAMPLES = 1
 N_DATASETS = 10
 N_EPOCHS = 100
 N_GRID = 1000
-ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001]
+ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001, .0005, .0001]
 SIGMA = 1.0
 MU0, SIGMA0 = 0.0, 2
 10.0
@@ -92,7 +93,6 @@ key, key_x = random.split(key)
 X_DESIGN = x_design_simulator(key_x, N_DATA, K)
 MODEL_ARGS = {"SIGMA": SIGMA, "X_DESIGN": X_DESIGN}
 PRIOR_ARGS = {"MU0": MU0, "SIGMA0": SIGMA0}
-
 
 PATH_FIGURES = PATH_RESULTS + "figures/"
 PATH_POSTERIORS = PATH_FIGURES + "posterior_check/"
@@ -156,7 +156,7 @@ def ABC_NRE(
         X, y, test_size=0.2, random_state=np.random.RandomState(key_split)
     )
     time_simulations = time.time() - time_start
-
+    print("Done in {} seconds.".format(time_simulations))
     N_POINTS_TRAIN = len(X_train)
     N_POINTS_TEST = len(X_test)
 
@@ -191,7 +191,7 @@ def ABC_NRE(
         verbose=True,
     )
     time_training = time.time() - time_simulations
-
+    print("Done in {} seconds!".format(time_training))
     return (
         X,
         y,

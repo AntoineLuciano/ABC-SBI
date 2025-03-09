@@ -67,7 +67,9 @@ def plot_posterior_comparison(params, TRUE_DATA, thetas_abc, prior_dist, file_na
     if true_posterior_pdf is not None:
         grid_true, pdf_true = find_grid_explorative(lambda x: true_posterior_pdf(x, TRUE_DATA), N_GRID, N_GRID, min_init, max_init)
         ax.plot(grid_true, pdf_true/np.trapz(pdf_true, grid_true), label="True", color = "green")
-        ax.set_xlim(np.min(grid_true)-2, np.max(grid_true)+2)
+        min_true = np.min(grid_true)
+        max_true = np.max(grid_true)
+        ax.set_xlim(min_true-(max_true-min_true)*.2, max_true+(max_true-min_true)*.2)
     ax.legend()
 
     ax.set_title("Posterior comparison")
