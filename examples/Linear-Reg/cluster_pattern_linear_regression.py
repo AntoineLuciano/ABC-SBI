@@ -24,95 +24,76 @@ from scipy.stats import norm
 import numpy as np
 import jax.numpy as jnp
 
-def ABC_gauss_single(key, true_data, epsilon):
-    key, key_xbar = random.split(key)
-    xbar = random.truncated_normal(key_xbar, lower = (jnp.mean(true_data)-jnp.sqrt(epsilon)-MU0)/jnp.sqrt(SIGMA0**2+SIGMA**2/len(true_data)), upper = (jnp.mean(true_data)+jnp.sqrt(epsilon)-MU0)/jnp.sqrt(SIGMA0**2+SIGMA**2/len(true_data)))*jnp.sqrt(SIGMA0**2+SIGMA**2/len(true_data)) + MU0
-    dist = (jnp.mean(true_data)-xbar)**2
-    key, key_z = random.split(key)
-    z = random.normal(key_z, (len(true_data),))*SIGMA
-    z = z-jnp.mean(z)+xbar
-    key, key_mu = random.split(key)
-    mu = random.normal(key_mu, (1,))*SIGMA/jnp.sqrt(len(true_data)) + xbar
-    return z, mu, dist
-
-
-def ABC_gauss(key, true_data, epsilon, N_ABC):
-    keys = random.split(key, N_ABC+1)
-    zs, mus, dists = vmap(jit(ABC_gauss_single), (0, None, None))(keys[1:], true_data, epsilon)
-    return zs, mus, dists, keys[0]
-
-def true_posterior_pdf(mus, TRUE_DATA):
-    mu_post = (MU0 * SIGMA**2 + SIGMA0**2 * jnp.sum(TRUE_DATA)) / (
-        SIGMA0**2 * len(TRUE_DATA) + SIGMA**2
-    )
-    sigma2_post = 1 / (1 / SIGMA0**2 + len(TRUE_DATA) / SIGMA**2)
-    return norm.pdf(mus, loc=mu_post, scale=np.sqrt(sigma2_post))
-
-def true_posterior_sample(key, TRUE_DATA, N_SAMPLE):
-    mu_post = (MU0 * SIGMA**2 + SIGMA0**2 * jnp.sum(TRUE_DATA)) / (
-        SIGMA0**2 * len(TRUE_DATA) + SIGMA**2
-    )
-    sigma2_post = 1 / (1 / SIGMA0**2 + len(TRUE_DATA) / SIGMA**2)
-    return random.normal(key, (N_SAMPLE,)) * np.sqrt(sigma2_post) + mu_post
-
-def get_dataset_gauss(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data, index_marginal):
-    n_points = n_points//2
-    zs, thetas, dists, key = ABC_gauss(key, true_data, epsilon, n_points)
-    thetas = thetas[:, index_marginal][:,None]
-    key, key_perm = random.split(key)
-    thetas_prime = thetas[random.permutation(key_perm, jnp.arange(n_points))]
-    zs = jnp.concatenate([zs, zs], axis=0)
-    thetas = jnp.concatenate([thetas, thetas_prime], axis=0)
-    ys = jnp.append(jnp.zeros(n_points), jnp.ones(n_points)).astype(int)
-    Xs = jnp.concatenate([thetas, zs], axis=1)
-    return Xs, ys, dists, key
-
-
-
+K = 5
+INDEX_MARGINAL = 0
+PATH_RESULTS = (
+    os.getcwd()
+    + "/examples/Linear-Reg/clean_results/K_{}/".format(K)
+)
 
 @jit
 def prior_simulator(key):
-    return random.normal(key, (1,)) * SIGMA0 + MU0
-
+    return random.normal(key, (K,))*SIGMA0 + MU0
 
 @jit
-def data_simulator(key, theta):
-    return (random.normal(key, (N_DATA,)) * SIGMA + theta).astype(float)
+def data_simulator(key, betas):
+    return random.normal(key, (X_DESIGN.shape[0],))*SIGMA+ jnp.dot(X_DESIGN, betas)
+    
 
 
 @jit
 def discrepancy(y, y_true):
-    return (jnp.mean(y) - jnp.mean(y_true)) ** 2
+    return jnp.sum((jnp.dot(jnp.transpose(X_DESIGN),y-y_true))**2)
+    # return jnp.sum((y-y_true)**2)
+
+def x_design_simulator(key, n_data, K):
+    X = random.normal(key, (n_data, K))
+    X = (X-jnp.mean(X, axis=0))/jnp.std(X, axis=0)
+    return X
 
 
+
+def true_posterior_sample(key, TRUE_DATA, N_SAMPLE):
+    COV0 = jnp.diag(np.array([SIGMA0**2]*K))
+    PREC0 = jnp.linalg.inv(COV0)
+    PREC_n = PREC0 + (1 / SIGMA**2) * (X_DESIGN.T @ X)
+    Sigma_n = jnp.linalg.inv(PREC_n)
+    mu_n = Sigma_n @ (PREC0 @ jnp.ones(X_DESIGN.shape[1])* MU0 + (1 / SIGMA**2) * (X_DESIGN.T @ TRUE_DATA))
+    return random.normal(key, (N_SAMPLE,)) * np.sqrt(Sigma_n[INDEX_MARGINAL, INDEX_MARGINAL]) + mu_n[INDEX_MARGINAL]
+
+def true_posterior_pdf(theta, TRUE_DATA):
+    COV0 = jnp.diag(np.array([SIGMA0**2]*K))
+    PREC0 = jnp.linalg.inv(COV0)
+    PREC_n = PREC0 + (1 / SIGMA**2) * (X_DESIGN.T @ X)
+    Sigma_n = jnp.linalg.inv(PREC_n)
+    mu_n = Sigma_n @ (PREC0 @ jnp.ones(X_DESIGN.shape[1])* MU0 + (1 / SIGMA**2) * (X_DESIGN.T @ TRUE_DATA))
+    return norm.pdf(theta, loc=mu_n[INDEX_MARGINAL], scale=np.sqrt(Sigma_n[INDEX_MARGINAL, INDEX_MARGINAL]))
 
 
 key = random.PRNGKey(0)
 
+
 N_DATA = 100
 N_KDE = 10000
-N_POINTS = 1000000
+N_POINTS = 500000
 N_SAMPLE = 10000
 N_SAMPLES = 1
 N_DATASETS = 10
 N_EPOCHS = 100
 N_GRID = 1000
-ALPHAS = [1.0, .9, .5,.1,.05,.01,.005,.001, .005, .0001]
-# ALPHAS = [1., .1, .01, .001, .0001]
+ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001]
 SIGMA = 1.0
-MU0, SIGMA0 = 0.0, 10.0
+MU0, SIGMA0 = 0.0, 2
+10.0
 
 PRIOR_DIST = norm(loc=MU0, scale=SIGMA0)
-INDEX_MARGINAL = 0
 
-MODEL_ARGS = {"SIGMA": SIGMA}
+key, key_x = random.split(key)
+X_DESIGN = x_design_simulator(key_x, N_DATA, K)
+MODEL_ARGS = {"SIGMA": SIGMA, "X_DESIGN": X_DESIGN}
 PRIOR_ARGS = {"MU0": MU0, "SIGMA0": SIGMA0}
 
 
-PATH_RESULTS = (
-    os.getcwd()
-    + "/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/clean_results/sigma0_{}/".format(int(SIGMA0))
-)
 PATH_FIGURES = PATH_RESULTS + "figures/"
 PATH_POSTERIORS = PATH_FIGURES + "posterior_check/"
 PATH_PICKLES = PATH_RESULTS + "pickles/"
@@ -158,7 +139,7 @@ def ABC_NRE(
     key, key_data = random.split(key)
     time_start = time.time()
     print("Simulation of the training dataset...")
-    X, y, dists, key = get_dataset_gauss(
+    X, y, dists, key = get_dataset(
         key_data,
         N_POINTS,
         prior_simulator,

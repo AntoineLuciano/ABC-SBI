@@ -55,6 +55,7 @@ def get_epsilon_star(key, acceptance_rate, n_points, prior_simulator, data_simul
 def get_dataset(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data, index_marginal = 0):
     n_points = n_points//2
     zs, thetas, dists, key = ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
+    zs = zs.reshape(n_points, -1)
     thetas = thetas[:, index_marginal][:,None]
     key, key_perm = random.split(key)
     thetas_prime = thetas[random.permutation(key_perm, thetas.shape[0])]
@@ -109,7 +110,8 @@ def NRE_corrected_posterior_pdf(params, mus, z, kde_estimator):
     return kde_estimator(mus)*jnp.exp(logratio_batch_z(params, mus, z))
 
 
-def find_grid_explorative(func, n_eval_explo, n_eval_final, min_grid, max_grid, threshold_factor=0.01, max_expansion=1000, expansion_factor=0.1):
+def find_grid_explorative(func, n_eval_explo, n_eval_final, min_grid, max_grid, threshold_factor=0.01, max_expansion=30, expansion_factor=0.1):
+    print("Finding grid...")
     expand = True
     expansions_left = max_expansion
     while expand and expansions_left > 0:
@@ -118,8 +120,10 @@ def find_grid_explorative(func, n_eval_explo, n_eval_final, min_grid, max_grid, 
         max_pdf = jnp.max(pdf_initial)
         
         while max_pdf == 0:
+            
             new_min_grid = min_grid - expansion_factor * (max_grid - min_grid)
             new_max_grid = max_grid + expansion_factor * (max_grid - min_grid)
+            print("Expanding grid to ", new_min_grid, new_max_grid)
             min_grid, max_grid = new_min_grid, new_max_grid
             grid_initial = jnp.linspace(min_grid, max_grid, n_eval_explo*100)
             pdf_initial = func(grid_initial)
@@ -138,7 +142,6 @@ def find_grid_explorative(func, n_eval_explo, n_eval_final, min_grid, max_grid, 
             new_max_grid = max_grid
         
         min_grid, max_grid = new_min_grid, new_max_grid
-
         if pdf_initial[0] <= threshold_value and pdf_initial[-1] <= threshold_value:
             expand = False
         
@@ -151,7 +154,6 @@ def find_grid_explorative(func, n_eval_explo, n_eval_final, min_grid, max_grid, 
         min_grid_opt, max_grid_opt = new_min_grid, new_max_grid
     else:
         min_grid_opt, max_grid_opt = min_grid, max_grid
-    
     grid_opt = jnp.linspace(min_grid_opt, max_grid_opt, n_eval_final)
     pdf_values = func(grid_opt)
     
