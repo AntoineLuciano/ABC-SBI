@@ -73,7 +73,8 @@ N_SAMPLES = 1
 N_DATASETS = 10
 N_EPOCHS = 100
 N_GRID = 1000
-ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001]
+# ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001]
+ALPHAS = [1., .99]
 SIGMA = 1.0
 MU0, SIGMA0 = 0.0, 20.0
 

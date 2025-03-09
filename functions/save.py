@@ -21,8 +21,9 @@ def create_csv_for_a_dataset(
 ):
     df = pd.DataFrame()
     df["ALPHA"] = ALPHAS
-    # df["TRUE_DATA"] = [TRUE_DATA] * len(ALPHAS)
-    df["TRUE_THETA"] = [TRUE_THETA] * len(ALPHAS)
+    df["TRUE_DATA"] = [np.array(TRUE_DATA).reshape(-1)] * len(ALPHAS)
+    df["TRUE_THETA"] = [np.array(TRUE_THETA).reshape(-1)] * len(ALPHAS)
+    df["INDEX_MARGINAL"] = [0] * len(ALPHAS)
     df["TEST_ACCURACY"] = [TEST_ACCURACY[a] for a in ALPHAS]
     df["TRAIN_ACCURACY"] = [TRAIN_ACCURACY[a] for a in ALPHAS]
     df["TEST_LOSSES"] = [TEST_LOSSES[a] for a in ALPHAS]

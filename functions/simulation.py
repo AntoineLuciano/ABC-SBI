@@ -111,7 +111,6 @@ def NRE_corrected_posterior_pdf(params, mus, z, kde_estimator):
 
 
 def find_grid_explorative(func, n_eval_explo, n_eval_final, min_grid, max_grid, threshold_factor=0.01, max_expansion=30, expansion_factor=0.1):
-    print("Finding grid...")
     expand = True
     expansions_left = max_expansion
     while expand and expansions_left > 0:
