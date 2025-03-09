@@ -100,7 +100,11 @@ N_GRID = 1000
 ALPHAS = [1.0, .9, .5,.1,.05,.01,.005,.001, .005, .0001]
 # ALPHAS = [1., .1, .01, .001, .0001]
 SIGMA = 1.0
-MU0, SIGMA0 = 0.0, 10.0
+MU0 = 0.
+if len(sys.argv)>1:
+    SIGMA0 = float(sys.argv[1])
+    
+print("SIGMA0 = ", SIGMA0)
 
 PRIOR_DIST = norm(loc=MU0, scale=SIGMA0)
 INDEX_MARGINAL = 0
@@ -175,7 +179,7 @@ def ABC_NRE(
         X, y, test_size=0.2, random_state=np.random.RandomState(key_split)
     )
     time_simulations = time.time() - time_start
-
+    print("Done in {} seconds!".format(time_simulations))
     N_POINTS_TRAIN = len(X_train)
     N_POINTS_TEST = len(X_test)
 
@@ -210,7 +214,7 @@ def ABC_NRE(
         verbose=True,
     )
     time_training = time.time() - time_simulations
-
+    print("Done in {} seconds!".format(time_training))
     return (
         X,
         y,

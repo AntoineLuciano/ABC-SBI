@@ -23,8 +23,11 @@ import time
 from scipy.stats import norm
 import numpy as np
 import jax.numpy as jnp
-
-D = 5
+if len(sys.argv)>1:
+    D = int(sys.argv[1])
+else :
+    D = 3
+print("D = ", D)
 
 PATH_RESULTS = (
     os.getcwd()
@@ -73,8 +76,8 @@ N_SAMPLES = 1
 N_DATASETS = 10
 N_EPOCHS = 100
 N_GRID = 1000
-# ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001]
-ALPHAS = [1., .99]
+ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001, .0005, .0001]
+# ALPHAS = [1., .99]
 SIGMA = 1.0
 MU0, SIGMA0 = 0.0, 20.0
 
@@ -147,7 +150,7 @@ def ABC_NRE(
         X, y, test_size=0.2, random_state=np.random.RandomState(key_split)
     )
     time_simulations = time.time() - time_start
-
+    print("Done in {} seconds!".format(time_simulations))
     N_POINTS_TRAIN = len(X_train)
     N_POINTS_TEST = len(X_test)
 
@@ -182,7 +185,7 @@ def ABC_NRE(
         verbose=True,
     )
     time_training = time.time() - time_simulations
-
+    print("Done in {} seconds!".format(time_training))
     return (
         X,
         y,
