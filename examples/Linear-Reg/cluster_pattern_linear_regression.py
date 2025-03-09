@@ -84,8 +84,7 @@ N_EPOCHS = 100
 N_GRID = 1000
 ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001, .0005, .0001]
 SIGMA = 1.0
-MU0, SIGMA0 = 0.0, 2
-10.0
+MU0, SIGMA0 = 0.0, 20.
 
 PRIOR_DIST = norm(loc=MU0, scale=SIGMA0)
 

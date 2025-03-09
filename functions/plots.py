@@ -28,7 +28,6 @@ def plot_metric(alphas, abc, nre, corrected_nre, path_name = "", show = True, me
     ax.set_xscale("log")
     ax.invert_xaxis()
     if len(title)>0: ax.set_title(title)
-    if len(metric_name)>0: ax.set_title(metric_name)
     
     if len(path_name)>0:fig.savefig(path_name)
     if show: plt.show()
