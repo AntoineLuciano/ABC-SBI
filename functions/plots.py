@@ -57,7 +57,7 @@ def plot_posterior_comparison(params, TRUE_DATA, thetas_abc, prior_dist, file_na
     min_init, max_init = prior_dist.interval(.999)
     grid_nre, pdf_nre = find_grid_explorative(lambda x: NRE_posterior_pdf(params, x, TRUE_DATA, prior_logpdf), N_GRID, N_GRID, min_init, max_init)
     grid_corrected_nre, pdf_corrected_nre = find_grid_explorative(lambda x: NRE_corrected_posterior_pdf(params, x, TRUE_DATA, kde_approx), N_GRID, N_GRID, min_init, max_init)
-    
+    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
     ax.plot(grid_nre, pdf_nre/np.trapz(pdf_nre, grid_nre), label="NRE", color="red")
     ax.plot(grid_corrected_nre, pdf_corrected_nre/np.trapz(pdf_corrected_nre, grid_corrected_nre), label="Corrected NRE", color = "blue", linestyle="--")
     sns.kdeplot(thetas_abc[:N_KDE], color="orange", label="ABC", ax = ax)
