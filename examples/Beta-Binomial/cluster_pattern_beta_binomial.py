@@ -11,77 +11,65 @@ sys.path.append(path)
 from functions.plots import plot_metric_for_many_datasets 
 from functions.nre_cluster import for_a_dataset
 from jax import random,jit
+import scipy.stats as stats
 import jax.numpy as jnp
-from scipy.stats import norm
+from scipy.stats import beta
 
 if len(sys.argv)>1:
-    K = int(sys.argv[1])
-else: 
-    K = 5
-INDEX_MARGINAL = 0
+    PRIOR_ALPHA = float(sys.argv[1])
+    PRIOR_BETA = PRIOR_ALPHA
+else :
+    PRIOR_ALPHA = 1
+    PRIOR_BETA = 1
+
 PATH_RESULTS = (
     os.getcwd()
-    + "/examples/Linear-Reg/new_clean_results/K_{}/".format(K)
+    + "/examples/Beta-Binomial/new_clean_results/alpha_beta_{}".format(PRIOR_BETA)
 )
 
 @jit
 def prior_simulator(key):
-    return random.normal(key, (K,))*SIGMA0 + MU0
+    return random.beta(key = key, a= PRIOR_ALPHA, b= PRIOR_BETA, shape = (1,))
+
 
 @jit
-def data_simulator(key, betas):
-    return random.normal(key, (X_DESIGN.shape[0],))*SIGMA+ jnp.dot(X_DESIGN, betas)
+def data_simulator(key, theta):
+    return random.binomial(key, n = MODEL_N, p = theta, shape= (N_DATA,))
+
 
 @jit
 def discrepancy(y, y_true):
-    return jnp.sum((jnp.dot(jnp.transpose(X_DESIGN),y-y_true))**2)
-    # return jnp.sum((y-y_true)**2)
-
-def x_design_simulator(key, n_data, K):
-    X = random.normal(key, (n_data, K))
-    X = (X-jnp.mean(X, axis=0))/jnp.std(X, axis=0)
-    return X
-
-
+    return (jnp.mean(y)- jnp.mean(y_true))**2
 
 def true_posterior_sample(key, TRUE_DATA, N_SAMPLE):
-    COV0 = jnp.diag(jnp.array([SIGMA0**2]*K))
-    PREC0 = jnp.linalg.inv(COV0)
-    PREC_n = PREC0 + (1 / SIGMA**2) * (X_DESIGN.T @ X_DESIGN)
-    Sigma_n = jnp.linalg.inv(PREC_n)
-    mu_n = Sigma_n @ (PREC0 @ jnp.ones(X_DESIGN.shape[1])* MU0 + (1 / SIGMA**2) * (X_DESIGN.T @ TRUE_DATA))
-    return random.normal(key, (N_SAMPLE,)) * jnp.sqrt(Sigma_n[INDEX_MARGINAL, INDEX_MARGINAL]) + mu_n[INDEX_MARGINAL]
+    alpha_post = PRIOR_ALPHA+ jnp.sum(TRUE_DATA)
+    beta_post = PRIOR_BETA + len(TRUE_DATA)* MODEL_N - jnp.sum(TRUE_DATA)
+    return random.beta(key, a = alpha_post, b = beta_post, shape = (N_SAMPLE,))
 
 def true_posterior_pdf(theta, TRUE_DATA):
-    COV0 = jnp.diag(jnp.array([SIGMA0**2]*K))
-    PREC0 = jnp.linalg.inv(COV0)
-    PREC_n = PREC0 + (1 / SIGMA**2) * (X_DESIGN.T @ X_DESIGN)
-    Sigma_n = jnp.linalg.inv(PREC_n)
-    mu_n = Sigma_n @ (PREC0 @ jnp.ones(X_DESIGN.shape[1])* MU0 + (1 / SIGMA**2) * (X_DESIGN.T @ TRUE_DATA))
-    return norm.pdf(theta, loc=mu_n[INDEX_MARGINAL], scale=jnp.sqrt(Sigma_n[INDEX_MARGINAL, INDEX_MARGINAL]))
+    alpha_post = PRIOR_ALPHA+ jnp.sum(TRUE_DATA)
+    beta_post = PRIOR_BETA + len(TRUE_DATA)* MODEL_N - jnp.sum(TRUE_DATA)
+    return beta.pdf(theta, alpha_post, beta_post)
+
+MODEL_N = 1
+PRIOR_DIST = beta(PRIOR_ALPHA, PRIOR_BETA)
+MODEL_ARGS = {"N": MODEL_N}
+PRIOR_ARGS = {'ALPHA': PRIOR_ALPHA, "BETA": PRIOR_BETA}
 
 
-key = random.PRNGKey(0)
+key = random.PRNGKey(5)
 
 
-N_DATA = 200
+N_DATA = 100
 N_KDE = 10000
 N_POINTS = 500000
 N_SAMPLE = 10000
 N_SAMPLES = 3
-N_DATASETS = 10
+N_DATASETS = 1
 N_EPOCHS = 100
 N_GRID = 1000
 ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001]
-SIGMA = 1.0
-MU0, SIGMA0 = 0.0, 20.
-
-PRIOR_DIST = norm(loc=MU0, scale=SIGMA0)
-
-key, key_x = random.split(key)
-X_DESIGN = x_design_simulator(key_x, N_DATA, K)
-MODEL_ARGS = {"SIGMA": SIGMA, "X_DESIGN": X_DESIGN}
-PRIOR_ARGS = {"MU0": MU0, "SIGMA0": SIGMA0}
+INDEX_MARGINAL = 0
 
 
 PATH_FIGURES = PATH_RESULTS + "figures/"

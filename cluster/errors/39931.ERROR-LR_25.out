@@ -1,9 +1,0 @@
-An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-Traceback (most recent call last):
-  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Linear-Reg/cluster_pattern_linear_regression.py", line 410, in <module>
-    ) = for_a_dataset(
-  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Linear-Reg/cluster_pattern_linear_regression.py", line 356, in for_a_dataset
-    create_csv_for_a_dataset(i_dataset, ALPHAS, TEST_ACCURACY_i, TRAIN_ACCURACY_i, TEST_LOSSES_i, TRAIN_LOSSES_i, TIME_SIMULATIONS_i, TIME_TRAINING_i, TIME_EVAL_i, METRICS_ABC_i, METRICS_NRE_i, METRICS_CORRECTED_NRE_i, TRUE_DATA, TRUE_THETA, PATH_CSV + "{}_theta_{:.3}.csv".format(i_dataset,float(TRUE_THETA[index_marginal])))
-  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/functions/save.py", line 24, in create_csv_for_a_dataset
-    df["TRUE_DATA"] = [np.array(TRUE_DATA).reshape(-1)] * len(ALPHAS)
-NameError: name 'np' is not defined

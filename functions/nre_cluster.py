@@ -10,7 +10,7 @@ os.chdir(path)
 sys.path.append(path)
 from functions.simulation import get_dataset
 from functions.training import train_loop
-from functions.plots import plot_metric_for_a_dataset, plot_posterior_comparison
+from functions.plots import plot_metric_for_a_dataset, plot_metric_for_many_datasets, plot_posterior_comparison
 from functions.metrics import evaluate_metrics
 from functions.save import create_csv_for_a_dataset, create_pickle_for_a_dataset
 from jax import random, jit, vmap

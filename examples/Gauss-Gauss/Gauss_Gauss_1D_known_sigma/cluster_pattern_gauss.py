@@ -62,7 +62,7 @@ N_SAMPLES = 3
 N_DATASETS = 10
 N_EPOCHS = 100
 N_GRID = 1000
-ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001, .0005, .0001]
+ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001]
 INDEX_MARGINAL = 0
 PATH_RESULTS = (
     os.getcwd()

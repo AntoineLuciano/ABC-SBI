@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from functions.simulation import NRE_corrected_posterior_pdf, NRE_posterior_pdf, find_grid_explorative
 from scipy.stats import gaussian_kde
+import seaborn as sns
+
 def plot_metric(alphas, abc, nre, corrected_nre, path_name = "", show = True, metric_name = "", title = ""):
     mean_abc = np.mean(abc, axis=1)
     std_abc = np.std(abc, axis=1)
