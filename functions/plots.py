@@ -57,12 +57,10 @@ def plot_posterior_comparison(params, TRUE_DATA, thetas_abc, prior_dist, file_na
     min_init, max_init = prior_dist.interval(.999)
     grid_nre, pdf_nre = find_grid_explorative(lambda x: NRE_posterior_pdf(params, x, TRUE_DATA, prior_logpdf), N_GRID, N_GRID, min_init, max_init)
     grid_corrected_nre, pdf_corrected_nre = find_grid_explorative(lambda x: NRE_corrected_posterior_pdf(params, x, TRUE_DATA, kde_approx), N_GRID, N_GRID, min_init, max_init)
-    grid_abc, pdf_abc = find_grid_explorative(lambda x: kde_approx.logpdf(x), N_GRID, N_GRID, min_init, max_init)
     fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-    
     ax.plot(grid_nre, pdf_nre/np.trapz(pdf_nre, grid_nre), label="NRE", color="red")
     ax.plot(grid_corrected_nre, pdf_corrected_nre/np.trapz(pdf_corrected_nre, grid_corrected_nre), label="Corrected NRE", color = "blue", linestyle="--")
-    ax.plot(grid_abc, pdf_abc/np.trapz(pdf_abc, grid_abc), label="ABC", color = "orange")
+    sns.kdeplot(thetas_abc[:N_KDE], color="orange", label="ABC", ax = ax)
     if true_posterior_pdf is not None:
         grid_true, pdf_true = find_grid_explorative(lambda x: true_posterior_pdf(x, TRUE_DATA), N_GRID, N_GRID, min_init, max_init)
         ax.plot(grid_true, pdf_true/np.trapz(pdf_true, grid_true), label="True", color = "green")
