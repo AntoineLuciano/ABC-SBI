@@ -19,6 +19,7 @@ def create_csv_for_a_dataset(
     METRICS_CORRECTED_NRE,
     TRUE_DATA,
     TRUE_THETA,
+    THETAS_ABC, 
     file_name
 ):
     df = pd.DataFrame()
@@ -42,11 +43,12 @@ def create_csv_for_a_dataset(
     df["RANKSUMS_STAT_CORRECTED_NRE"] = [METRICS_CORRECTED_NRE[a]["RS_stat"] for a in ALPHAS]
     df["RANKSUMS_PVALUE_CORRECTED_NRE"] = [METRICS_CORRECTED_NRE[a]["RS_pvalue"] for a in ALPHAS]
     df["C2ST_CORRECTED_NRE"] = [METRICS_CORRECTED_NRE[a]["C2ST"] for a in ALPHAS]
+    df["THETAS_ABC"] = [THETAS_ABC[a] for a in ALPHAS]
     df.to_csv(file_name)
     print("CSV CREATED at {}".format(file_name))
     
 
-def create_pickle_for_a_dataset(ALPHAS, PARAMS, METRICS_ABC, METRICS_NRE, METRICS_CORRECTED_NRE, TRUE_DATA, TRUE_THETA, TIME_SIMULATIONS, TIME_TRAINING, TIME_EVAL, MODEL_ARGS, PRIOR_ARGS, file_name):
+def create_pickle_for_a_dataset(ALPHAS, PARAMS, METRICS_ABC, METRICS_NRE, METRICS_CORRECTED_NRE, TRUE_DATA, TRUE_THETA, TIME_SIMULATIONS, TIME_TRAINING, TIME_EVAL, MODEL_ARGS, PRIOR_ARGS, NN_ARGS, THETAS_ABC, file_name):
     dico = {
         "ALPHAS": ALPHAS,
         "PARAMS": PARAMS,
@@ -60,6 +62,9 @@ def create_pickle_for_a_dataset(ALPHAS, PARAMS, METRICS_ABC, METRICS_NRE, METRIC
         "TIME_EVAL": TIME_EVAL,
         "MODEL_ARGS": MODEL_ARGS,
         "PRIOR_ARGS": PRIOR_ARGS,
+        "NN_ARGS": NN_ARGS, 
+        "THETAS_ABC": THETAS_ABC
+        
         }
     with lzma.open(file_name, "wb") as f:
         pickle.dump(dico, f)
