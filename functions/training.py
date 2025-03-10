@@ -9,7 +9,9 @@ from functions.simulation import get_dataset
 
 import numpy as np
 
-def train_loop(key, num_epoch_max, num_layers, hidden_size, num_classes, batch_size, num_batch, learning_rate, wdecay, patience, cooldown, factor, rtol, accumulation_size, learning_rate_min, prior_simulator, data_simulator, discrepancy, true_data, X_train = None, y_train = None, X_test = None, y_test =  None, N_POINTS_TRAIN = 0, N_POINTS_TEST = 0, epsilon = jnp.inf, verbose = True):
+def train_loop(key, NN_ARGS, prior_simulator, data_simulator, discrepancy, true_data, X_train = None, y_train = None, X_test = None, y_test =  None, N_POINTS_TRAIN = 0, N_POINTS_TEST = 0, epsilon = jnp.inf, verbose = True):
+    
+    num_epoch_max, num_layers, hidden_size, batch_size, num_batch, learning_rate, wdecay, patience, cooldown, factor, rtol, accumulation_size, learning_rate_min = NN_ARGS["N_EPOCH"], NN_ARGS["NUM_LAYERS"], NN_ARGS["HIDDEN_SIZE"], NN_ARGS["BATCH_SIZE"], NN_ARGS["NUM_BATCH"], NN_ARGS["LEARNING_RATE"], NN_ARGS["WDECAY"], NN_ARGS["PATIENCE"], NN_ARGS["COOLDOWN"], NN_ARGS["FACTOR"], NN_ARGS["RTOL"], NN_ARGS["ACCUMULATION_SIZE"], NN_ARGS["LEARNING_RATE_MIN"]    
 
     class MLP(nn.Module):
         """A simple multilayer perceptron model for image classification."""
@@ -20,7 +22,7 @@ def train_loop(key, num_epoch_max, num_layers, hidden_size, num_classes, batch_s
             for size in self.hidden_sizes:
                 x = nn.Dense(features=size)(x)
                 x = nn.elu(x)
-            x = nn.Dense(features=num_classes)(x)
+            x = nn.Dense(features=2)(x)
             logratio = x[:,0]-x[:,1]
             x = nn.log_softmax(x)
             
