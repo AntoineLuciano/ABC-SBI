@@ -157,9 +157,9 @@ def for_a_dataset(
         THETAS_ABC_i[alpha] = thetas_abc
         time_iterations[alpha] = time.time() - time_iteration
         
-    plot_metric_for_a_dataset(metric_name="C2ST", ALPHAS=ALPHAS, METRICS= METRICS_i, N_SAMPLES=N_SAMPLES, PATH_NAME=PATH+"figures/dataset_{}/C2ST.png".format(i_dataset+1), show=False, title="C2ST for dataset {} $\\theta = {:.3}".format(i_dataset+1, TRUE_THETA[index_marginal]))
+    plot_metric_for_a_dataset(metric_name="C2ST", ALPHAS=ALPHAS, METRICS= METRICS_i, N_SAMPLES=N_SAMPLES, PATH_NAME=PATH+"figures/dataset_{}/C2ST.png".format(i_dataset+1), show=False, title="C2ST for dataset {} $\\theta =$ {:.3}".format(i_dataset+1, TRUE_THETA[index_marginal]))
     
-    plot_metric_for_a_dataset(metric_name="RS_stat", ALPHAS=ALPHAS, METRICS= METRICS_i, N_SAMPLES=N_SAMPLES, PATH_NAME=PATH+"figures/dataset_{}/RS_stats.png".format(i_dataset+1), show=False, title="Ranksums statistic for dataset {} $\\theta = {:.3}".format(i_dataset+1, TRUE_THETA[index_marginal]))
+    plot_metric_for_a_dataset(metric_name="RS_stat", ALPHAS=ALPHAS, METRICS= METRICS_i, N_SAMPLES=N_SAMPLES, PATH_NAME=PATH+"figures/dataset_{}/RS_stats.png".format(i_dataset+1), show=False, title="Ranksums statistic for dataset {} $\\theta =$ {:.3}".format(i_dataset+1, TRUE_THETA[index_marginal]))
     
     with lzma.open(PATH+"pickle/dataset_{}_params.xz".format(i_dataset+1), "wb") as f:
         pickle.dump(PARAMS_i)
