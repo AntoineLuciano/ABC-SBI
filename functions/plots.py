@@ -37,17 +37,17 @@ def plot_metric(alphas, abc, nre, corrected_nre, path_name = "", show = True, me
     print("FIGURE CREATED at {}".format(path_name))
     
     
-def plot_metric_for_a_dataset(metric_name, ALPHAS, METRICS_ABC, METRICS_NRE, METRICS_CORRECTED_NRE,N_SAMPLES, PATH_NAME = "", show = True, title = ""):
-    abc = np.array([[METRICS_ABC[a][metric_name][j] for j in range(N_SAMPLES)] for a in ALPHAS]).reshape(len(ALPHAS), -1)
-    nre = np.array([[METRICS_NRE[a][metric_name][j] for j in range(N_SAMPLES)] for a in ALPHAS]).reshape(len(ALPHAS), -1)
-    corrected_nre = np.array([[METRICS_CORRECTED_NRE[a][metric_name][j] for j in range(N_SAMPLES)] for a in ALPHAS]).reshape(len(ALPHAS), -1)
+def plot_metric_for_a_dataset(metric_name, ALPHAS, METRICS, N_SAMPLES, PATH_NAME = "", show = True, title = ""):
+    abc = np.array([[METRICS[a]["ABC"][metric_name][j] for j in range(N_SAMPLES)] for a in ALPHAS]).reshape(len(ALPHAS), -1)
+    nre = np.array([[METRICS[a]["NRE"][metric_name][j] for j in range(N_SAMPLES)] for a in ALPHAS]).reshape(len(ALPHAS), -1)
+    corrected_nre = np.array([[METRICS[a]["CORRECTED_NRE"][metric_name][j] for j in range(N_SAMPLES)] for a in ALPHAS]).reshape(len(ALPHAS), -1)
     plot_metric(ALPHAS, abc, nre, corrected_nre, PATH_NAME, show = show, metric_name = metric_name, title = title)
     
 
-def plot_metric_for_many_datasets(metric_name, ALPHAS, METRICS_ABC, METRICS_NRE, METRICS_CORRECTED_NRE, N_SAMPLES, N_DATASETS, PATH_NAME = "", show = True, title = ""):
-    abc = np.array([[METRICS_ABC[i][a][metric_name][j] for i in range(N_DATASETS) for j in range(N_SAMPLES)] for a in ALPHAS]).reshape(len(ALPHAS), -1)
-    nre = np.array([[METRICS_NRE[i][a][metric_name][j] for i in range(N_DATASETS) for j in range(N_SAMPLES)] for a in ALPHAS]).reshape(len(ALPHAS), -1)
-    corrected_nre = np.array([[METRICS_CORRECTED_NRE[i][a][metric_name][j] for i in range(N_DATASETS) for j in range(N_SAMPLES)] for a in ALPHAS]).reshape(len(ALPHAS), -1)
+def plot_metric_for_many_datasets(metric_name, ALPHAS, METRICS, N_SAMPLES, N_DATASETS, PATH_NAME = "", show = True, title = ""):
+    abc = np.array([[METRICS[i][a]["ABC"][metric_name][j] for i in range(N_DATASETS) for j in range(N_SAMPLES)] for a in ALPHAS]).reshape(len(ALPHAS), -1)
+    nre = np.array([[METRICS[i][a]["NRE"][metric_name][j] for i in range(N_DATASETS) for j in range(N_SAMPLES)] for a in ALPHAS]).reshape(len(ALPHAS), -1)
+    corrected_nre = np.array([[METRICS[i][a]["CORRECTED_NRE"][metric_name][j] for i in range(N_DATASETS) for j in range(N_SAMPLES)] for a in ALPHAS]).reshape(len(ALPHAS), -1)
     
     plot_metric(ALPHAS, abc, nre, corrected_nre, PATH_NAME, show = show, metric_name = metric_name, title = title)
     

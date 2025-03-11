@@ -61,25 +61,25 @@ def create_csv_for_a_dataset(
     print("CSV CREATED at {}".format(file_name))
     
 
-def create_pickle_for_a_dataset(ALPHAS, PARAMS, METRICS_ABC, METRICS_NRE, METRICS_CORRECTED_NRE, TRUE_DATA, TRUE_THETA, TIME_SIMULATIONS, TIME_TRAINING, TIME_EVAL, MODEL_ARGS, PRIOR_ARGS, NN_ARGS, THETAS_ABC, file_name):
-    dico = {
-        "ALPHAS": ALPHAS,
-        "PARAMS": PARAMS,
-        "METRICS_ABC": METRICS_ABC,
-        "METRICS_NRE": METRICS_NRE,
-        "METRICS_CORRECTED_NRE": METRICS_CORRECTED_NRE,
-        "TRUE_DATA": TRUE_DATA,
-        "TRUE_THETA": TRUE_THETA,
-        "TIME_SIMULATIONS": TIME_SIMULATIONS,
-        "TIME_TRAINING": TIME_TRAINING,
-        "TIME_EVAL": TIME_EVAL,
-        "MODEL_ARGS": MODEL_ARGS,
-        "PRIOR_ARGS": PRIOR_ARGS,
-        "NN_ARGS": NN_ARGS, 
-        "THETAS_ABC": THETAS_ABC
+# def create_pickle_for_a_dataset(ALPHAS, PARAMS, METRICS_ABC, METRICS_NRE, METRICS_CORRECTED_NRE, TRUE_DATA, TRUE_THETA, TIME_SIMULATIONS, TIME_TRAINING, TIME_EVAL, MODEL_ARGS, PRIOR_ARGS, NN_ARGS, THETAS_ABC, file_name):
+#     dico = {
+#         "ALPHAS": ALPHAS,
+#         "PARAMS": PARAMS,
+#         "METRICS_ABC": METRICS_ABC,
+#         "METRICS_NRE": METRICS_NRE,
+#         "METRICS_CORRECTED_NRE": METRICS_CORRECTED_NRE,
+#         "TRUE_DATA": TRUE_DATA,
+#         "TRUE_THETA": TRUE_THETA,
+#         "TIME_SIMULATIONS": TIME_SIMULATIONS,
+#         "TIME_TRAINING": TIME_TRAINING,
+#         "TIME_EVAL": TIME_EVAL,
+#         "MODEL_ARGS": MODEL_ARGS,
+#         "PRIOR_ARGS": PRIOR_ARGS,
+#         "NN_ARGS": NN_ARGS, 
+#         "THETAS_ABC": THETAS_ABC
         
-        }
-    with lzma.open(file_name, "wb") as f:
-        pickle.dump(dico, f)
-    print("PICKLE CREATED at {}".format(file_name))
+#         }
+#     with lzma.open(file_name, "wb") as f:
+#         pickle.dump(dico, f)
+#     print("PICKLE CREATED at {}".format(file_name))
  
