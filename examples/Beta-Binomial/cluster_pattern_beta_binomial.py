@@ -10,6 +10,7 @@ os.chdir(path)
 sys.path.append(path)
 from functions.plots import plot_metric_for_many_datasets 
 from functions.nre_cluster import for_a_dataset
+from functions.metrics import c2stest, ranksumstest_stat, ranksumstest_pvalue
 from jax import random,jit
 import scipy.stats as stats
 import jax.numpy as jnp
@@ -134,9 +135,9 @@ EPSILONS = {}
 TRUE_DATAS = {}
 TRUE_THETAS = {}
 
-METRICS_ABC = {}
-METRICS_NRE = {}
-METRICS_CORRECTED_NRE = {}
+METRICS = {}
+
+METRICS_TO_TEST ={"C2ST": c2stest, "RS_stat": ranksumstest_stat, "RS_pvalue": ranksumstest_pvalue}
 
 
 for i_dataset in range(N_DATASETS):
@@ -150,12 +151,10 @@ for i_dataset in range(N_DATASETS):
         TIME_SIMULATIONS[i_dataset],
         TIME_TRAINING[i_dataset],
         TIME_EVAL[i_dataset],
-        METRICS_ABC[i_dataset],
-        METRICS_NRE[i_dataset],
-        METRICS_CORRECTED_NRE[i_dataset],
+        METRICS[i_dataset],
         TRUE_DATAS[i_dataset],
         TRUE_THETAS[i_dataset],
-    ) = for_a_dataset(i_dataset= i_dataset, key = key_i, N_POINTS= N_POINTS, prior_simulator= prior_simulator, data_simulator= data_simulator, discrepancy= discrepancy, true_posterior_pdf= true_posterior_pdf, true_posterior_sample= true_posterior_sample, ALPHAS= ALPHAS, PRIOR_DIST= PRIOR_DIST, PRIOR_ARGS = PRIOR_ARGS, MODEL_ARGS= MODEL_ARGS, NN_ARGS= NN_ARGS, N_GRID= N_GRID, N_KDE= N_KDE, N_SAMPLE= N_SAMPLE, N_SAMPLES= N_SAMPLES, PATH= PATH_RESULTS, index_marginal= INDEX_MARGINAL)
+    ) = for_a_dataset(i_dataset= i_dataset, key = key_i, N_POINTS= N_POINTS, prior_simulator= prior_simulator, data_simulator= data_simulator, discrepancy= discrepancy, true_posterior_pdf= true_posterior_pdf, true_posterior_sample= true_posterior_sample, ALPHAS= ALPHAS, PRIOR_DIST= PRIOR_DIST, PRIOR_ARGS = PRIOR_ARGS, MODEL_ARGS= MODEL_ARGS, NN_ARGS= NN_ARGS, N_GRID= N_GRID, N_KDE= N_KDE, N_SAMPLE= N_SAMPLE, N_SAMPLES= N_SAMPLES, METRICS_TO_TEST= METRICS_TO_TEST, PATH= PATH_RESULTS, index_marginal= INDEX_MARGINAL)
 
-plot_metric_for_many_datasets("C2ST", ALPHAS, METRICS_ABC, METRICS_NRE, METRICS_CORRECTED_NRE, N_SAMPLES, N_DATASETS, PATH_FIGURES + "c2st.png", show = False, title = "For 10 differents $\\theta$")
-plot_metric_for_many_datasets("RS_stat", ALPHAS, METRICS_ABC, METRICS_NRE, METRICS_CORRECTED_NRE, N_SAMPLES, N_DATASETS, PATH_FIGURES + "ranksums.png", show = False, title = "For 10 differents $\\theta$")
+plot_metric_for_many_datasets("C2ST", ALPHAS, METRICS, N_SAMPLES, N_DATASETS, PATH_FIGURES + "c2st.png", show = False, title = "For 10 differents $\\theta$")
+plot_metric_for_many_datasets("RS_stat", ALPHAS, METRICS, N_SAMPLES, N_DATASETS, PATH_FIGURES + "ranksums.png", show = False, title = "For 10 differents $\\theta$")
