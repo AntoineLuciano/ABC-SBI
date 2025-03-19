@@ -18,15 +18,14 @@ import jax.numpy as jnp
 
 
 
-@jit
 def prior_simulator(key):
     return random.normal(key, (1,))*SIGMA0 + MU0
 
-@jit
+
 def data_simulator(key, theta):
     return (random.normal(key, (N_DATA,))*SIGMA + theta).astype(float)
 
-@jit
+
 def discrepancy(y, y_true):
     return (jnp.mean(y) - jnp.mean(y_true))**2
 

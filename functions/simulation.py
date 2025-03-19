@@ -21,7 +21,6 @@ def ABC_single(key, prior_simulator, data_simulator, discrepancy, epsilon, true_
     key, data, theta, dist = lax.while_loop(cond_fun, body_fun, (key, fake_data, fake_theta, epsilon+1))
     return data, theta, dist
 
-
 ABC_single = jit(ABC_single, static_argnums=(1,2,3))
 
 def ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data):
@@ -29,7 +28,7 @@ def ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, eps
     datas, thetas, dists = vmap(ABC_single, in_axes=(0, None, None, None, None, None))(keys[1:], prior_simulator, data_simulator, discrepancy, epsilon, true_data)
     return datas, thetas, dists, keys[0]
 
-ABC_epsilon = jit(ABC_epsilon, static_argnums=(1,2,3,4,5))
+# ABC_epsilon = jit(ABC_epsilon, static_argnums=(2,3,4))
 
 def get_epsilon_star(key, acceptance_rate, n_points, prior_simulator, data_simulator, discrepancy, true_data, quantile_rate = .9, epsilon = jnp.inf, return_accept = False):
     new_epsilon = epsilon
