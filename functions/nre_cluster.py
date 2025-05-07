@@ -88,7 +88,7 @@ def for_an_epsilon(
     thetas_abc, dists, params, train_accuracy, train_losses, test_accuracy, test_losses, time_simulations, time_training = ABC_NRE(key= key_nre, N_POINTS= N_POINTS, prior_simulator= prior_simulator, data_simulator= data_simulator, discrepancy=discrepancy, TRUE_DATA= TRUE_DATA, EPSILON= EPSILON, NN_ARGS= NN_ARGS, index_marginal=  index_marginal)
     
     print("Plotting the posterior...")
-    plot_posterior_comparison(params= params, TRUE_DATA= TRUE_DATA, thetas_abc= thetas_abc, prior_dist= PRIOR_DIST, file_name = PATH+"figures/dataset_{}/posterior_check/alpha_{}.png".format(i_dataset+1, alpha), show = False, N_GRID = N_GRID, true_posterior_pdf = true_posterior_pdf, N_KDE= N_KDE)
+    plot_posterior_comparison(params= params, TRUE_DATA= TRUE_DATA, thetas_abc= thetas_abc, prior_dist= PRIOR_DIST, file_name = PATH+"figures/posterior_check/{}_alpha_{}.png".format(i_dataset+1, alpha), show = False, N_GRID = N_GRID, true_posterior_pdf = true_posterior_pdf, N_KDE= N_KDE)
     
     metrics, time_eval = evaluate_metrics(key = key_evaluate, metrics_dico= METRICS_TO_TEST, TRUE_DATA= TRUE_DATA, params= params, thetas_abc= thetas_abc, PRIOR_DIST= PRIOR_DIST, N_GRID= N_GRID, N_SAMPLE= N_SAMPLE, N_SAMPLES= N_SAMPLES, true_posterior_sample= true_posterior_sample, N_KDE= N_KDE)
     
@@ -157,19 +157,19 @@ def for_a_dataset(
         THETAS_ABC_i[alpha] = thetas_abc
         time_iterations[alpha] = time.time() - time_iteration
         
-    plot_metric_for_a_dataset(metric_name="C2ST", ALPHAS=ALPHAS, METRICS= METRICS_i, N_SAMPLES=N_SAMPLES, PATH_NAME=PATH+"figures/dataset_{}/C2ST.png".format(i_dataset+1), show=False, title="C2ST for dataset {} $\\theta =$ {:.3}".format(i_dataset+1, TRUE_THETA[index_marginal]))
+    plot_metric_for_a_dataset(metric_name="C2ST", ALPHAS=ALPHAS, METRICS= METRICS_i, N_SAMPLES=N_SAMPLES, PATH_NAME=PATH+"figures/C2ST_dataset_{}.png".format(i_dataset+1), show=False, title="C2ST for dataset {} $\\theta =$ {:.3}".format(i_dataset+1, TRUE_THETA[index_marginal]))
     
-    plot_metric_for_a_dataset(metric_name="RS_stat", ALPHAS=ALPHAS, METRICS= METRICS_i, N_SAMPLES=N_SAMPLES, PATH_NAME=PATH+"figures/dataset_{}/RS_stats.png".format(i_dataset+1), show=False, title="Ranksums statistic for dataset {} $\\theta =$ {:.3}".format(i_dataset+1, TRUE_THETA[index_marginal]))
+    plot_metric_for_a_dataset(metric_name="RS_stat", ALPHAS=ALPHAS, METRICS= METRICS_i, N_SAMPLES=N_SAMPLES, PATH_NAME=PATH+"figures/RS_stats_dataset_{}.png".format(i_dataset+1), show=False, title="Ranksums statistic for dataset {} $\\theta =$ {:.3}".format(i_dataset+1, TRUE_THETA[index_marginal]))
     
-    with lzma.open(PATH+"pickle/dataset_{}_params.xz".format(i_dataset+1), "wb") as f:
-        pickle.dump(PARAMS_i)
-        print("Pickle created at {}".format(PATH+"pickle/dataset_{}_params.xz".format(i_dataset+1)))
+    with lzma.open(PATH+"pickles/dataset_{}_params.xz".format(i_dataset+1), "wb") as f:
+        pickle.dump(PARAMS_i, f)
+        print("Pickle created at {}".format(PATH+"pickles/dataset_{}_params.xz".format(i_dataset+1)))
         
-    with lzma.open(PATH+"pickle/dataset_{}_thetas_abc.xz".format(i_dataset+1), "wb") as f:
-        pickle.dump(THETAS_ABC_i)
-        print("Pickle created at {}".format(PATH+"pickle/dataset_{}_thetas_abc.xz".format(i_dataset+1)))
+    with lzma.open(PATH+"pickles/dataset_{}_thetas_abc.xz".format(i_dataset+1), "wb") as f:
+        pickle.dump(THETAS_ABC_i, f)
+        print("Pickle created at {}".format(PATH+"pickles/dataset_{}_thetas_abc.xz".format(i_dataset+1)))
         
-    create_csv_for_a_dataset(i_datasets=i_dataset, ALPHAS=ALPHAS, TEST_ACCURACY=TEST_ACCURACY_i, TRAIN_ACCURACY=TRAIN_ACCURACY_i, TEST_LOSSES=TEST_LOSSES_i, TRAIN_LOSSES=TRAIN_LOSSES_i, TIME_SIMULATIONS=TIME_SIMULATIONS_i, TIME_TRAINING=TIME_TRAINING_i, TIME_EVAL=TIME_EVAL_i, METRICS= METRICS_i, TRUE_DATA=TRUE_DATA, TRUE_THETA=TRUE_THETA, THETAS_ABC = THETAS_ABC_i, file_name=PATH+"csv/dataset_{}_theta_{:.3}.csv".format(i_dataset+1, TRUE_THETA[index_marginal]), PRIOR_ARGS=PRIOR_ARGS, MODEL_ARGS=MODEL_ARGS, NN_ARGS=NN_ARGS, INDEX_MARGINAL=index_marginal)
+    create_csv_for_a_dataset(ALPHAS=ALPHAS, EPSILONS=EPSILONS_i, TEST_ACCURACY=TEST_ACCURACY_i, TRAIN_ACCURACY=TRAIN_ACCURACY_i, TIME_SIMULATIONS=TIME_SIMULATIONS_i, TIME_TRAINING=TIME_TRAINING_i, TIME_EVAL=TIME_EVAL_i, METRICS=METRICS_i, TRUE_DATA=TRUE_DATA, TRUE_THETA=TRUE_THETA, PRIOR_ARGS=PRIOR_ARGS, MODEL_ARGS=MODEL_ARGS, NN_ARGS=NN_ARGS, INDEX_MARGINAL=index_marginal, file_name=PATH+"csv/dataset_{}_theta_{:.3}.csv".format(i_dataset+1, TRUE_THETA[index_marginal]))
 
     return (
         PARAMS_i,

@@ -54,19 +54,19 @@ PRIOR_ARGS = {"MU0": MU0, "SIGMA0":SIGMA0}
 key = random.PRNGKey(0)
 
 
-N_DATA = 100
-N_KDE = 10000
-N_POINTS = 500000
-N_SAMPLE = 10000
+N_DATA = 20
+N_KDE = 1000
+N_POINTS = 1000
+N_SAMPLE = 1000
 N_SAMPLES = 3
 N_DATASETS = 10
-N_EPOCHS = 100
+N_EPOCHS = 1
 N_GRID = 1000
-ALPHAS = [1.0, .9, .5,.1,.05,.01, .005, .001]
+ALPHAS = [1.0, .9, .5,.1,.05,.01]
 INDEX_MARGINAL = 0
 PATH_RESULTS = (
     os.getcwd()
-    + "/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/new_clean_results/sigma0_{}/".format(int(SIGMA0))
+    + "/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/new_new_clean_results/sigma0_{}/".format(int(SIGMA0))
 )
 
 PATH_FIGURES = PATH_RESULTS + "figures/"
@@ -94,9 +94,9 @@ ACCUMULATION_SIZE = 200
 LEARNING_RATE_MIN = 1e-6
 
 BATCH_SIZE = 256
-NUM_BATCH = 1024
+NUM_BATCH = 16
 NUM_CLASSES = 2
-HIDDEN_SIZE = 256
+HIDDEN_SIZE = 128
 NUM_LAYERS = 2
 WDECAY = 0.001
 
