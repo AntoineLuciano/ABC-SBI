@@ -3,13 +3,13 @@ from optax import tree_utils as otu
 from optax.contrib import reduce_on_plateau
 from flax import linen as nn
 import time
-from jax import value_and_grad, jit, random
+from jax import value_and_grad, jit, random, vmap
 import jax.numpy as jnp
 from functions.simulation import get_dataset
 
 import numpy as np
 
-def train_loop(key, NN_ARGS, prior_simulator, data_simulator, discrepancy, true_data, X_train = None, y_train = None, X_test = None, y_test =  None, N_POINTS_TRAIN = 0, N_POINTS_TEST = 0, epsilon = jnp.inf, verbose = True):
+def train_loop(key, NN_ARGS, prior_simulator, data_simulator, discrepancy, true_data, X_train = None, y_train = None, X_test = None, y_test =  None, N_POINTS_TRAIN = 0, N_POINTS_TEST = 0, epsilon = jnp.inf, verbose = True, iid = True):
     
     num_epoch_max, num_layers, hidden_size, batch_size, num_batch, learning_rate, wdecay, patience, cooldown, factor, rtol, accumulation_size, learning_rate_min = NN_ARGS["N_EPOCH"], NN_ARGS["NUM_LAYERS"], NN_ARGS["HIDDEN_SIZE"], NN_ARGS["BATCH_SIZE"], NN_ARGS["NUM_BATCH"], NN_ARGS["LEARNING_RATE"], NN_ARGS["WDECAY"], NN_ARGS["PATIENCE"], NN_ARGS["COOLDOWN"], NN_ARGS["FACTOR"], NN_ARGS["RTOL"], NN_ARGS["ACCUMULATION_SIZE"], NN_ARGS["LEARNING_RATE_MIN"]    
 
@@ -19,6 +19,7 @@ def train_loop(key, NN_ARGS, prior_simulator, data_simulator, discrepancy, true_
 
         @nn.compact
         def __call__(self, x):
+            
             for size in self.hidden_sizes:
                 x = nn.Dense(features=size)(x)
                 x = nn.elu(x)
@@ -27,6 +28,50 @@ def train_loop(key, NN_ARGS, prior_simulator, data_simulator, discrepancy, true_
             x = nn.log_softmax(x)
             
             return x, logratio
+    net = MLP()
+    
+
+
+    # class PhiConditioned(nn.Module):
+    #     hidden_sizes: list
+
+    #     @nn.compact
+    #     def __call__(self, x_set, theta):  # x_set: (B, M, d), theta: (B, 1)
+    #         B, M, d = x_set.shape
+    #         theta_exp = jnp.repeat(theta[:, None, :], M, axis=1)  # (B, M, 1)
+    #         h = jnp.concatenate([x_set, theta_exp], axis=-1)  # (B, M, d+1)
+    #         for hsize in self.hidden_sizes:
+    #             h = vmap(nn.Dense(hsize))(h)
+    #             h = nn.elu(h)
+    #         return h  # (B, M, hidden_size)
+    # class MLP(nn.Module):
+    #     hidden_sizes: list
+    #     iid: bool
+    #     M: int  # nombre de points
+    #     d: int  # dimension de chaque x_i
+
+    #     @nn.compact
+    #     def __call__(self, x):  # x: (B, 1 + M*d)
+    #         if self.iid:
+    #             theta = x[:, 0:1]                          # (B, 1)
+    #             x_flat = x[:, 1:]                          # (B, M*d)
+    #             x_set = x_flat.reshape((-1, self.M, self.d))  # (B, M, d)
+    #             phi_out = PhiConditioned(self.hidden_sizes)(x_set, theta)  # (B, M, h)
+    #             pooled = jnp.sum(phi_out, axis=1)          # (B, h)
+    #             h = jnp.concatenate([theta, pooled], axis=-1)
+    #         else:
+    #             h = x
+    #             for size in self.hidden_sizes:
+    #                 h = nn.Dense(size)(h)
+    #                 h = nn.elu(h)
+
+    #         h = nn.Dense(2)(h)
+    #         logratio = h[:, 0] - h[:, 1]
+    #         h = nn.log_softmax(h)
+    #         return h, logratio
+
+    # net = MLP(hidden_sizes=[hidden_size] * num_layers, iid=iid, d = 1, M = X_train.shape[1]-1)
+    
 
 
     def get_train_batches(inputs, labels, batch_size, num_batch, key, true_data):
@@ -81,7 +126,7 @@ def train_loop(key, NN_ARGS, prior_simulator, data_simulator, discrepancy, true_
 
 
 
-    net = MLP()
+    
     key, subkey = random.split(key)
     
     fake_data = jnp.ones((N_POINTS_TRAIN, X_test.shape[1]))

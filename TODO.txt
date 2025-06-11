@@ -1,0 +1,15 @@
+
+TO DO (HIGH LEVEL)
+- Litterature review (by end of June) Google Doc? Sequential NRE?
+- Code review (Ryan ASAP)
+- Consistency condition (Lipschitz condition on the posterior/loss) 
+- Experiments
+
+
+NEW IDEAS
+- Think to the non-binary kernel
+- Learning the summary statistics (e.g. using a neural network)
+
+GOALS: 
+- ArXiv paper (by end of June 11) 
+- Submit to Bayesian Analysis (by end of August)???

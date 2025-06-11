@@ -130,7 +130,9 @@ def for_a_dataset(
     THETAS_ABC_i = {}
     key, key_theta, key_data = random.split(key, 3)
     TRUE_THETA = prior_simulator(key_theta)
+    TRUE_THETA = np.array([25.])
     TRUE_DATA = data_simulator(key_data, TRUE_THETA)
+    TRUE_DATA = np.array([25.])
     key, key_epsilon = random.split(key)
     time_iterations = {}
     EPSILONS_i = {1.0: np.inf}
@@ -169,7 +171,7 @@ def for_a_dataset(
         pickle.dump(THETAS_ABC_i, f)
         print("Pickle created at {}".format(PATH+"pickles/dataset_{}_thetas_abc.xz".format(i_dataset+1)))
         
-    create_csv_for_a_dataset(ALPHAS=ALPHAS, EPSILONS=EPSILONS_i, TEST_ACCURACY=TEST_ACCURACY_i, TRAIN_ACCURACY=TRAIN_ACCURACY_i, TIME_SIMULATIONS=TIME_SIMULATIONS_i, TIME_TRAINING=TIME_TRAINING_i, TIME_EVAL=TIME_EVAL_i, METRICS=METRICS_i, TRUE_DATA=TRUE_DATA, TRUE_THETA=TRUE_THETA, PRIOR_ARGS=PRIOR_ARGS, MODEL_ARGS=MODEL_ARGS, NN_ARGS=NN_ARGS, INDEX_MARGINAL=index_marginal, file_name=PATH+"csv/dataset_{}_theta_{:.3}.csv".format(i_dataset+1, TRUE_THETA[index_marginal]))
+    create_csv_for_a_dataset(ALPHAS=ALPHAS, EPSILONS=EPSILONS_i, TEST_ACCURACY=TEST_ACCURACY_i, TRAIN_ACCURACY=TRAIN_ACCURACY_i, TIME_SIMULATIONS=TIME_SIMULATIONS_i, TIME_TRAINING=TIME_TRAINING_i, TIME_EVAL=TIME_EVAL_i, METRICS=METRICS_i, TRUE_DATA=TRUE_DATA, TRUE_THETA=TRUE_THETA, PRIOR_ARGS=PRIOR_ARGS, MODEL_ARGS=MODEL_ARGS, NN_ARGS=NN_ARGS, INDEX_MARGINAL=index_marginal, file_name=PATH+"csv/dataset_{}.csv".format(i_dataset+1, TRUE_THETA[index_marginal]))
 
     return (
         PARAMS_i,

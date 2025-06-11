@@ -6,7 +6,19 @@ from sbibm.metrics import c2st
 import torch 
 import time 
 import numpy as np
-from scipy.stats import ranksums, gaussian_kde
+from scipy.stats import ranksums, gaussian_kde, wasserstein_distance
+
+def MSE_posterior_mean(true_samples, approx_samples):
+    mean_true = np.mean(true_samples)
+    mean_approx = np.mean(approx_samples)
+    mse = (mean_true - mean_approx) ** 2
+    return mse
+
+
+def wasserstein_1d(true_samples, approx_samples):
+    return wasserstein_distance(true_samples, approx_samples)
+
+
 
 def ranksumstest_stat(x,y):
     return ranksums(x,y).statistic

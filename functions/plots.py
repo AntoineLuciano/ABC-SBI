@@ -53,27 +53,31 @@ def plot_metric_for_many_datasets(metric_name, ALPHAS, METRICS, N_SAMPLES, N_DAT
     
     
     
-def plot_posterior_comparison(params, TRUE_DATA, thetas_abc, prior_dist, file_name="", show=True, N_GRID = 1000, true_posterior_pdf = None, N_KDE = 10000):
+def plot_posterior_comparison(params, TRUE_DATA, thetas_abc, prior_dist, file_name="", show=True, N_GRID = 1000, true_posterior_pdf = None, N_KDE = 10000, return_fig=False, abc = True, corrected_nre = True, nre = True, title = ""):
+    
     prior_logpdf = lambda x: prior_dist.logpdf(x)
     kde_approx = gaussian_kde(thetas_abc[:N_KDE])
     min_init, max_init = prior_dist.interval(.999)
     grid_nre, pdf_nre = find_grid_explorative(lambda x: NRE_posterior_pdf(params, x, TRUE_DATA, prior_logpdf), N_GRID, N_GRID, min_init, max_init)
     grid_corrected_nre, pdf_corrected_nre = find_grid_explorative(lambda x: NRE_corrected_posterior_pdf(params, x, TRUE_DATA, kde_approx), N_GRID, N_GRID, min_init, max_init)
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-    ax.plot(grid_nre, pdf_nre/np.trapz(pdf_nre, grid_nre), label="NRE", color="red")
-    ax.plot(grid_corrected_nre, pdf_corrected_nre/np.trapz(pdf_corrected_nre, grid_corrected_nre), label="Corrected NRE", color = "blue", linestyle="--")
-    sns.kdeplot(thetas_abc[:N_KDE], color="orange", label="ABC", ax = ax)
+    fig, ax = plt.subplots(1, 1, figsize=(7, 6))
+    if nre: ax.plot(grid_nre, pdf_nre/np.trapz(pdf_nre, grid_nre), label="NRE", color="red")
+    if corrected_nre: ax.plot(grid_corrected_nre, pdf_corrected_nre/np.trapz(pdf_corrected_nre, grid_corrected_nre), label="ABC-NRE", color = "blue", linestyle="--")
+    if abc: sns.kdeplot(thetas_abc[:N_KDE], color="orange", label="ABC", ax = ax)
     if true_posterior_pdf is not None:
         grid_true, pdf_true = find_grid_explorative(lambda x: true_posterior_pdf(x, TRUE_DATA), N_GRID, N_GRID, min_init, max_init)
-        ax.plot(grid_true, pdf_true/np.trapz(pdf_true, grid_true), label="True", color = "green")
+        ax.plot(grid_true, pdf_true/np.trapz(pdf_true, grid_true), label="Truth", color = "green")
         min_true = np.min(grid_true)
         max_true = np.max(grid_true)
         ax.set_xlim(min_true-(max_true-min_true)*.2, max_true+(max_true-min_true)*.2)
     ax.legend()
-
-    ax.set_title("Posterior comparison")
+    ax.set_xlim(35, 45)
+    ax.set_ylim(0, .5)
+    if title != "": ax.set_title("Posterior comparison")
     if len(file_name)>0: fig.savefig(file_name)
     if show: plt.show()
+    if return_fig:
+        return fig, ax
     plt.close(fig)
     print("FIGURE CREATED at {}".format(file_name))
     
