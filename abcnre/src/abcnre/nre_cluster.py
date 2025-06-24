@@ -22,6 +22,7 @@ import jax.numpy as jnp
 import lzma
 import pickle
 
+
 def ABC_NRE(
     key,
     N_POINTS,
@@ -36,7 +37,9 @@ def ABC_NRE(
     key, key_data = random.split(key)
     time_start = time.time()
     print("Simulation of the training dataset...")
-    X, y, dists, key = get_dataset(key = key_data, n_points = N_POINTS, prior_simulator= prior_simulator, data_simulator= data_simulator, discrepancy=discrepancy, epsilon= EPSILON, true_data= TRUE_DATA, index_marginal= index_marginal)
+    X, y, dists, key = get_dataset(
+        key = key_data, n_points = N_POINTS, prior_simulator= prior_simulator, data_simulator= data_simulator, 
+        discrepancy=discrepancy, epsilon= EPSILON, true_data= TRUE_DATA, index_marginal= index_marginal)
 
     key, key_split = random.split(key)
 
@@ -51,7 +54,8 @@ def ABC_NRE(
 
     print("Training the neural network...")
     time_start = time.time()
-    params, train_accuracy, train_losses, test_accuracy, test_losses, key = train_loop(key = key, NN_ARGS = NN_ARGS, prior_simulator= prior_simulator, data_simulator= data_simulator, discrepancy=discrepancy, true_data=TRUE_DATA, X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, N_POINTS_TRAIN=N_POINTS_TRAIN, N_POINTS_TEST=N_POINTS_TEST, epsilon=EPSILON, verbose=True)
+    params, train_accuracy, train_losses, test_accuracy, test_losses, key = \
+        train_loop(key = key, NN_ARGS = NN_ARGS, prior_simulator= prior_simulator, data_simulator= data_simulator, discrepancy=discrepancy, true_data=TRUE_DATA, X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, N_POINTS_TRAIN=N_POINTS_TRAIN, N_POINTS_TEST=N_POINTS_TEST, epsilon=EPSILON, verbose=True)
     
     time_training = time.time() - time_start
     print("Done in {} seconds!".format(time_training))
@@ -85,12 +89,20 @@ def for_an_epsilon(
     print("\n---------------------------------\nDATASET {} ALPHA {}\n---------------------------------".format(i_dataset, alpha))
     key, key_nre, key_kde, key_evaluate = random.split(key, 4)
     
-    thetas_abc, dists, params, train_accuracy, train_losses, test_accuracy, test_losses, time_simulations, time_training = ABC_NRE(key= key_nre, N_POINTS= N_POINTS, prior_simulator= prior_simulator, data_simulator= data_simulator, discrepancy=discrepancy, TRUE_DATA= TRUE_DATA, EPSILON= EPSILON, NN_ARGS= NN_ARGS, index_marginal=  index_marginal)
+    thetas_abc, dists, params, train_accuracy, train_losses, test_accuracy, test_losses, time_simulations, time_training = \
+        ABC_NRE(key= key_nre, N_POINTS= N_POINTS, prior_simulator= prior_simulator, data_simulator= data_simulator, 
+                discrepancy=discrepancy, TRUE_DATA= TRUE_DATA, EPSILON= EPSILON, NN_ARGS= NN_ARGS, index_marginal=  index_marginal)
     
     print("Plotting the posterior...")
-    plot_posterior_comparison(params= params, TRUE_DATA= TRUE_DATA, thetas_abc= thetas_abc, prior_dist= PRIOR_DIST, file_name = PATH+"figures/posterior_check/{}_alpha_{}.png".format(i_dataset+1, alpha), show = False, N_GRID = N_GRID, true_posterior_pdf = true_posterior_pdf, N_KDE= N_KDE)
+    plot_posterior_comparison(
+        params= params, TRUE_DATA= TRUE_DATA, thetas_abc= thetas_abc, prior_dist= PRIOR_DIST, 
+        file_name = PATH+"figures/posterior_check/{}_alpha_{}.png".format(i_dataset+1, alpha), 
+        show = False, N_GRID = N_GRID, true_posterior_pdf = true_posterior_pdf, N_KDE= N_KDE)
     
-    metrics, time_eval = evaluate_metrics(key = key_evaluate, metrics_dico= METRICS_TO_TEST, TRUE_DATA= TRUE_DATA, params= params, thetas_abc= thetas_abc, PRIOR_DIST= PRIOR_DIST, N_GRID= N_GRID, N_SAMPLE= N_SAMPLE, N_SAMPLES= N_SAMPLES, true_posterior_sample= true_posterior_sample, N_KDE= N_KDE)
+    metrics, time_eval = evaluate_metrics(
+        key = key_evaluate, metrics_dico= METRICS_TO_TEST, TRUE_DATA= TRUE_DATA, params= params, 
+        thetas_abc= thetas_abc, PRIOR_DIST= PRIOR_DIST, N_GRID= N_GRID, N_SAMPLE= N_SAMPLE, 
+        N_SAMPLES= N_SAMPLES, true_posterior_sample= true_posterior_sample, N_KDE= N_KDE)
     
     return (dists,params,train_accuracy,train_losses,test_accuracy,test_losses,time_simulations,time_training,time_eval,metrics, thetas_abc)
 
@@ -159,9 +171,15 @@ def for_a_dataset(
         THETAS_ABC_i[alpha] = thetas_abc
         time_iterations[alpha] = time.time() - time_iteration
         
-    plot_metric_for_a_dataset(metric_name="C2ST", ALPHAS=ALPHAS, METRICS= METRICS_i, N_SAMPLES=N_SAMPLES, PATH_NAME=PATH+"figures/C2ST_dataset_{}.png".format(i_dataset+1), show=False, title="C2ST for dataset {} $\\theta =$ {:.3}".format(i_dataset+1, TRUE_THETA[index_marginal]))
+    plot_metric_for_a_dataset(
+        metric_name="C2ST", ALPHAS=ALPHAS, METRICS= METRICS_i, N_SAMPLES=N_SAMPLES, 
+        PATH_NAME=PATH+"figures/C2ST_dataset_{}.png".format(i_dataset+1), 
+        show=False, title="C2ST for dataset {} $\\theta =$ {:.3}".format(i_dataset+1, TRUE_THETA[index_marginal]))
     
-    plot_metric_for_a_dataset(metric_name="RS_stat", ALPHAS=ALPHAS, METRICS= METRICS_i, N_SAMPLES=N_SAMPLES, PATH_NAME=PATH+"figures/RS_stats_dataset_{}.png".format(i_dataset+1), show=False, title="Ranksums statistic for dataset {} $\\theta =$ {:.3}".format(i_dataset+1, TRUE_THETA[index_marginal]))
+    plot_metric_for_a_dataset(
+        metric_name="RS_stat", ALPHAS=ALPHAS, METRICS= METRICS_i, N_SAMPLES=N_SAMPLES, 
+        PATH_NAME=PATH+"figures/RS_stats_dataset_{}.png".format(i_dataset+1), show=False, 
+        title="Ranksums statistic for dataset {} $\\theta =$ {:.3}".format(i_dataset+1, TRUE_THETA[index_marginal]))
     
     with lzma.open(PATH+"pickles/dataset_{}_params.xz".format(i_dataset+1), "wb") as f:
         pickle.dump(PARAMS_i, f)
@@ -171,7 +189,12 @@ def for_a_dataset(
         pickle.dump(THETAS_ABC_i, f)
         print("Pickle created at {}".format(PATH+"pickles/dataset_{}_thetas_abc.xz".format(i_dataset+1)))
         
-    create_csv_for_a_dataset(ALPHAS=ALPHAS, EPSILONS=EPSILONS_i, TEST_ACCURACY=TEST_ACCURACY_i, TRAIN_ACCURACY=TRAIN_ACCURACY_i, TIME_SIMULATIONS=TIME_SIMULATIONS_i, TIME_TRAINING=TIME_TRAINING_i, TIME_EVAL=TIME_EVAL_i, METRICS=METRICS_i, TRUE_DATA=TRUE_DATA, TRUE_THETA=TRUE_THETA, PRIOR_ARGS=PRIOR_ARGS, MODEL_ARGS=MODEL_ARGS, NN_ARGS=NN_ARGS, INDEX_MARGINAL=index_marginal, file_name=PATH+"csv/dataset_{}.csv".format(i_dataset+1, TRUE_THETA[index_marginal]))
+    create_csv_for_a_dataset(
+        ALPHAS=ALPHAS, EPSILONS=EPSILONS_i, TEST_ACCURACY=TEST_ACCURACY_i, TRAIN_ACCURACY=TRAIN_ACCURACY_i, 
+        TIME_SIMULATIONS=TIME_SIMULATIONS_i, TIME_TRAINING=TIME_TRAINING_i, TIME_EVAL=TIME_EVAL_i, 
+        METRICS=METRICS_i, TRUE_DATA=TRUE_DATA, TRUE_THETA=TRUE_THETA, PRIOR_ARGS=PRIOR_ARGS, 
+        MODEL_ARGS=MODEL_ARGS, NN_ARGS=NN_ARGS, INDEX_MARGINAL=index_marginal, 
+        file_name=PATH+"csv/dataset_{}.csv".format(i_dataset+1, TRUE_THETA[index_marginal]))
 
     return (
         PARAMS_i,

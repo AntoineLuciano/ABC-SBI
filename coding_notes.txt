@@ -5,3 +5,23 @@
 - Don't use capital case for variable names
 - Keep to < 80 columns for readability
 - For standalone functions, give an example invocation in a comment at the top of the file
+- Don't assign massive tuples to one another (e.g. in train_loop), it's unreadable and error-prone
+- Use functors to avoid passing around a zillion arguments.  Key example: the use of get_dataset in training.train_loop 
+- When defining local functions, don't pass arguments that never change (e.g. batch_size in training.train_loop.get_train_batches)
+- I recommend giving functions verb names.  For example, is dataset_stats a function or a container of stats?
+- Save configuration parameters in yml files (or something), not hard-coded constants
+- I think that right now the NN architecture is hard-coded!
+- Split up and cache computation.  For example, in cluster_logistic, make one script to 
+  run for a particular alpha and save the results, then call these scripts in parallel.
+  And train the NN separately from analyzing it (e.g. for SBC).
+- I think there are different versions of find_grid_explorative.  Make one in its own 
+  source file and test it
+- Make simple tests to make sure everything runs
+- It would be good to be more careful with paths and analysis names
+- I recommend defining a simple class structure for drawing data,
+  and logically separating data generation, neural net training, and
+  evaluation.
+- You will need to encode the NN structure together with the serialized
+  NN params.  I recommend getting away from pickle.  Let's talk about how 
+  to do this.  I recommend NN configuration files, with
+  names and hashes.

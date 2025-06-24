@@ -9,9 +9,15 @@ from .simulation import get_dataset
 
 import numpy as np
 
-def train_loop(key, NN_ARGS, prior_simulator, data_simulator, discrepancy, true_data, X_train = None, y_train = None, X_test = None, y_test =  None, N_POINTS_TRAIN = 0, N_POINTS_TEST = 0, epsilon = jnp.inf, verbose = True, iid = True):
+def train_loop(key, NN_ARGS, prior_simulator, data_simulator, discrepancy, true_data, 
+               X_train = None, y_train = None, X_test = None, y_test =  None, 
+               N_POINTS_TRAIN = 0, N_POINTS_TEST = 0, epsilon = jnp.inf, verbose = True, iid = True):
     
-    num_epoch_max, num_layers, hidden_size, batch_size, num_batch, learning_rate, wdecay, patience, cooldown, factor, rtol, accumulation_size, learning_rate_min = NN_ARGS["N_EPOCH"], NN_ARGS["NUM_LAYERS"], NN_ARGS["HIDDEN_SIZE"], NN_ARGS["BATCH_SIZE"], NN_ARGS["NUM_BATCH"], NN_ARGS["LEARNING_RATE"], NN_ARGS["WDECAY"], NN_ARGS["PATIENCE"], NN_ARGS["COOLDOWN"], NN_ARGS["FACTOR"], NN_ARGS["RTOL"], NN_ARGS["ACCUMULATION_SIZE"], NN_ARGS["LEARNING_RATE_MIN"]    
+    num_epoch_max, num_layers, hidden_size, batch_size, num_batch, learning_rate, wdecay, patience, cooldown, \
+        factor, rtol, accumulation_size, learning_rate_min = \
+            NN_ARGS["N_EPOCH"], NN_ARGS["NUM_LAYERS"], NN_ARGS["HIDDEN_SIZE"], NN_ARGS["BATCH_SIZE"], NN_ARGS["NUM_BATCH"], \
+                NN_ARGS["LEARNING_RATE"], NN_ARGS["WDECAY"], NN_ARGS["PATIENCE"], NN_ARGS["COOLDOWN"], \
+                    NN_ARGS["FACTOR"], NN_ARGS["RTOL"], NN_ARGS["ACCUMULATION_SIZE"], NN_ARGS["LEARNING_RATE_MIN"]    
 
     class MLP(nn.Module):
         """A simple multilayer perceptron model for image classification."""
@@ -73,12 +79,12 @@ def train_loop(key, NN_ARGS, prior_simulator, data_simulator, discrepancy, true_
     # net = MLP(hidden_sizes=[hidden_size] * num_layers, iid=iid, d = 1, M = X_train.shape[1]-1)
     
 
-
     def get_train_batches(inputs, labels, batch_size, num_batch, key, true_data):
         if inputs is None:
             # print("Simulation of {} batches of size {}".format(num_batch, batch_size))
             for i in range(num_batch):
-                inputs_batch, labels_batch, _, key = get_dataset(key, batch_size, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
+                inputs_batch, labels_batch, _, key = get_dataset(
+                    key, batch_size, prior_simulator, data_simulator, discrepancy, epsilon, true_data)
                 yield inputs_batch, labels_batch
         else:
             permutation = random.permutation(key, len(inputs))
