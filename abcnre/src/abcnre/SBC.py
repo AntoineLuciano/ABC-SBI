@@ -1,7 +1,7 @@
 import scipy.stats as stats
 import jax.numpy as jnp
 from jax import random, vmap, jit
-from functions.simulation import ABC_epsilon
+from .simulation import ABC_epsilon
 from tqdm import tqdm
 import scipy.stats as stats
 import matplotlib.pyplot as plt

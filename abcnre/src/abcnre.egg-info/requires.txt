@@ -1,0 +1,10 @@
+numpy
+jax
+torch
+scipy
+scikit-learn
+matplotlib
+seaborn
+tqdm
+optax
+flax

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from functions.simulation import NRE_corrected_posterior_pdf, NRE_posterior_pdf, find_grid_explorative
+from .simulation import NRE_corrected_posterior_pdf, NRE_posterior_pdf, find_grid_explorative
 from scipy.stats import gaussian_kde
 import seaborn as sns
 

@@ -1,6 +1,6 @@
 
 
-from functions.simulation import NRE_posterior_sample, NRE_corrected_posterior_sample
+from .simulation import NRE_posterior_sample, NRE_corrected_posterior_sample
 from jax import random
 from sbibm.metrics import c2st
 import torch 

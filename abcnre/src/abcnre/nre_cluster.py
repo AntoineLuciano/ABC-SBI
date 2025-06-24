@@ -1,18 +1,18 @@
 import os
 import sys
-path = os.getcwd()
-print("Old path:", path)
-path = path.split("/")
-path = path[: path.index("ABC-SBI") + 1]
-path = "/".join(path)
-print("New path:", path)
-os.chdir(path)
-sys.path.append(path)
-from functions.simulation import get_dataset
-from functions.training import train_loop
-from functions.plots import plot_metric_for_a_dataset, plot_posterior_comparison
-from functions.metrics import evaluate_metrics
-from functions.save import create_csv_for_a_dataset
+# path = os.getcwd()
+# print("Old path:", path)
+# path = path.split("/")
+# path = path[: path.index("ABC-SBI") + 1]
+# path = "/".join(path)
+# print("New path:", path)
+# os.chdir(path)
+# sys.path.append(path)
+from .simulation import get_dataset
+from .training import train_loop
+from .plots import plot_metric_for_a_dataset, plot_posterior_comparison
+from .metrics import evaluate_metrics
+from .save import create_csv_for_a_dataset
 from jax import random, jit, vmap
 from sklearn.model_selection import train_test_split
 import time
