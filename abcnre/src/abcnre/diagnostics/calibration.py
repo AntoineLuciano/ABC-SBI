@@ -7,9 +7,9 @@ from typing import Dict, Any, Optional
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ..inference.estimator import NeuralRatioEstimator
-    from ..simulation.simulator import ABCSimulator
+from ..simulation.simulator import ABCSimulator
 
-from .posterior import get_unnormalized_nre_pdf, get_normalized_posterior, sample_from_posterior
+from .posterior import get_unnormalized_nre_pdf, get_normalized_pdf, sample_from_pdf, get_unormalized_corrected_nre_pdf
 
 
 def run_abc_sbc(
@@ -19,7 +19,8 @@ def run_abc_sbc(
     abc_phi_samples: np.ndarray,
     num_sbc_rounds: int = 500,
     num_posterior_samples: int = 1000,
-    true_phis_for_sbc: Optional[np.ndarray] = None # <<< Nouvel argument optionnel
+    true_phis_for_sbc: Optional[np.ndarray] = None 
+
 ) -> Dict[str, Any]:
     """
     Performs ABC-based Simulation-Based Calibration (ABC-SBC).
@@ -29,10 +30,8 @@ def run_abc_sbc(
     randomly drawn from `abc_phi_samples`.
     
     Args:
-        # ... (les autres arguments restent les mêmes)
         true_phis_for_sbc: An optional array of pre-defined "true" phi values to use for calibration.
     """
-    # --- NOUVELLE LOGIQUE ---
     if true_phis_for_sbc is not None:
         print(f"Running ABC-SBC using {len(true_phis_for_sbc)} provided true phi values...")
         phis_to_iterate = true_phis_for_sbc
@@ -47,19 +46,18 @@ def run_abc_sbc(
     for phi_true in tqdm(phis_to_iterate, desc="ABC-SBC Progress"):
         key, sim_key, sample_key = jax.random.split(key, 3)
 
-        # La suite de la logique reste la même...
-        # 1. Simulate a new dataset x_sim from phi_true
+       
         n_obs = simulator.observed_data.shape[0]
         x_sim = simulator.model.simulate(sim_key, phi_true, n_obs)
         
         temp_simulator = ABCSimulator(model=simulator.model, observed_data=x_sim)
 
-        # 2. Compute the NRE posterior for this x_sim
-        unnormalized_pdf_func = get_unnormalized_nre_pdf(estimator, temp_simulator)
-        grid, normalized_pdf = get_normalized_posterior(unnormalized_pdf_func, initial_bounds)
+        unnormalized_pdf_func = get_unormalized_corrected_nre_pdf(estimator, temp_simulator, 
+                                                                  phi_samples=abc_phi_samples)
+        grid, normalized_pdf = get_normalized_pdf(unnormalized_pdf_func, initial_bounds)
 
         # 3. Draw samples from this NRE posterior
-        posterior_samples = sample_from_posterior(
+        posterior_samples = sample_from_pdf(
             grid, normalized_pdf, num_posterior_samples, sample_key
         )
 

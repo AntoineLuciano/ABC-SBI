@@ -3,7 +3,10 @@
 import jax.numpy as jnp
 import numpy as np
 from scipy.integrate import trapz
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Optional
+from scipy.stats import gaussian_kde
+from scipy.integrate import cumulative_trapezoid
+
 import jax 
 # To avoid circular imports, we use TYPE_CHECKING
 from typing import TYPE_CHECKING
@@ -17,7 +20,8 @@ def _find_optimal_grid(
     initial_bounds: Tuple[float, float],
     n_grid_points: int = 500,
     threshold_factor: float = 1e-4,
-    expansion_factor: float = 0.2
+    expansion_factor: float = 0.2,
+
 ) -> np.ndarray:
     """
     Finds a grid where the PDF is non-negligible.
@@ -121,7 +125,11 @@ def get_unnormalized_nre_pdf(
 
 def get_unormalized_corrected_nre_pdf(
     estimator: 'NeuralRatioEstimator',
-    simulator: 'ABCSimulator'
+    simulator: 'ABCSimulator',
+    phi_samples: Optional[jnp.ndarray] = None,
+    kde_approximation: Optional[Callable] = None,
+    num_samples_for_kde: int = 10000
+
 ) -> Callable[[jnp.ndarray], jnp.ndarray]:
     """
     Creates a function for the unnormalized corrected NRE posterior PDF.
@@ -135,10 +143,16 @@ def get_unormalized_corrected_nre_pdf(
     Returns:
         A callable function that evaluates the unnormalized posterior at given phi values.
     """
-    model = simulator.model
-    obs_summary = simulator.observed_summary_stats
-    phi_stored = simulator.phi_stored
     
+    obs_summary = simulator.observed_summary_stats
+    if kde_approximation is not None:
+        kde_func = kde_approximation
+    elif phi_samples is not None:
+        kde_func = gaussian_kde(phi_samples.flatten())
+    else:
+        phi_samples = simulator.get_phi_samples(num_samples_for_kde)
+        kde_func = gaussian_kde(phi_samples.flatten())
+
     def unnormalized_pdf(phi_values: jnp.ndarray) -> jnp.ndarray:
         # Ensure phi_values is 2D for concatenation
         phi_features = phi_values[:, None] if phi_values.ndim == 1 else phi_values
@@ -152,27 +166,25 @@ def get_unormalized_corrected_nre_pdf(
         # Get log-ratio from the NRE
         log_ratios = estimator.log_ratio(features)
         
-        # Get prior probability
-        prior_log_pdf = model.prior_logpdf(phi_values)
+        # Evaluate KDE approximation at phi_values
+        kde_vals = kde_func(phi_values)
 
-        # Get likelihood p(x_obs | phi)
-        likelihood_log_pdf = model.likelihood_logpdf(obs_summary, phi_values)
+        # p(phi|x) ∝ exp(-log_r) * kde(phi)
+        return jnp.exp(-log_ratios) * kde_vals
 
-        # p(phi|x) ∝ exp(log_r) * p(phi) / p(x_obs) => log(p(phi|x)) = log_r + log(p(phi)) - log(p(x_obs))
-        unnormalized_log_pdf = -log_ratios + prior_log_pdf - likelihood_log_pdf
-        
-        return jnp.exp(unnormalized_log_pdf)
     
     return unnormalized_pdf
 
 
-def get_normalized_posterior(
+
+
+def get_normalized_pdf(
     unnormalized_pdf_func: Callable,
     initial_bounds: Tuple[float, float],
-    n_grid_points: int = 1000
+    n_grid_points: int = 1000,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Computes the normalized posterior PDF on an optimal grid.
+    Computes the normalized PDF on an optimal grid.
 
     Args:
         unnormalized_pdf_func: A function that computes the unnormalized PDF.
@@ -184,6 +196,7 @@ def get_normalized_posterior(
         corresponding normalized probability density values.
     """
     # 1. Find the optimal grid where the posterior is significant
+
     grid = _find_optimal_grid(unnormalized_pdf_func, initial_bounds, n_grid_points)
 
     # 2. Evaluate the unnormalized PDF on this grid
@@ -200,16 +213,15 @@ def get_normalized_posterior(
     
     return grid, normalized_pdf
 
-from scipy.integrate import cumulative_trapezoid
 
-def sample_from_posterior(
+def sample_from_pdf(
     grid: np.ndarray,
     normalized_pdf: np.ndarray,
     n_samples: int,
     key: 'jax.random.PRNGKey'
 ) -> jnp.ndarray:
     """
-    Draws samples from a posterior distribution defined on a grid.
+    Draws samples from a probability distribution defined on a grid.
 
     This function uses the inverse transform sampling method. It first computes
     the Cumulative Distribution Function (CDF) from the PDF, and then uses
@@ -222,7 +234,7 @@ def sample_from_posterior(
         key: A JAX random key for reproducibility.
 
     Returns:
-        A JAX array of samples drawn from the posterior distribution.
+        A JAX array of samples drawn from the probability distribution.
     """
     # 1. Compute the CDF from the PDF using numerical integration
     # We add an initial 0 to the CDF to start at the beginning of the grid

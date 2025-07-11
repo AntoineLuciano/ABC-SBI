@@ -30,16 +30,19 @@ def plot_posterior_comparison(
         save_path: The path to save the figure to.
     """
     plt.figure(figsize=(12, 8))
-    
-    colors = plt.cm.viridis(np.linspace(0, 1, len(distributions) + 1))
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    # # Get the standard matplotlib color cycle
+    # colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    # if len(colors) < len(distributions):
+    #     # Extend colors if not enough
+    #     cmap = plt.get_cmap('tab10')
+    #     colors = [cmap(i % cmap.N) for i in range(len(distributions))]
 
     for i, (label, data) in enumerate(distributions.items()):
         # Check if data is samples (1D array) or a pre-computed PDF (tuple)
         if isinstance(data, (list, np.ndarray)) or (isinstance(data, np.ndarray) and np.array(data).ndim == 1):
-
-            sns.kdeplot(data, label=label, color=colors[i])
+            sns.kdeplot(data.flatten(), label=label, linewidth=2.5, alpha=0.8, color=colors[i])
         elif isinstance(data, tuple) and len(data) == 2:
-            # It's a (grid, pdf) tuple, plot a line
             grid, pdf_values = data
             plt.plot(grid, pdf_values, lw=2.5, alpha=0.8, label=label, color=colors[i])
         
@@ -49,7 +52,7 @@ def plot_posterior_comparison(
     # Plot the prior if provided
     if prior_pdf:
         grid, pdf = prior_pdf
-        plt.plot(grid, pdf, 'g--', lw=2, alpha=0.7, label='Prior')
+        plt.plot(grid, pdf,  lw=1, alpha=0.7, label='Prior', color='gray', linestyle='--')
 
     # Plot the true value if provided
     if true_value is not None:
@@ -91,20 +94,21 @@ def plot_sbc_ranks(
     
     n_sbc_rounds = len(ranks)
     # The number of bins is L+1, where L is the number of posterior samples
-    num_bins = num_posterior_samples + 1
-    
+    num_bins = max(num_posterior_samples//2**3 + 1, 17)
+    print(f"Number of bins for histogram: {num_bins}")
+
     # Calculate confidence intervals using a binomial distribution
     # This shows the range where counts are expected to fall by chance.
     alpha = 0.05 # 95% confidence interval
     lower_bound = stats.binom.ppf(alpha / 2, n_sbc_rounds, 1 / num_bins)
     upper_bound = stats.binom.ppf(1 - alpha / 2, n_sbc_rounds, 1 / num_bins)
 
-    plt.hist(ranks, bins=np.arange(num_bins + 1), density=False, alpha=0.8, label='Actual Ranks')
+    plt.hist(ranks, bins=num_bins, density=False, alpha=0.8, label='Actual Ranks', color = "red", edgecolor='black')
     
     # Plot expected uniform distribution and confidence bands
     expected_count = n_sbc_rounds / num_bins
     plt.axhline(expected_count, color='k', linestyle='--', label='Expected Uniform Count')
-    plt.fill_between([0, num_bins], lower_bound, upper_bound, color='gray', alpha=0.3, label='95% Confidence Interval')
+    plt.fill_between([0, num_posterior_samples], lower_bound, upper_bound, color='gray', alpha=0.3, label='95% Confidence Interval')
 
     plt.title(title, fontsize=16)
     plt.xlabel('Rank Statistic')
