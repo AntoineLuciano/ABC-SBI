@@ -1,0 +1,9 @@
+network:
+  type: MLPNetwork
+  hidden_dims: [64, 32]
+  dropout_rate: 0.1
+training:
+  learning_rate: 0.001
+  num_epochs: 10
+  batch_size: 128
+  seed: 42

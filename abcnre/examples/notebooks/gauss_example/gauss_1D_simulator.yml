@@ -1,0 +1,13 @@
+abcnre_version: 0.1.0
+config_hash: 273b7710f945
+model_class: abcnre.simulation.models.gauss_gauss.GaussGaussModel
+model_args:
+  mu0: 0.0
+  sigma0: 2.0
+  sigma: 0.5
+observed_data_path: observed_data_273b7710f945.npy
+epsilon: 0.2836467921733856
+simulator_config:
+  quantile_n_samples: 10000
+  verbose: true
+  summary_stats_enabled: true

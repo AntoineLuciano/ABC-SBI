@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/mnt/nfs/nrdata02-users-data/luciano/script/ABC-SBI/examples/Beta-Binomial/cluster_pattern_beta_binomial.py", line 19, in <module>
-    PRIOR_ALPHA = float(sys.args[1])
-AttributeError: module 'sys' has no attribute 'args'. Did you mean: 'argv'?

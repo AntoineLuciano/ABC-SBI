@@ -1,2 +1,0 @@
-class SimulationBudgetExceeded(Exception):
-    pass

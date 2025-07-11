@@ -1,0 +1,201 @@
+.
+├── TODO.txt
+├── abcnre
+│   ├── CHANGELOG.md
+│   ├── LICENSE
+│   ├── README.md
+│   ├── benchmarks
+│   │   └── results
+│   ├── check_installation.py
+│   ├── data
+│   │   ├── cache
+│   │   └── reference
+│   ├── docs
+│   │   └── source
+│   │       ├── api
+│   │       ├── examples
+│   │       └── tutorials
+│   ├── examples
+│   │   ├── data
+│   │   │   └── configs
+│   │   ├── notebooks
+│   │   └── scripts
+│   │       └── basic_workflow.py
+│   ├── fix_and_test.py
+│   ├── fix_simulation_import.py
+│   ├── one_liner_fix.py
+│   ├── pyproject.toml
+│   ├── quick_test_existing.py
+│   ├── requirements-dev.txt
+│   ├── requirements.txt
+│   ├── scripts
+│   │   ├── install_dev.sh
+│   │   └── run_tests.sh
+│   ├── setup_networks_only.py
+│   ├── src
+│   │   ├── abcnre
+│   │   │   ├── __init__.py
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   └── _version.cpython-310.pyc
+│   │   │   ├── _version.py
+│   │   │   ├── cli
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── commands
+│   │   │   │   │   └── __init__.py
+│   │   │   │   └── main.py
+│   │   │   ├── config
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── schemas
+│   │   │   ├── diagnostics
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── validator.py
+│   │   │   ├── inference
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   ├── config.cpython-310.pyc
+│   │   │   │   │   ├── diagnostics_integration.cpython-310.pyc
+│   │   │   │   │   ├── estimator.cpython-310.pyc
+│   │   │   │   │   ├── persistence.cpython-310.pyc
+│   │   │   │   │   ├── trainer.cpython-310.pyc
+│   │   │   │   │   ├── utils.cpython-310.pyc
+│   │   │   │   │   └── validation.cpython-310.pyc
+│   │   │   │   ├── config.py
+│   │   │   │   ├── diagnostics_integration.py
+│   │   │   │   ├── estimator.py
+│   │   │   │   ├── networks
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── __pycache__
+│   │   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   │   ├── base.cpython-310.pyc
+│   │   │   │   │   │   ├── deepset.cpython-310.pyc
+│   │   │   │   │   │   └── mlp.cpython-310.pyc
+│   │   │   │   │   ├── base.py
+│   │   │   │   │   ├── deepset.py
+│   │   │   │   │   └── mlp.py
+│   │   │   │   ├── persistence.py
+│   │   │   │   ├── trainer.py
+│   │   │   │   ├── utils.py
+│   │   │   │   └── validation.py
+│   │   │   ├── io
+│   │   │   │   └── __init__.py
+│   │   │   ├── preprocessing
+│   │   │   │   └── __init__.py
+│   │   │   ├── simulation
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── __init__.py.backup
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   ├── base.cpython-310.pyc
+│   │   │   │   │   ├── sampler.cpython-310.pyc
+│   │   │   │   │   ├── simulator.cpython-310.pyc
+│   │   │   │   │   └── utils.cpython-310.pyc
+│   │   │   │   ├── base.py
+│   │   │   │   ├── models
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── __pycache__
+│   │   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   │   ├── base.cpython-310.pyc
+│   │   │   │   │   │   ├── g_and_k.cpython-310.pyc
+│   │   │   │   │   │   └── gauss_gauss.cpython-310.pyc
+│   │   │   │   │   ├── base.py
+│   │   │   │   │   ├── g_and_k.py
+│   │   │   │   │   └── gauss_gauss.py
+│   │   │   │   ├── sampler.py
+│   │   │   │   ├── simulation_file_documentation.md
+│   │   │   │   ├── simulator.py
+│   │   │   │   └── utils.py
+│   │   │   └── utils
+│   │   │       └── __init__.py
+│   │   └── abcnre.egg-info
+│   │       ├── PKG-INFO
+│   │       ├── SOURCES.txt
+│   │       ├── dependency_links.txt
+│   │       ├── entry_points.txt
+│   │       ├── requires.txt
+│   │       └── top_level.txt
+│   ├── tests
+│   │   ├── __init__.py
+│   │   ├── benchmarks
+│   │   ├── conftest.py
+│   │   ├── fixtures
+│   │   │   ├── configs
+│   │   │   └── data
+│   │   ├── integration
+│   │   │   └── __init__.py
+│   │   └── unit
+│   │       ├── __init__.py
+│   │       ├── test_config
+│   │       │   └── __init__.py
+│   │       ├── test_diagnostics
+│   │       │   └── __init__.py
+│   │       ├── test_inference
+│   │       │   ├── __init__.py
+│   │       │   ├── src
+│   │       │   │   └── abcnre
+│   │       │   │       └── inference
+│   │       │   │           └── networks
+│   │       │   ├── test_compatibility.py
+│   │       │   ├── test_inference_advanced.py
+│   │       │   ├── test_inference_basic.py
+│   │       │   ├── test_integration_simulation.py
+│   │       │   └── tests
+│   │       │       └── unit
+│   │       │           └── test_inference
+│   │       └── test_simulation
+│   │           ├── __init__.py
+│   │           ├── test_gauss_gauss_simple.py
+│   │           ├── test_simulator.py
+│   │           └── test_yaml_persistence.py
+│   ├── tree.txt
+│   └── ultimate_fix.py
+├── abcnre_old
+│   ├── LICENSE.txt
+│   ├── README.md
+│   ├── noxfile.py
+│   ├── pyproject.toml
+│   ├── src
+│   │   ├── abcnre
+│   │   │   ├── SBC.py
+│   │   │   ├── __init__.py
+│   │   │   ├── metrics.py
+│   │   │   ├── nre_cluster.py
+│   │   │   ├── plots.py
+│   │   │   ├── save.py
+│   │   │   ├── simulation.py
+│   │   │   └── training.py
+│   │   ├── abcnre.egg-info
+│   │   │   ├── PKG-INFO
+│   │   │   ├── SOURCES.txt
+│   │   │   ├── dependency_links.txt
+│   │   │   ├── requires.txt
+│   │   │   └── top_level.txt
+│   │   └── baz
+│   │       └── __init__.py
+│   └── tests
+│       ├── LICENSE.txt
+│       ├── README.md
+│       ├── __init__.py
+│       ├── noxfile.py
+│       ├── pyproject.toml
+│       ├── src
+│       │   ├── foo
+│       │   │   └── __init__.py
+│       │   ├── sample
+│       │   │   ├── __init__.py
+│       │   │   ├── package_data.dat
+│       │   │   └── simple.py
+│       │   └── sampleproject.egg-info
+│       │       ├── PKG-INFO
+│       │       ├── SOURCES.txt
+│       │       ├── dependency_links.txt
+│       │       ├── entry_points.txt
+│       │       ├── requires.txt
+│       │       └── top_level.txt
+│       └── test_simple.py
+├── coding_notes.txt
+├── simple_todo_abcnre.md
+└── tree.txt
+
+66 directories, 133 files

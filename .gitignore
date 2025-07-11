@@ -1,8 +1,0 @@
-**/__pycache__/**
-venv/**
-**/.ipynb_checkpoints/**
-**/*.pyc
-tex_antoine/**
-sbibm-main/** 
-tstex_modules/**
-amnre-master/**

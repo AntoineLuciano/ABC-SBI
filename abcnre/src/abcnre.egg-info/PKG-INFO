@@ -1,99 +1,96 @@
 Metadata-Version: 2.4
 Name: abcnre
-Version: 0.0.0
-Summary: Tools for doing ABC-NRE
-Author-email: Antoine Luciano <luciano@ceremade.dauphine.fr>, Ryan Giordano <rgiordano@berkeley.edu>
-Maintainer-email: Antoine Luciano <luciano@ceremade.dauphine.fr>, Ryan Giordano <rgiordano@berkeley.edu>
-License: MIT License
-        
-        Copyright (c) 2025 Ryan Giordano
-        
-        Permission is hereby granted, free of charge, to any person obtaining a copy
-        of this software and associated documentation files (the "Software"), to deal
-        in the Software without restriction, including without limitation the rights
-        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-        copies of the Software, and to permit persons to whom the Software is
-        furnished to do so, subject to the following conditions:
-        
-        The above copyright notice and this permission notice shall be included in all
-        copies or substantial portions of the Software.
-        
-        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-        SOFTWARE.
-Keywords: sample,setuptools,development
+Version: 0.1.0
+Summary: Approximate Bayesian Computation with Neural Ratio Estimation
+Author-email: Your Name <your.email@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/username/abcnre
+Project-URL: Documentation, https://abcnre.readthedocs.io
+Project-URL: Repository, https://github.com/username/abcnre
+Project-URL: Issues, https://github.com/username/abcnre/issues
 Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
 Classifier: Programming Language :: Python :: 3.9
 Classifier: Programming Language :: Python :: 3.10
 Classifier: Programming Language :: Python :: 3.11
-Classifier: Programming Language :: Python :: 3.12
-Classifier: Programming Language :: Python :: 3.13
-Classifier: Programming Language :: Python :: 3 :: Only
-Requires-Python: >=3.10
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.8
 Description-Content-Type: text/markdown
-License-File: LICENSE.txt
-Requires-Dist: numpy
-Requires-Dist: jax
-Requires-Dist: torch
-Requires-Dist: scipy
-Requires-Dist: scikit-learn
-Requires-Dist: matplotlib
-Requires-Dist: seaborn
-Requires-Dist: tqdm
-Requires-Dist: optax
-Requires-Dist: flax
+License-File: LICENSE
+Requires-Dist: numpy>=1.20.0
+Requires-Dist: scipy>=1.7.0
+Requires-Dist: torch>=1.9.0
+Requires-Dist: matplotlib>=3.3.0
+Requires-Dist: pyyaml>=5.4.0
+Requires-Dist: tqdm>=4.60.0
+Requires-Dist: scikit-learn>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.0; extra == "dev"
+Requires-Dist: black>=22.0; extra == "dev"
+Requires-Dist: isort>=5.0; extra == "dev"
+Requires-Dist: flake8>=4.0; extra == "dev"
+Requires-Dist: mypy>=0.900; extra == "dev"
+Requires-Dist: pre-commit>=2.0; extra == "dev"
+Provides-Extra: docs
+Requires-Dist: sphinx>=4.0; extra == "docs"
+Requires-Dist: sphinx-rtd-theme>=1.0; extra == "docs"
+Requires-Dist: nbsphinx>=0.8; extra == "docs"
+Requires-Dist: pandoc>=1.0; extra == "docs"
+Provides-Extra: examples
+Requires-Dist: jupyter>=1.0; extra == "examples"
+Requires-Dist: seaborn>=0.11; extra == "examples"
+Requires-Dist: plotly>=5.0; extra == "examples"
 Dynamic: license-file
 
-# A sample Python project
+# ABCNRE
 
-Copied from [pypa/sampleproject](https://github.com/pypa/sampleproject).
+**Approximate Bayesian Computation with Neural Ratio Estimation**
 
-To install the packages in this project, run
+> 🚧 **Work in Progress** - This package is under active development
 
-```python3 -m pip install -e abcnre```
+## Quick Start
 
-in the root directory of the github repo.
+```bash
+# Installation
+pip install -e .
 
-![Python Logo](https://www.python.org/static/community_logos/python-logo.png "Sample inline image")
+# Basic usage
+python examples/scripts/basic_workflow.py
+```
 
-A sample project that exists as an aid to the [Python Packaging User
-Guide][packaging guide]'s [Tutorial on Packaging and Distributing
-Projects][distribution tutorial].
+## Development
 
-This project does not aim to cover best practices for Python project
-development as a whole. For example, it does not provide guidance or tool
-recommendations for version control, documentation, or testing.
+```bash
+# Setup development environment
+bash scripts/install_dev.sh
 
-[The source for this project is available here][src].
+# Run tests
+bash scripts/run_tests.sh
+```
 
-The metadata for a Python project is defined in the `pyproject.toml` file,
-an example of which is included in this project. You should edit this file
-accordingly to adapt this sample project to your needs.
+## Project Structure
 
-----
+```
+abcnre/
+├── src/abcnre/          # Source code
+├── tests/               # Tests
+├── examples/            # Examples and tutorials  
+├── docs/                # Documentation
+└── scripts/             # Development scripts
+```
 
-This is the README file for the project.
+## Contributing
 
-The file should use UTF-8 encoding and can be written using
-[reStructuredText][rst] or [markdown][md use] with the appropriate [key set][md
-use]. It will be used to generate the project webpage on PyPI and will be
-displayed as the project homepage on common code-hosting services, and should be
-written for that purpose.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests: `pytest tests/`
+5. Submit a pull request
 
-Typical contents for this file would include an overview of the project, basic
-usage examples, etc. Generally, including the project changelog in here is not a
-good idea, although a simple “What's New” section for the most recent version
-may be appropriate.
+## License
 
-[packaging guide]: https://packaging.python.org
-[distribution tutorial]: https://packaging.python.org/tutorials/packaging-projects/
-[src]: https://github.com/pypa/sampleproject
-[rst]: http://docutils.sourceforge.net/rst.html
-[md]: https://tools.ietf.org/html/rfc7764#section-3.5 "CommonMark variant"
-[md use]: https://packaging.python.org/specifications/core-metadata/#description-content-type-optional
+MIT License - see [LICENSE](LICENSE) file.

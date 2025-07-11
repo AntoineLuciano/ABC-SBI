@@ -1,0 +1,27 @@
+experiment_name: MLP with ReduceLROnPlateau
+random_seed: 42
+output_dir: ./experiments
+network:
+  network_type: MLPNetwork
+  network_args:
+    hidden_dims:
+    - 128
+    - 64
+    - 32
+    activation: relu
+training:
+  learning_rate: 0.001
+  n_samples_per_epoch: 10240
+  batch_size: 256
+  num_epochs: 50
+  validation_split: 0.2
+  early_stopping_patience: 10
+  optimizer: adam
+  weight_decay: 0.0
+  lr_scheduler:
+    schedule_name: reduce_on_plateau
+    schedule_args:
+      patience: 10
+      factor: 0.5
+  store_thetas: true
+  num_thetas_to_store: 10000

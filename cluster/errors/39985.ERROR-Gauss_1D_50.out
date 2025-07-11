@@ -1,2 +1,0 @@
-An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-slurmstepd-clust1: error: *** JOB 39985 ON clust1 CANCELLED AT 2025-03-10T10:47:37 ***

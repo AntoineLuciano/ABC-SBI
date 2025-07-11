@@ -1,6 +1,0 @@
-An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/site-packages/numpy/lib/function_base.py:4878: RuntimeWarning: overflow encountered in add
-  ret = (d * (y[tuple(slice1)] + y[tuple(slice2)]) / 2.0).sum(axis)
-/home/users/luciano/miniconda3/envs/SBC/lib/python3.10/site-packages/numpy/core/_methods.py:236: RuntimeWarning: invalid value encountered in subtract
-  x = asanyarray(arr - arrmean)
-slurmstepd-clust1: error: *** JOB 40019 ON clust1 CANCELLED AT 2025-03-11T10:59:56 ***

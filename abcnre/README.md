@@ -1,47 +1,48 @@
-# A sample Python project
+# ABCNRE
 
-Copied from [pypa/sampleproject](https://github.com/pypa/sampleproject).
+**Approximate Bayesian Computation with Neural Ratio Estimation**
 
-To install the packages in this project, run
+> 🚧 **Work in Progress** - This package is under active development
 
-```python3 -m pip install -e abcnre```
+## Quick Start
 
-in the root directory of the github repo.
+```bash
+# Installation
+pip install -e .
 
-![Python Logo](https://www.python.org/static/community_logos/python-logo.png "Sample inline image")
+# Basic usage
+python examples/scripts/basic_workflow.py
+```
 
-A sample project that exists as an aid to the [Python Packaging User
-Guide][packaging guide]'s [Tutorial on Packaging and Distributing
-Projects][distribution tutorial].
+## Development
 
-This project does not aim to cover best practices for Python project
-development as a whole. For example, it does not provide guidance or tool
-recommendations for version control, documentation, or testing.
+```bash
+# Setup development environment
+bash scripts/install_dev.sh
 
-[The source for this project is available here][src].
+# Run tests
+bash scripts/run_tests.sh
+```
 
-The metadata for a Python project is defined in the `pyproject.toml` file,
-an example of which is included in this project. You should edit this file
-accordingly to adapt this sample project to your needs.
+## Project Structure
 
-----
+```
+abcnre/
+├── src/abcnre/          # Source code
+├── tests/               # Tests
+├── examples/            # Examples and tutorials  
+├── docs/                # Documentation
+└── scripts/             # Development scripts
+```
 
-This is the README file for the project.
+## Contributing
 
-The file should use UTF-8 encoding and can be written using
-[reStructuredText][rst] or [markdown][md use] with the appropriate [key set][md
-use]. It will be used to generate the project webpage on PyPI and will be
-displayed as the project homepage on common code-hosting services, and should be
-written for that purpose.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests: `pytest tests/`
+5. Submit a pull request
 
-Typical contents for this file would include an overview of the project, basic
-usage examples, etc. Generally, including the project changelog in here is not a
-good idea, although a simple “What's New” section for the most recent version
-may be appropriate.
+## License
 
-[packaging guide]: https://packaging.python.org
-[distribution tutorial]: https://packaging.python.org/tutorials/packaging-projects/
-[src]: https://github.com/pypa/sampleproject
-[rst]: http://docutils.sourceforge.net/rst.html
-[md]: https://tools.ietf.org/html/rfc7764#section-3.5 "CommonMark variant"
-[md use]: https://packaging.python.org/specifications/core-metadata/#description-content-type-optional
+MIT License - see [LICENSE](LICENSE) file.
