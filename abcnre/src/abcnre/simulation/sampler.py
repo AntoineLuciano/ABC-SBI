@@ -55,6 +55,7 @@ def get_abc_sample(
         return distance >= epsilon
     
     def rejection_step(state):
+        #! This is error prone, better to use a named tuple for state
         key, sim_data, theta, summary_stat, distance, count = state # Add count
         
         key, key_theta, key_data = random.split(key, 3)

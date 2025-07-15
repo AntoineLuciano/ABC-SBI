@@ -141,6 +141,8 @@ class GaussGaussModel(StatisticalModel):
             Simulated dataset of shape (n_obs,)
         """
         # JAX-compatible way to handle scalar/array theta
+        #! I would probably throw a RunTime error if you get anything other than
+        #! a scalar rather than just use the first value
         if jnp.isscalar(theta):
             theta_val = theta
         else:
@@ -246,6 +248,12 @@ class GaussGaussModel(StatisticalModel):
 
     def get_model_args(self) -> Dict[str, Any]:
         """Get model parameters for serialization."""
+        #! I'd also save the name of the current library so you know what's
+        #! being saved. When instantiating a class from the saved args, you
+        #! can then check that it's the right model type.  Relatedly, you might
+        #! define a function that takes this dictionary and returns the appropriate
+        #! model.  In fact, you could define a single function that works for all models
+        #! using a statically defined lookup dictionary.
         return {
             'mu0': self.mu0,
             'sigma0': self.sigma0, 
