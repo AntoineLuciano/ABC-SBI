@@ -30,7 +30,8 @@ def ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, eps
 
 # ABC_epsilon = jit(ABC_epsilon, static_argnums=(2,3,4))
 
-def get_epsilon_star(key, acceptance_rate, n_points, prior_simulator, data_simulator, discrepancy, true_data, quantile_rate = .9, epsilon = jnp.inf, return_accept = False):
+def get_epsilon_star(key, acceptance_rate, n_points, prior_simulator, data_simulator, discrepancy, true_data, 
+                     quantile_rate = .9, epsilon = jnp.inf, return_accept = False):
     new_epsilon = epsilon
     accept = 1.
     datas, thetas, dists, key = ABC_epsilon(key, n_points, prior_simulator, data_simulator, discrepancy, epsilon, true_data)

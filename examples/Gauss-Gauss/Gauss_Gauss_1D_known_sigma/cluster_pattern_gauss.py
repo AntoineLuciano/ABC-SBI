@@ -1,3 +1,7 @@
+#!/usr/bin/python
+# Example usage:
+# ./ ...
+
 import os
 import sys
 path = os.getcwd()
@@ -16,6 +20,7 @@ import scipy.stats as stats
 import jax.numpy as jnp
 
 
+# Data generation parameters
 
 
 def prior_simulator(key):
@@ -53,7 +58,7 @@ PRIOR_ARGS = {"MU0": MU0, "SIGMA0":SIGMA0}
 
 key = random.PRNGKey(0)
 
-
+# NRE postprocessing parameters
 N_DATA = 1
 N_KDE = 10000
 N_POINTS = 10000
@@ -69,6 +74,8 @@ PATH_RESULTS = (
     + "/examples/Gauss-Gauss/Gauss_Gauss_1D_known_sigma/slides_10_25/sigma0_{}/".format(int(SIGMA0))
 )
 
+
+# Postprocessing parameters
 PATH_FIGURES = PATH_RESULTS + "figures/"
 PATH_POSTERIORS = PATH_FIGURES + "posterior_check/"
 PATH_PICKLES = PATH_RESULTS + "pickles/"
@@ -85,7 +92,9 @@ if not os.path.exists(PATH_CSV):
 if not os.path.exists(PATH_POSTERIORS):
     os.makedirs(PATH_POSTERIORS)
     
-LEARNING_RATE = 0.001
+
+# Neural network parameters
+#LEARNING_RATE = 0.001
 PATIENCE = 7
 COOLDOWN = 0
 FACTOR = 0.5
@@ -100,13 +109,14 @@ HIDDEN_SIZE = 128
 NUM_LAYERS = 2
 WDECAY = 0.001
 
+# TODO: also encode the neural network architecture
 NN_ARGS = {
     "N_EPOCH": N_EPOCHS,
     "NUM_LAYERS": NUM_LAYERS,
     "HIDDEN_SIZE": HIDDEN_SIZE,
     "BATCH_SIZE": BATCH_SIZE,
     "NUM_BATCH": NUM_BATCH,
-    "LEARNING_RATE": LEARNING_RATE,
+    "LEARNING_RATE": 0.001,
     "WDECAY": WDECAY,
     "PATIENCE": PATIENCE,
     "COOLDOWN": COOLDOWN,
@@ -116,7 +126,7 @@ NN_ARGS = {
     "LEARNING_RATE_MIN": LEARNING_RATE_MIN
 }
 
-
+ # Neural network output
 PARAMS = {}
 TEST_ACCURACY = {}
 TRAIN_ACCURACY = {}

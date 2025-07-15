@@ -23,6 +23,60 @@ import lzma
 import pickle
 
 
+class DataGenerator:
+    def __init__(self, x_true, y_true):
+        self.x_true = x_true 
+        self.epsilon = np.inf
+        self.name = "Gaussian"
+        # ...
+
+        self.saved_draws = []
+
+    def reset_simulation_time(self):
+        self.simulation_time = 0.0
+
+    def convert_data_to_array(self, x, y):
+        pass
+
+    def convert_to_data(self, data_array):
+        pass
+
+    def initialize_from_yml(self, yml_filename):
+        pass
+
+    def draw_from_prior(self, num_draws):
+        pass
+
+    def draw_from_likelihood(self, num_draws):
+        pass
+
+    def draw_data_and_params(self, num_draws):
+        pass
+        #...
+
+    def draw_data_and_params_for_training(self, num_draws, track_time=True):
+        # Here, update simulation_time
+        pass
+        # THis is the one function that the NN needs!
+
+        # Return joint draws concatenated with independent draws, laebeled with 
+        # binary indicator
+
+    def permute_data(self, num_draws):
+        pass
+        #...
+
+    def set_epsilon(self):
+        pass
+        #...
+
+    def eval_distance(self, x, y):
+        pass
+        # Evaluate the distance metric
+
+
+
+
 def ABC_NRE(
     key,
     N_POINTS,
@@ -55,7 +109,11 @@ def ABC_NRE(
     print("Training the neural network...")
     time_start = time.time()
     params, train_accuracy, train_losses, test_accuracy, test_losses, key = \
-        train_loop(key = key, NN_ARGS = NN_ARGS, prior_simulator= prior_simulator, data_simulator= data_simulator, discrepancy=discrepancy, true_data=TRUE_DATA, X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, N_POINTS_TRAIN=N_POINTS_TRAIN, N_POINTS_TEST=N_POINTS_TEST, epsilon=EPSILON, verbose=True)
+        train_loop(key = key, NN_ARGS = NN_ARGS, 
+                   prior_simulator=prior_simulator, data_simulator= data_simulator, 
+                   discrepancy=discrepancy, true_data=TRUE_DATA, X_train=X_train, y_train=y_train, 
+                   X_test=X_test, y_test=y_test, 
+                   N_POINTS_TRAIN=N_POINTS_TRAIN, N_POINTS_TEST=N_POINTS_TEST, epsilon=EPSILON, verbose=True)
     
     time_training = time.time() - time_start
     print("Done in {} seconds!".format(time_training))
@@ -153,7 +211,13 @@ def for_a_dataset(
         EPSILON = EPSILONS_i[alpha]
         key, key_epsilon = random.split(key_epsilon)
         
-        dists,params,train_accuracy,train_losses,test_accuracy,test_losses,time_simulations,time_training,time_eval,metrics, thetas_abc = for_an_epsilon(i_dataset=i_dataset, alpha=alpha, key=key_epsilon, N_POINTS=N_POINTS, prior_simulator=prior_simulator, data_simulator=data_simulator, discrepancy=discrepancy, true_posterior_pdf=true_posterior_pdf, true_posterior_sample=true_posterior_sample, TRUE_DATA=TRUE_DATA, EPSILON=EPSILON, PRIOR_DIST=PRIOR_DIST, NN_ARGS=NN_ARGS, N_GRID=N_GRID, N_KDE=N_KDE, N_SAMPLE=N_SAMPLE, N_SAMPLES=N_SAMPLES, METRICS_TO_TEST= METRICS_TO_TEST, PATH=PATH, index_marginal=index_marginal)
+        dists, params, train_accuracy, train_losses, test_accuracy, test_losses, time_simulations, time_training, time_eval, metrics, thetas_abc = \
+            for_an_epsilon(i_dataset=i_dataset, alpha=alpha, key=key_epsilon, N_POINTS=N_POINTS, prior_simulator=prior_simulator, 
+                           data_simulator=data_simulator, discrepancy=discrepancy, 
+                           true_posterior_pdf=true_posterior_pdf, true_posterior_sample=true_posterior_sample, 
+                           TRUE_DATA=TRUE_DATA, EPSILON=EPSILON, PRIOR_DIST=PRIOR_DIST, NN_ARGS=NN_ARGS, N_GRID=N_GRID, 
+                           N_KDE=N_KDE, N_SAMPLE=N_SAMPLE, N_SAMPLES=N_SAMPLES, METRICS_TO_TEST= METRICS_TO_TEST, 
+                           PATH=PATH, index_marginal=index_marginal)
 
         if alpha == 1:
             for alpha_not_1 in ALPHAS[1:]:
