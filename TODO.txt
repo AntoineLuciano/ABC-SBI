@@ -13,3 +13,7 @@ NEW IDEAS
 GOALS: 
 - ArXiv paper (by end of June 11) 
 - Submit to Bayesian Analysis (by end of August)???
+
+
+CODE NOTES:
+- Let's use virtual envioronments with a requirements file.  This requires agreeing on a Jupyter kernel name.  I used ABC-SBI-kernel
