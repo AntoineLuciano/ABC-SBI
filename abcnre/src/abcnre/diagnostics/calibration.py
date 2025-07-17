@@ -3,6 +3,8 @@ import jax.numpy as jnp
 import numpy as np
 from tqdm import tqdm
 from typing import Dict, Any, Optional
+import pandas as pd
+from pathlib import Path
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -41,6 +43,7 @@ def run_abc_sbc(
         phis_to_iterate = jax.random.choice(choice_key, abc_phi_samples, shape=(num_sbc_rounds,))
 
     ranks = []
+    true_phis_used = []
     initial_bounds = (np.min(abc_phi_samples), np.max(abc_phi_samples))
 
     for phi_true in tqdm(phis_to_iterate, desc="ABC-SBC Progress"):
@@ -64,9 +67,29 @@ def run_abc_sbc(
         # 4. Compute the rank of phi_true
         rank = jnp.sum(posterior_samples < phi_true)
         ranks.append(int(rank))
+        true_phis_used.append(float(phi_true.item()))
 
     print("ABC-SBC complete.")
     return {
         'ranks': np.array(ranks),
-        'true_phis': np.array(phis_to_iterate)
+        'true_phis': np.array(true_phis_used)
     }
+    
+    
+def save_sbc_results_to_csv(sbc_results: Dict[str, np.ndarray], filepath: Path):
+    """
+    Saves the results of a Simulation-Based Calibration run to a CSV file.
+
+    Args:
+        sbc_results: The dictionary returned by run_abc_sbc.
+        filepath: The path to the output CSV file.
+    """
+    # Ensure the output directory exists
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+
+    # The dictionary keys ('ranks', 'true_phis') become the columns
+    df = pd.DataFrame(sbc_results)
+
+    # Save to CSV
+    df.to_csv(filepath, index=False)
+    print(f"✅ SBC results saved to {filepath}")

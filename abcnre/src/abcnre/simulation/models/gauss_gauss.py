@@ -191,10 +191,10 @@ class GaussGaussModel(StatisticalModel):
         """
         return theta
     
-    def get_analytical_posterior_stats(self, observed_data: jnp.ndarray) -> Dict[str, float]:
+    def get_posterior_stats(self, observed_data: jnp.ndarray) -> Dict[str, float]:
         """
-        Get analytical posterior statistics for comparison.
-        
+        Get posterior statistics for comparison.
+
         For Gaussian-Gaussian conjugate model, the posterior is:
         theta | X ~ N(mu_post, sigma_post^2)
         
@@ -233,7 +233,7 @@ class GaussGaussModel(StatisticalModel):
     
     def get_posterior_distribution(self, observed_data: jnp.ndarray):
         """
-        Get analytical posterior distribution.
+        Get posterior distribution.
         
         Args:
             observed_data: Observed dataset
@@ -241,7 +241,7 @@ class GaussGaussModel(StatisticalModel):
         Returns:
             Scipy normal distribution object
         """
-        stats = self.get_analytical_posterior_stats(observed_data)
+        stats = self.get_posterior_stats(observed_data)
         return scstats.norm(loc=stats['posterior_mean'], scale=stats['posterior_std'])
 
     def get_model_args(self) -> Dict[str, Any]:

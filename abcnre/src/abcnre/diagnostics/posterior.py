@@ -253,3 +253,30 @@ def sample_from_pdf(
     return posterior_samples
 
 
+def get_sampler_from_pdf(
+    unnormalized_pdf_func: Callable,
+    initial_bounds: Tuple[float, float],
+    n_grid_points: int = 1000,
+) -> Callable[[jnp.ndarray], jnp.ndarray]:
+    """
+    Creates a sampler function from the unnormalized PDF.
+
+    This function combines the steps of finding the optimal grid, normalizing
+    the PDF, and sampling from it.
+
+    Args:
+        unnormalized_pdf_func: A function that computes the unnormalized PDF.
+        initial_bounds: A tuple (min, max) to start the grid search.
+        n_grid_points: The number of points for the final grid.
+
+    Returns:
+        A callable function that takes a JAX random key and returns samples.
+    """
+    grid, normalized_pdf = get_normalized_pdf(unnormalized_pdf_func, initial_bounds, n_grid_points)
+
+    def sampler(key: 'jax.random.PRNGKey', num_samples: int) -> jnp.ndarray:
+        return sample_from_pdf(grid, normalized_pdf, num_samples, key)
+
+    return sampler
+
+

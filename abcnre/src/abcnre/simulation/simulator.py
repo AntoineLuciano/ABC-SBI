@@ -16,6 +16,7 @@ from .base import ABCSampleResult, ABCTrainingResult, ABCSingleResult
 from . import utils 
 from functools import cached_property
 from .utils import generate_sampler_hash
+import jax
 class ABCSimulator:
     """
     Main class for ABC simulation and data generation.
@@ -220,6 +221,29 @@ class ABCSimulator:
         
         return (f"ABCSimulator(model={model_name}, "
                 f"epsilon={self.epsilon:.4f}, observed_data_shape={obs_shape})")
+    
+    def get_true_posterior_samples(self, key: 'jax.random.PRNGKey', n_samples: int) -> jnp.ndarray:
+        """
+        Draws samples from the true analytical posterior, if available.
+
+        This method relies on the underlying model having a method to sample
+        from its analytical posterior (e.g., for conjugate models).
+
+        Args:
+            key: A JAX random key.
+            n_samples: The number of samples to draw.
+
+        Returns:
+            An array of samples from the true posterior.
+        
+        Raises:
+            NotImplementedError: If the model does not support analytical sampling.
+        """
+        if not hasattr(self.model, 'get_posterior_distribution'):
+            raise NotImplementedError("The current model does not have a method for analytical posterior sampling.")
+        
+        seed = int(random.randint(key, (), 0, jnp.iinfo(jnp.int32).max))
+        return self.model.get_posterior_distribution(self.observed_data).rvs(size=n_samples, random_state=seed)
 
 # Backward compatibility alias
 ABCDataGenerator = ABCSimulator
