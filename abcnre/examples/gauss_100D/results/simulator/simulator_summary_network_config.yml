@@ -1,0 +1,61 @@
+experiment_name: summary_learner_DeepSet_default_default
+output_dir: ./experiments
+task_type: summary_learner
+network:
+  network_type: DeepSet
+  network_args:
+    activation: relu
+    use_layer_norm: true
+    dropout_rate: 0.0
+    pooling_type: mean
+    phi_hidden_dims:
+    - 32
+    - 16
+    rho_hidden_dims:
+    - 32
+    - 16
+training:
+  learning_rate: 0.0003
+  n_samples_per_epoch: 10240
+  batch_size: 256
+  num_epochs: 100
+  validation_split: 0.2
+  early_stopping_patience: 10
+  optimizer: adam
+  weight_decay: 0.0
+  lr_scheduler:
+    schedule_name: cosine
+    schedule_args:
+      warmup_epochs: 0
+      eta_min: 0.0
+  store_thetas: true
+  num_thetas_to_store: 10000
+  stopping_rules:
+    max_epochs: 500
+    early_stopping:
+      enabled: true
+      monitor: validation_loss
+      patience: 15
+      min_delta: 0.0001
+      restore_best_weights: true
+    lr_stopping:
+      enabled: true
+      min_lr: 1.0e-07
+    convergence_stopping:
+      enabled: false
+      tolerance: 1.0e-06
+      patience: 5
+    plateau_stopping:
+      enabled: false
+      patience: 20
+      threshold: 1.0e-05
+    time_stopping:
+      enabled: false
+      max_time_hours: null
+    sample_stopping:
+      enabled: true
+      max_samples: 10000000
+    simulation_stopping:
+      enabled: false
+      max_simulations: null
+  verbose: true
