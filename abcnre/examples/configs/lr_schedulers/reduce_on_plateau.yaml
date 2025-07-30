@@ -1,0 +1,40 @@
+# Reduce on plateau learning rate scheduler configurations
+
+# Base configuration for reduce on plateau scheduler
+base:
+  schedule_name: "reduce_on_plateau"
+  schedule_args:
+    patience: 10
+    factor: 0.5
+    min_lr: 1.0e-6
+    threshold: 1.0e-4
+
+# Variants with different parameters
+variants:
+  default:
+    schedule_args:
+      patience: 10
+      factor: 0.5
+      min_lr: 1.0e-6
+      threshold: 1.0e-4
+      
+  patient:
+    schedule_args:
+      patience: 20
+      factor: 0.7
+      min_lr: 1.0e-7
+      threshold: 1.0e-5
+      
+  aggressive:
+    schedule_args:
+      patience: 5
+      factor: 0.3
+      min_lr: 1.0e-5
+      threshold: 1.0e-3
+      
+  gentle:
+    schedule_args:
+      patience: 15
+      factor: 0.8
+      min_lr: 1.0e-8
+      threshold: 1.0e-6

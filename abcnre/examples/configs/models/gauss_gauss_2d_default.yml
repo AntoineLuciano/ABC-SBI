@@ -1,0 +1,53 @@
+# Configuration template for Multidimensional Gaussian-Gaussian Model
+#
+# Model: X | theta ~ N(theta, Sigma)  
+# Prior: theta ~ N(mu0, Sigma0)
+#
+# Multidimensional extension where theta is a vector parameter.
+
+model_type: GaussGaussMultiDimModel
+model_class: GaussGaussMultiDimModel
+
+model_args:
+  # Prior mean vector (2D example)
+  mu0: [0.0, 0.0]
+  
+  # Prior covariance matrix (2x2)
+  sigma0: [[4.0, 0.0], 
+           [0.0, 4.0]]
+  
+  # Observation noise covariance matrix (2x2)  
+  sigma: [[0.25, 0.0],
+          [0.0, 0.25]]
+  
+  # Dimension is inferred from mu0
+  dim: 2
+  
+  # Number of observations per sample
+  n_obs: 100
+  
+  # Index of marginal parameter of interest for phi transformation (0 = first component)
+  marginal_of_interest: 0
+
+metadata:
+  parameter_space_dim: 2
+  analytical_posterior: true
+  module: abcnre.simulation.models.gauss_gauss
+  version: '1.0'
+  description: "2D Gaussian location model with known covariance"
+  use_case: "Multidimensional parameter inference"
+  
+  # Mathematical details
+  conjugate_prior: true
+  sufficient_statistic: "sample_mean_vector"
+  phi_transformation: "theta[0]"  # Extract first component (marginal_of_interest=0)
+  
+  # Typical parameter ranges for each dimension
+  typical_ranges:
+    mu0_component: [-5.0, 5.0]
+    sigma0_diagonal: [0.5, 5.0]
+    sigma_diagonal: [0.1, 2.0]
+    
+  # Example true parameter vector for simulation studies
+  example_true_theta: [1.5, -0.8]
+  example_phi_true: 1.5  # Expected phi value from example_true_theta[0]

@@ -51,7 +51,7 @@ def run_abc_sbc(
 
        
         n_obs = simulator.observed_data.shape[0]
-        x_sim = simulator.model.simulate(sim_key, phi_true, n_obs)
+        x_sim = simulator.model.simulate(sim_key, phi_true)
         
         temp_simulator = ABCSimulator(model=simulator.model, observed_data=x_sim)
 

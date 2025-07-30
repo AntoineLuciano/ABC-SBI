@@ -1,0 +1,18 @@
+-e git+https://github.com/AntoineLuciano/permABC.git@d46d5ddda09e632e01395e67c83aae24f47a5af5#egg=permabc
+absl-py==1.0.0
+aeppl==0.0.38
+aesara==2.8.7
+arviz
+jax==0.4.30
+jaxlib==0.4.30
+flax
+matplotlib
+numpy>=1.21.5
+pandas==1.2.3
+pyro-ppl
+scikit-learn
+scipy
+seaborn
+xarray
+xarray-einstats
+python -m ipykernel install --user --name=ABC-SBI-kernel --display-name "Python (ABC-SBI)"

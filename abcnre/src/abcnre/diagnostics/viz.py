@@ -70,12 +70,13 @@ def plot_sbc_ranks(
     """
     plt.figure(figsize=(10, 6))
     n_sbc_rounds = len(ranks)
+    
     num_bins = max(num_posterior_samples // 2**3 + 1, 17)
     
     alpha = 0.05
     lower_bound = stats.binom.ppf(alpha / 2, n_sbc_rounds, 1 / num_bins)
     upper_bound = stats.binom.ppf(1 - alpha / 2, n_sbc_rounds, 1 / num_bins)
-
+    
     plt.hist(ranks, bins=num_bins, density=False, alpha=0.8, label='Actual Ranks', edgecolor='k')
     
     expected_count = n_sbc_rounds / num_bins

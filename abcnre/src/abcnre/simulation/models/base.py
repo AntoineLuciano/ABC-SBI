@@ -30,7 +30,7 @@ class StatisticalModel(ABC):
     """
     
     @abstractmethod
-    def prior_sample(self, key: random.PRNGKey) -> jnp.ndarray:
+    def get_prior_sample(self, key: random.PRNGKey) -> jnp.ndarray:
         """
         Sample parameters from prior distribution.
         
@@ -56,37 +56,115 @@ class StatisticalModel(ABC):
         Returns:
             An array of parameter sets of shape (n_samples, n_params).
         """
-        # 1. Split the main key into n_samples sub-keys
         keys = random.split(key, n_samples)
         
-        # 2. Use jax.vmap to apply prior_sample across all keys in parallel
-        # This is significantly faster than a Python for-loop.
         return vmap(self.prior_sample)(keys)
     
     
     @abstractmethod
-    def simulate(self, key: random.PRNGKey, theta: jnp.ndarray, n_obs: int) -> jnp.ndarray:
+    def simulate(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
         """
         Simulate data given parameters.
         
         Args:
             key: JAX random key
             theta: Parameter values
-            n_obs: Number of observations to simulate
             
         Returns:
             Simulated dataset
         """
         pass
+    
+    def simulate_multiple(
+        self, key: random.PRNGKey, theta: jnp.ndarray, n_samples: int
+    ) -> jnp.ndarray:
+        """
+        Simulate multiple datasets given parameters.
         
+        Args:
+            key: JAX random key
+            theta: Parameter values
+            n_samples: Number of datasets to simulate
+            
+        Returns:
+            Array of simulated datasets of shape (n_samples, data_shape)
+        """
+        keys = random.split(key, n_samples)
+        return vmap(lambda k: self.simulate(k, theta))(keys)
+    
+    def sample_theta_x(
+        self, key: random.PRNGKey
+    ) -> jnp.ndarray:
+        """
+        Sample theta and simulate data in one step.
+
+        Args:
+            key: JAX random key
+
+        Returns:
+            Simulated dataset
+        """
+        key_theta, key_data = random.split(key)
+        theta = self.get_prior_sample(key_theta)
+        return theta, self.simulate(key_data, theta)
+
+    def sample_theta_x_multiple(
+        self, key: random.PRNGKey,  n_samples: int
+    ) -> jnp.ndarray:
+        """
+        Sample multiple theta and simulate data in one step.
+
+        Args:
+            key: JAX random key
+            n_samples: Number of samples to draw
+
+        Returns:
+            Array of simulated datasets of shape (n_samples, data_shape)
+        """
+        keys = random.split(key, n_samples)
+        return vmap(lambda k: self.sample_theta_x(k))(keys)
+    
+    def sample_phi_x(
+        self, key: random.PRNGKey
+    ) -> jnp.ndarray:
+        """
+        Sample phi and simulate data in one step.
+
+        Args:
+            key: JAX random key
+
+        Returns:
+            Simulated dataset
+        """
+        key_theta, key_data = random.split(key)
+        theta = self.get_prior_sample(key_theta)
+        phi = self.transform_phi(theta)
+        return phi, self.simulate(key_data, theta)
+
+    def sample_phi_x_multiple(
+        self, key: random.PRNGKey, n_samples: int
+    ) -> jnp.ndarray:
+        """
+        Sample multiple phi and simulate data in one step.
+
+        Args:
+            key: JAX random key
+            n_samples: Number of samples to draw
+
+        Returns:
+            Array of simulated datasets of shape (n_samples, data_shape)
+        """
+        keys = random.split(key, n_samples)
+        return vmap(lambda k: self.sample_phi_x(k))(keys)
+    
     @abstractmethod
     def discrepancy_fn(self, data1: jnp.ndarray, data2: jnp.ndarray) -> float:
         """
         Compute distance/discrepancy between two datasets.
         
         Args:
-            data1: First dataset
-            data2: Second dataset
+            data1: First dataset/statistics
+            data2: Second dataset/statistics
             
         Returns:
             Distance/discrepancy value (scalar)

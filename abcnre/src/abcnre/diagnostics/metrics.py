@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 from sbibm.metrics import c2st as c2st_sbibm
 from scipy import stats
-from typing import Dict, Union, np, torch, Callable, List, Any, Optional
+from typing import Dict, Union,Callable, List, Any, Optional
 import jax
 
 

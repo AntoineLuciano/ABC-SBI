@@ -1,0 +1,73 @@
+# Example: conditioned_deepset.yaml - Configuration for ConditionedDeepSet networks with size variants
+
+# Base configuration shared by all variants
+base:
+  network_type: "ConditionedDeepSet"
+  network_args:
+    activation: "relu"
+    use_layer_norm: true
+    dropout_rate: 0.0
+    pooling_type: "mean"
+    conditioning_mode: "concat"
+
+# Size variants that override/extend the base configuration
+variants:
+  small:
+    network_args:
+      phi_hidden_dims: [16, 16]
+      rho_hidden_dims: [16, 16]
+      
+      
+  default:
+    network_args:
+      phi_hidden_dims: [32, 16]
+      rho_hidden_dims: [32, 16] 
+      
+      
+  large:
+    network_args:
+      phi_hidden_dims: [64, 64, 32]
+      rho_hidden_dims: [64, 64, 32]
+      
+      
+  # Variant with FiLM conditioning instead of concatenation
+  film_conditioning:
+    network_args:
+      phi_hidden_dims: [32, 16]
+      rho_hidden_dims: [32, 16]
+      conditioning_mode: "film"
+      
+      
+  # Variant with attention pooling
+  attention_pooling:
+    network_args:
+      phi_hidden_dims: [32, 16]
+      rho_hidden_dims: [32, 16]
+      pooling_type: "attention"
+      
+      
+  # Variant with max pooling
+  max_pooling:
+    network_args:
+      phi_hidden_dims: [32, 16]
+      rho_hidden_dims: [32, 16]
+      pooling_type: "max"
+      
+      
+  # High-dimensional variant with FiLM and attention
+  advanced:
+    network_args:
+      phi_hidden_dims: [64, 32, 16]
+      rho_hidden_dims: [64, 32, 16]
+      conditioning_mode: "film"
+      pooling_type: "attention"
+      dropout_rate: 0.1
+      
+      
+  # Extra large variant for complex tasks
+  xl:
+    network_args:
+      phi_hidden_dims: [128, 64, 32]
+      rho_hidden_dims: [128, 64, 32]
+      dropout_rate: 0.1
+      use_layer_norm: true

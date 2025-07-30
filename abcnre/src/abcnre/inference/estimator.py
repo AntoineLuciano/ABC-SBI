@@ -14,482 +14,294 @@ import jax.numpy as jnp
 from jax import random
 import optax
 import flax.linen as nn
-from flax.training import train_state
 import numpy as np
-
-from .networks.base import NetworkBase
-from .networks.mlp import MLPNetwork
-from .networks.deepset import DeepSetNetwork
-from .utils import save_model_config, load_model_config, compute_metrics
+import matplotlib.pyplot as plt
+from ..training import (
+    NNConfig,
+    get_nn_config,
+    train_classifier,
+    TrainingResult,
+    create_network_from_nn_config,
+)
 from ..simulation.base import ABCTrainingResult
-from .trainer import TrainingState, train_step, evaluate_step, create_optimizer,  create_learning_rate_schedule
-from .config import TrainingConfig, LRSchedulerConfig
-import time
 from ..simulation.simulator import ABCSimulator
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+
+def create_log_ratio_function(
+    network: nn.Module,
+    params: Dict[str, Any],
+    network_type: str,
+    summary_as_input: bool = False,
+) -> Callable[[jnp.ndarray, jnp.ndarray, Optional[jnp.ndarray]], jnp.ndarray]:
+    """
+    Create log-ratio function adapted to different network architectures.
+    
+    Args:
+        network: Trained network instance
+        params: Trained parameters
+        network_type: Type of network ("conditioned_deepset", "deepset", "MLP")
+        summary_as_input: Whether summary statistics are used as input
+        
+    Returns:
+        Log-ratio function that takes (phi, x, s_x) and returns log-ratio estimates
+    """
+    
+    def log_ratio_fn(
+        phi: jnp.ndarray,  # Parameters theta: (batch, k)
+        x: jnp.ndarray,    # Observations: (batch, n, d) or (batch, d)
+        s_x: Optional[jnp.ndarray] = None  # Summary stats: (batch, s)
+    ) -> jnp.ndarray:
+        """
+        Compute log-ratio log[f(x|θ) / p(x)] for given parameters and observations.
+        
+        Args:
+            phi: Parameter values θ, shape (batch, k)
+            x: Observations, shape (batch, n, d) or (batch, d)  
+            s_x: Optional summary statistics, shape (batch, s)
+            
+        Returns:
+            Log-ratio estimates, shape (batch,)
+        """
+        
+        # Prepare inputs based on network type
+        if network_type == "conditioned_deepset":
+            # ConditionedDeepSet expects dict input: {'theta': ..., 'x': ...}
+            theta = phi
+            if summary_as_input and s_x is not None:
+                # Concatenate summary stats to theta
+                theta = jnp.concatenate([phi, s_x], axis=-1)
+            
+            network_input = {
+                'theta': theta,  # (batch, k) or (batch, k + s)
+                'x': x          # (batch, n, d) - preserves structure for deep set
+            }
+            
+        else:
+            # DeepSet or MLP expect flattened concatenated input
+            # Flatten observations if multi-dimensional
+            if x.ndim > 2:
+                batch_size = x.shape[0]
+                x_flat = x.reshape(batch_size, -1)  # (batch, n*d)
+            else:
+                x_flat = x  # Already (batch, d)
+            
+            # Build input components
+            input_components = [x_flat, phi]  # [observations, parameters]
+            
+            if summary_as_input and s_x is not None:
+                input_components.append(s_x)  # Add summary stats
+            
+            # Concatenate all components
+            network_input = jnp.concatenate(input_components, axis=-1)
+            # Shape: (batch, n*d + k) or (batch, n*d + k + s)
+        
+        # Forward pass through network
+        logits = network.apply(params, network_input, training=False)
+        
+        # Return log-ratio (squeeze to remove last dimension if output_dim=1)
+        log_ratio = logits.squeeze(-1)  # (batch,)
+        
+        return log_ratio
+    
+    return log_ratio_fn
+    
 
 class NeuralRatioEstimator:
     """
     Neural Ratio Estimator for ABC posterior inference.
-    
+
     This class provides a high-level interface for training neural networks
     to estimate likelihood ratios, which can then be used to approximate
     the posterior distribution in ABC inference.
-    
+
     The estimator trains a binary classifier to distinguish between samples
     from the joint distribution p(x,θ) and the marginal distributions p(x)p(θ).
     The trained classifier's output can be transformed into likelihood ratios
     using: r(x,θ) = σ(f(x,θ)) / (1 - σ(f(x,θ))), where σ is the sigmoid function.
-    
+
     Args:
-        network: Neural network architecture
-        learning_rate: Learning rate for optimization
-        optimizer: Optax optimizer (default: Adam)
+        nn_config: Neural network configuration for training
         random_seed: Random seed for reproducibility
-        
+
     Example:
         # Create estimator with MLP network
-        network = MLPNetwork(hidden_dims=[128, 64, 32])
-        estimator = NeuralRatioEstimator(network, learning_rate=1e-3)
-        
-        # Train on ABC samples
-        estimator.train(abc_simulator, num_epochs=100, batch_size=256)
-        
+        nn_config = get_nn_config(network_name="MLP", task_type="classifier")
+        estimator = NeuralRatioEstimator(nn_config, random_seed=42)
+
+        # Train on ABC simulator
+        result = estimator.train(simulator)
+
         # Estimate posterior
         log_ratios = estimator.log_ratio(features)
         posterior_weights = jnp.exp(log_ratios)
     """
-    
+
     def __init__(
         self,
-        network: NetworkBase,
-        training_config: TrainingConfig,
-        random_seed: int = 42
+        simulator : ABCSimulator,
+        nn_config: Optional[Union[NNConfig, Dict[str, Any]]] = None,
+        summary_as_input: bool = False,
     ):
         """Initializes the Neural Ratio Estimator."""
-        self.network = network
-        self.training_config = training_config
-        self.random_seed = random_seed
-        self.key = random.PRNGKey(random_seed)
-        self.accumulated_phi_samples: list = []
-        self.total_simulation_count: int = 0
-        
-        schedule_params = training_config.lr_scheduler
-        
-        # Create the learning rate schedule object
-        if schedule_params.schedule_name != 'reduce_on_plateau':
-            num_steps_per_epoch = training_config.n_samples_per_epoch // training_config.batch_size
-            lr_schedule = create_learning_rate_schedule(
-                schedule_name=schedule_params.schedule_name,
-                base_learning_rate=training_config.learning_rate,
-                num_epochs=training_config.num_epochs,
-                num_steps_per_epoch=num_steps_per_epoch,
-                **schedule_params.schedule_args
-            )
+
+        # Handle configuration input
+        if nn_config is None:
+            # Create default classifier configuration
+            self.nn_config = get_nn_config(network_name="MLP", task_type="classifier")
+        elif isinstance(nn_config, dict):
+            self.nn_config = NNConfig.from_dict(nn_config)
         else:
-            # For 'reduce_on_plateau', the schedule is stateful and managed in the train loop
-            # We set it to None here to indicate this.
-            lr_schedule = None
+            self.nn_config = nn_config
 
-        # --- THE FIX ---
-        # Store the schedule object as an instance attribute so other methods can access it.
-        self.lr_schedule = lr_schedule
-        
-        # The optimizer needs an initial learning rate (float) or a schedule object.
-        optimizer_lr = lr_schedule if lr_schedule is not None else training_config.learning_rate
-        self.optimizer = create_optimizer(
-            learning_rate=optimizer_lr,
-            optimizer_type=training_config.optimizer,
-            weight_decay=training_config.weight_decay
-        )
-        
-        self.state: Optional[TrainingState] = None
+        # Ensure task_type is classifier
+        if self.nn_config.task_type != "classifier":
+            raise ValueError("nn_config.task_type must be 'classifier'")
+
+        self.simulator = simulator
+        self.classifier_result: Optional[ClassifierResult] = None
         self.is_trained = False
-        self.training_history = {
-            'train_loss': [], 'train_accuracy': [],
-            'val_loss': [], 'val_accuracy': []
-        }
-            
-    def initialize_training(self, input_shape: Tuple[int, ...]) -> None:
-        """
-        Initialize training state with network parameters.
-        
-        Args:
-            input_shape: Shape of input features (batch_size, feature_dim)
-        """
-        self.key, init_key = random.split(self.key)
-        
-        # Initialize network parameters avec batch_stats
-        dummy_input = jnp.ones(input_shape)
-        variables = self.network.init(init_key, dummy_input, training=False)
-        params = variables['params']
-        batch_stats = variables.get('batch_stats', {})
-        
-        # Créer apply_fn qui gère les batch_stats avec tous les paramètres
-        def apply_fn(variables, x, training=True, **kwargs):
-            if 'batch_stats' in variables and variables['batch_stats']:
-                if training and 'mutable' in kwargs:
-                    return self.network.apply(variables, x, training=training, **kwargs)
-                else:
-                    return self.network.apply(variables, x, training=training)
-            else:
-                return self.network.apply(variables, x, training=training)
-        
-        # Create training state
-        self.state = TrainingState.create(
-            apply_fn=apply_fn,
-            params=params,
-            tx=self.optimizer,
-            key=init_key,
-            batch_stats=batch_stats
-        )
-        
-        print(f"Initialized network with {self.network.count_parameters(params):,} parameters")
-    
+        self.summary_as_input = summary_as_input
+
     def train(
-        self,
-        simulator: 'ABCSimulator', 
-        output_dir: Path, 
-        num_epochs: int,
-        n_samples_per_epoch: int,
-        batch_size: int,
-        validation_split: float = 0.2,
-        early_stopping_patience: int = 10,
-        verbose: bool = True
-    ) -> Dict[str, Any]:
+        self,  key : jax.random.PRNGKey, n_samples_max: Optional[int] = None, n_sim_max: Optional[int] = None, n_phi_to_store : Optional[int] = 0, **kwargs
+    ) -> TrainingResult:
         """
-        Trains the neural ratio estimator.
+        Trains the neural ratio estimator using the unified training system.
 
         Args:
-            data_generator: A function that generates training data on demand.
-            num_epochs: The number of epochs to train for.
-            n_samples_per_epoch: The total number of samples to generate at the
-                                 start of each epoch.
-            batch_size: The size of mini-batches for each training step.
-            validation_split: The fraction of data to use for validation each epoch.
-            early_stopping_patience: The number of epochs to wait for improvement
-                                     before stopping early.
-            verbose: Whether to print training progress.
+            n_samples_max: Maximum number of samples for training (optional stopping rule)
+            n_sim_max: Maximum number of simulations to run (optional stopping rule)
+            **kwargs: Additional training parameters (will override config if provided)
 
         Returns:
-            A dictionary containing training metrics and history.
+            ClassifierResult containing trained network and training history
         """
-        total_sim_time = 0.0
-        total_train_time = 0.0
-        if self.training_config.store_thetas:
-            self.accumulated_phi_samples = []
-        self.total_simulation_count = 0
 
-        # Initialize the network if it hasn't been done yet
-        if self.state is None:
-            # Determine input shape from a dummy data generation
-            phi_dim = 1 # Assuming phi is a scalar for now
-            summary_stat_dim = simulator.observed_summary_stats.shape[0]
-            input_shape = (batch_size, phi_dim + summary_stat_dim)
-            self.initialize_training(input_shape)
+        if n_sim_max is not None:
+            if hasattr(self.nn_config.training, "stopping_rules"):
+                # Check if stopping_rules is a dict or StoppingRulesConfig object
+                if isinstance(self.nn_config.training.stopping_rules, dict):
+                    if "simulation_stopping" not in self.nn_config.training.stopping_rules:
+                        self.nn_config.training.stopping_rules["simulation_stopping"] = {}
 
-        data_generator = lambda key, n: simulator.generate_training_samples(key, n)
-        best_val_loss = float('inf')
-        early_stop_counter = 0
-        lr_plateau_counter = 0
-        current_lr = self.training_config.learning_rate 
-        schedule_name = self.training_config.lr_scheduler.schedule_name
-        lr_schedule_patience = self.training_config.lr_scheduler.schedule_args.get('patience', 10)
-        lr_schedule_factor = self.training_config.lr_scheduler.schedule_args.get('factor', 0.5)
+                    self.nn_config.training.stopping_rules["simulation_stopping"][
+                        "enabled"
+                    ] = True
+                    self.nn_config.training.stopping_rules["simulation_stopping"][
+                        "max_simulations"
+                    ] = n_sim_max
 
-        if self.training_config.store_thetas: 
-            self.accumulated_phi_samples = []
-        self.total_simulation_count = 0
-
-        for epoch in range(num_epochs):
-            # 1. Generate a fresh dataset for the entire epoch
-            self.key, epoch_key = random.split(self.key)
-            time_start_sim = time.time()
-            epoch_data = data_generator(epoch_key, n_samples_per_epoch)
-            total_sim_time += time.time() - time_start_sim
-
-            
-            if verbose and epoch == 0: # On l'affiche une seule fois
-                print("\n--- DEBUG INFO ---")
-                has_phis = hasattr(epoch_data, 'phi_samples') and epoch_data.phi_samples is not None
-                print(f"Does epoch_data contain phi_samples? {has_phis}")
-                if has_phis:
-                    print(f"Shape of phi_samples: {epoch_data.phi_samples.shape}")
-                print("--- END DEBUG INFO ---\n")
-                
-                
-            self.total_simulation_count += getattr(epoch_data, 'total_sim_count', 0)
-            
-            if self.training_config.store_thetas:
-                current_len = len(self.accumulated_phi_samples)
-                needed = self.training_config.num_thetas_to_store - current_len
-                if needed > 0 and hasattr(epoch_data, 'phi_samples') and epoch_data.phi_samples is not None:
-                    self.accumulated_phi_samples.extend(epoch_data.phi_samples[:needed])
-        
-
-            # 2. Split the epoch data into a training set and a validation set
-            val_size = int(n_samples_per_epoch * validation_split)
-            train_size = n_samples_per_epoch - val_size
-            
-            # Shuffle the epoch data before splitting for better generalization
-            self.key, perm_key = random.split(self.key)
-            perm = jax.random.permutation(perm_key, n_samples_per_epoch)
-            shuffled_features = epoch_data.features[perm]
-            shuffled_labels = epoch_data.labels[perm]
-
-            epoch_train_features, epoch_val_features = jnp.split(shuffled_features, [train_size])
-            epoch_train_labels, epoch_val_labels = jnp.split(shuffled_labels, [train_size])
-            
-            num_batches = train_size // batch_size
-            
-            # 3. Inner loop to iterate over the batches for this epoch
-            for i in range(num_batches):
-                # Slice the current batch
-                start = i * batch_size
-                end = start + batch_size
-                batch_features = epoch_train_features[start:end]
-                batch_labels = epoch_train_labels[start:end]
-                
-                time_start_train = time.time()
-                # Perform one training step
-                self.state, train_metrics = train_step(self.state, batch_features, batch_labels)
-                total_train_time+= time.time()-time_start_train
-            # 4. Evaluate on the validation set at the end of the epoch
-            val_metrics = evaluate_step(self.state, epoch_val_features, epoch_val_labels)
-
-            # Update history and check for early stopping
-            self.training_history['train_loss'].append(train_metrics['loss'])
-            self.training_history['train_accuracy'].append(train_metrics['accuracy'])
-            self.training_history['val_loss'].append(val_metrics['loss'])
-            self.training_history['val_accuracy'].append(val_metrics['accuracy'])
-            
-            if val_metrics['loss'] < best_val_loss:
-                best_val_loss = val_metrics['loss']
-                patience_counter = 0
+                elif hasattr(self.nn_config.training.stopping_rules, "simulation_stopping"):
+                    self.nn_config.training.stopping_rules.simulation_stopping.enabled = (
+                        True
+                    )
+                    self.nn_config.training.stopping_rules.simulation_stopping.max_simulations = (
+                        n_sim_max
+                    )
             else:
-                patience_counter += 1
+                # Create stopping rules if they don't exist
+                self.nn_config.training.stopping_rules = {
+                    "simulation_stopping": {"enabled": True, "max_simulations": n_sim_max}
+                }
             
-            if patience_counter >= early_stopping_patience:
-                if verbose:
-                    print(f"\nEarly stopping at epoch {epoch + 1}")
-                break
-            
-            if verbose:
-                if self.lr_schedule:
-                    # For stateless schedules, calculate LR from the current step
-                    effective_lr = self.lr_schedule(self.state.step)
+        
+        
+        def create_io_generator(network_type: str, use_summary: bool):
+            """Create IO generator based on network type and summary usage."""
+
+            def io_generator(key: random.PRNGKey, batch_size: int):
+                """Unified IO generator for all network types."""
+                training_result = self.simulator.generate_training_samples(key, batch_size)
+                
+                if network_type == "conditioned_deepset":
+                    # ConditionedDeepSet: dict input format
+                    theta = training_result.phi
+                    if use_summary:
+                        theta = jnp.concatenate([theta, training_result.summary_stats], axis=1)
+                    
+                    training_input = {
+                        'x': training_result.data,
+                        'theta': theta
+                    }
                 else:
-                    # For stateful schedules like reduce_on_plateau
-                    effective_lr = current_lr
-                print(f"Epoch {epoch + 1}/{num_epochs} | "
-                      f"Train Loss: {train_metrics['loss']:.4f}, Val Loss: {val_metrics['loss']:.4f}, "
-                      f"Train Acc {train_metrics['accuracy']:.2%}, Val Acc: {val_metrics['accuracy']:.2%}, "
-                      f"Learning rate = {effective_lr:.6f}")
+                    # DeepSet/MLP: flattened concatenated input
+                    inputs = jnp.concatenate([training_result.data.reshape(batch_size, -1), training_result.phi], axis=1)
+                    if use_summary:
+                        inputs = jnp.concatenate([inputs, training_result.summary_stats], axis=1)
+                    training_input = inputs
+
+                return {
+                    "input": training_input,
+                    "output": training_result.labels,
+                    "n_simulations": training_result.total_sim_count,
+                }
+            return io_generator
+    
+            
+        network_type = self.nn_config.network.network_type
+        io_generator = create_io_generator(network_type, self.summary_as_input)
+
+        logger.info(f"Using {network_type} {'with' if self.summary_as_input else 'without'} summary statistics")
+        
+        if n_phi_to_store is not None and n_phi_to_store > 0:
+            logger.info(f"Storing {n_phi_to_store} phi during training")
+            self.nn_config.training.n_phi_to_store = n_phi_to_store 
+        # Train using the unified system
+        key, train_key = random.split(key)
+        self.classifier_result = train_classifier(
+            key=train_key, config=self.nn_config, io_generator=io_generator
+        )
 
         self.is_trained = True
-        final_results = {
-            'history': self.training_history,
-            'final_train_loss': self.training_history['train_loss'][-1],
-            'final_val_loss': self.training_history['val_loss'][-1],
-            'final_train_accuracy': self.training_history['train_accuracy'][-1],
-            'final_val_accuracy': self.training_history['val_accuracy'][-1],
-            'epochs_trained': len(self.training_history['train_loss']),
-            'total_simulation_count': self.total_simulation_count,
-        }
-    
-    def predict(self, features: jnp.ndarray) -> jnp.ndarray:
-        """
-        Predict class probabilities for given features.
-        
-        Args:
-            features: Input features of shape (batch_size, feature_dim)
-            
-        Returns:
-            Predicted probabilities of shape (batch_size, 1)
-        """
-        if not self.is_trained:
-            raise ValueError("Model must be trained before prediction")
-        
-        # Utiliser la méthode __call__ de TrainingState qui gère les batch_stats
-        if self.state.batch_stats is not None:
-            variables = {'params': self.state.params, 'batch_stats': self.state.batch_stats}
-        else:
-            variables = {'params': self.state.params}
-        
-        logits = self.state.apply_fn(variables, features, training=False)
-        probabilities = nn.sigmoid(logits)
-        return probabilities
-    
-    def log_ratio(self, features: jnp.ndarray) -> jnp.ndarray:
-        """
-        Compute log likelihood ratios for given features.
-        
-        The log ratio is computed as: log(p(x,θ)/p(x)p(θ)) = log(σ(f(x,θ))/(1-σ(f(x,θ))))
-        where σ is the sigmoid function and f is the network output.
-        
-        Args:
-            features: Input features of shape (batch_size, feature_dim)
-            
-        Returns:
-            Log likelihood ratios of shape (batch_size,)
-        """
-        if not self.is_trained:
-            raise ValueError("Model must be trained before computing log ratios")
-        
-        # Utiliser la méthode __call__ de TrainingState qui gère les batch_stats
-        if self.state.batch_stats is not None:
-            variables = {'params': self.state.params, 'batch_stats': self.state.batch_stats}
-        else:
-            variables = {'params': self.state.params}
-        
-        logits = self.state.apply_fn(variables, features, training=False)
-        log_ratios = logits.flatten()
-        
-        return log_ratios
-    
-    def posterior_weights(self, features: jnp.ndarray) -> jnp.ndarray:
-        """
-        Compute posterior weights for given features.
-        
-        The posterior weights are computed as: w = exp(log_ratio) * prior
-        Since we assume uniform prior, this simplifies to: w = exp(log_ratio)
-        
-        Args:
-            features: Input features of shape (batch_size, feature_dim)
-            
-        Returns:
-            Posterior weights of shape (batch_size,)
-        """
-        log_ratios = self.log_ratio(features)
-        weights = jnp.exp(log_ratios)
-        return weights
-    
-    def save_model(self, filepath: str, metadata: Optional[Dict[str, Any]] = None) -> None:
-        """
-        Save trained model to file.
-        
-        Args:
-            filepath: Path to save the model
-            metadata: Additional metadata to save
-        """
-        if not self.is_trained:
-            raise ValueError("Model must be trained before saving")
-        
-        filepath = Path(filepath)
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Prepare save data
-        config_to_save = {
-            'network_config': self.network.get_config(),
-            'network_class': self.network.__class__.__name__,
-            'training_config': self.training_config.to_dict() # Save the full training config
-        }
-        
-        save_data = {
-            'params': self.state.params,
-            'batch_stats': self.state.batch_stats,
-            'config': config_to_save, # <-- Use the dictionary we just made
-            'training_history': self.training_history,
-            'metadata': metadata or {}
-        }
-        
-        
-        # Save using JAX serialization
-        with open(filepath, 'wb') as f:
-            np.savez_compressed(f, **save_data)
-        
-        print(f"Model saved to {filepath}")
-    
-    def load_model(self, filepath: str) -> Dict[str, Any]:
-        """
-        Loads a trained model state from a compressed .npz file.
 
-        Args:
-            filepath: Path to the .npz model file.
-
-        Returns:
-            A dictionary containing the metadata saved with the model.
-        """
-        filepath = Path(filepath)
-        if not filepath.exists():
-            raise FileNotFoundError(f"Model file not found: {filepath}")
-
-        with open(filepath, 'rb') as f:
-            # The npz file is opened and lazily loaded.
-            data = np.load(f, allow_pickle=True)
-
-            # --- All logic that accesses `data` must now be INSIDE this 'with' block ---
-
-            # Reconstruct the network if needed.
-            loaded_config = data['config'].item()
-            if loaded_config['network_class'] != self.network.__class__.__name__:
-                raise ValueError(
-                    f"Network class mismatch: expected {self.network.__class__.__name__}, "
-                    f"but file was saved with {loaded_config['network_class']}"
-                )
-
-            # Define the apply function, which is part of the state.
-            def apply_fn(variables, x, training=True, **kwargs):
-                if 'batch_stats' in variables and variables['batch_stats']:
-                    if training and 'mutable' in kwargs:
-                        return self.network.apply(variables, x, training=training, **kwargs)
-                    else:
-                        return self.network.apply(variables, x, training=training)
-                else:
-                    return self.network.apply(variables, x, training=training)
-
-            # Restore the training state from the saved components.
-            self.state = TrainingState.create(
-                apply_fn=apply_fn,
-                params=data['params'].item(),
-                tx=self.optimizer,
-                key=self.key,  # Re-initialize key from the estimator's seed
-                batch_stats=data.get('batch_stats', {}).item() if 'batch_stats' in data else {}
+        if self.nn_config.training.verbose:
+            print("✅ Neural Ratio Estimator training completed successfully!")
+            print(
+                f"   - Final train loss: {self.classifier_result.training_history.get('final_loss', 'N/A')}"
             )
+            print(
+                f"   - Total simulations: {self.classifier_result.training_history.get('total_simulations', 'N/A')}"
+            )
+        self.trained_params = self.classifier_result.params
+        self.trained_network = self.classifier_result.network
+        self._training_history = self.classifier_result.training_history
+        self._trained_config = self.nn_config
+        self.stored_phis = self.classifier_result.stored_phi if hasattr(self.classifier_result, 'stored_phi') else None
 
-            # Restore the estimator's configuration and history.
-            self.config = loaded_config
-            self.training_history = data['training_history'].item()
-            self.is_trained = True
-            
-            metadata = data['metadata'].item() if 'metadata' in data else {}
+        self.log_ratio_fn = create_log_ratio_function(
+            network=self.classifier_result.network,
+            params=self.classifier_result.params,
+            network_type=self.nn_config.network.network_type,
+            summary_as_input=self.summary_as_input
+        )
         
-        # The file is automatically and safely closed here, after all data is loaded.
-        
-        print(f"Model loaded successfully from {filepath}")
-        return metadata
-    
-    def save_config(self, filepath: str) -> None:
+        return self.classifier_result
+
+    def predict(
+        self,
+        phi: jnp.ndarray,
+        x: jnp.ndarray,
+        s_x: Optional[jnp.ndarray] = None,
+    ) -> jnp.ndarray:
         """
-        Save estimator configuration to YAML file.
-        
+        Predict log-ratio estimates for given parameters and observations.
+
         Args:
-            filepath: Path to save configuration
-        """
-        save_model_config(self.config, filepath)
-    
-    def get_model_info(self) -> Dict[str, Any]:
-        """
-        Get information about the trained model.
-        
+            phi: Parameters θ, shape (batch, k)
+            x: Observations, shape (batch, n, d) or (batch, d)
+            s_x: Optional summary statistics, shape (batch, s)
+
         Returns:
-            Dictionary containing model information
+            Log-ratio estimates, shape (batch,)
         """
         if not self.is_trained:
-            return {'status': 'untrained'}
+            raise RuntimeError("Estimator is not trained. Call train() first.")
+
+        return nn.sigmoid(
+            self.log_ratio_fn(phi, x, s_x)
+        )
         
-        return {
-            'status': 'trained',
-            'network_class': self.config['network_class'],
-            'network_config': self.config['network_config'],
-            'num_parameters': self.network.count_parameters(self.state.params),
-            'learning_rate': self.config['learning_rate'],
-            'epochs_trained': len(self.training_history['train_loss']),
-            'final_train_loss': self.training_history['train_loss'][-1],
-            'final_val_loss': self.training_history['val_loss'][-1],
-            'final_train_accuracy': self.training_history['train_accuracy'][-1],
-            'final_val_accuracy': self.training_history['val_accuracy'][-1]
-        }
-
-
-# Backward compatibility
-ABCClassifier = NeuralRatioEstimator

@@ -1,0 +1,30 @@
+# Exponential learning rate scheduler configurations
+
+# Base configuration for exponential scheduler
+base:
+  schedule_name: "exponential"
+  schedule_args:
+    decay_rate: 0.96
+    decay_steps: 1000
+
+# Variants with different parameters
+variants:
+  default:
+    schedule_args:
+      decay_rate: 0.96
+      decay_steps: 1000
+      
+  slow_decay:
+    schedule_args:
+      decay_rate: 0.98
+      decay_steps: 2000
+      
+  fast_decay:
+    schedule_args:
+      decay_rate: 0.9
+      decay_steps: 500
+      
+  very_slow:
+    schedule_args:
+      decay_rate: 0.995
+      decay_steps: 5000

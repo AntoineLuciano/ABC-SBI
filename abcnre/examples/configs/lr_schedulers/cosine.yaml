@@ -1,0 +1,30 @@
+# Cosine learning rate scheduler configurations
+
+# Base configuration for cosine scheduler
+base:
+  schedule_name: "cosine"
+  schedule_args:
+    warmup_epochs: 0
+    eta_min: 0.0
+
+# Variants with different parameters
+variants:
+  default:
+    schedule_args:
+      warmup_epochs: 0
+      eta_min: 0.0
+      
+  with_warmup:
+    schedule_args:
+      warmup_epochs: 10
+      eta_min: 0.0
+      
+  low_min:
+    schedule_args:
+      warmup_epochs: 0
+      eta_min: 1.0e-6
+      
+  aggressive:
+    schedule_args:
+      warmup_epochs: 5
+      eta_min: 1.0e-7

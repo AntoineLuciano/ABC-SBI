@@ -1,0 +1,45 @@
+# Example: deepset.yaml - Configuration for DeepSet networks with size variants
+
+# Base configuration shared by all variants
+base:
+  network_type: "DeepSet"
+  network_args:
+    activation: "relu"
+    use_layer_norm: true
+    dropout_rate: 0.0
+    pooling_type: "mean"
+
+# Size variants that override/extend the base configuration
+variants:
+  small:
+    network_args:
+      phi_hidden_dims: [16, 16]
+      rho_hidden_dims: [16, 16]
+      
+      
+  default:
+    network_args:
+      phi_hidden_dims: [32, 16]
+      rho_hidden_dims: [32, 16] 
+      
+      
+  large:
+    network_args:
+      phi_hidden_dims: [64, 64, 32]
+      rho_hidden_dims: [64, 64, 32]
+      
+      
+  # Variant with different pooling
+  max_pooling:
+    network_args:
+      phi_hidden_dims: [32, 16]
+      rho_hidden_dims: [32, 16]
+      pooling_type: "max"
+      
+      
+  # High-dimensional summary variant
+  high_dim_summary:
+    network_args:
+      phi_hidden_dims: [64, 32]
+      rho_hidden_dims: [64, 32]
+      dropout_rate: 0.1

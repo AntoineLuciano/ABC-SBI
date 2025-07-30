@@ -16,11 +16,25 @@ from .base import ABCSampleResult, ABCTrainingResult, ABCSingleResult
 
 # Utility functions
 from .utils import save_simulator, load_simulator
-# from .utils import save_generator_config, load_generator_config
+
+# New dedicated I/O functions
+from .io import (
+    save_simulator_to_yaml,
+    load_simulator_from_yaml,
+    validate_simulator_config_yaml,
+    validate_simulator_config_dict,
+)
+
+# Registry functions
+from .registry import (
+    create_simulator_from_dict,
+    get_supported_model_types,
+    validate_simulator_config_dict as validate_config_dict,
+)
 
 # Model imports
 from .models.base import StatisticalModel
-from .models.gauss_gauss import GaussGaussModel
+from .models.gauss_gauss_1D import GaussGaussModel
 from .models.g_and_k import GAndKModel
 
 __all__ = [
@@ -28,18 +42,24 @@ __all__ = [
     "ABCSimulator",
     "RejectionSampler",
     "BaseSampler",
-    
     # Result structures
     "ABCSampleResult",
-    "ABCTrainingResult", 
+    "ABCTrainingResult",
     "ABCSingleResult",
-    
-    # Utilities
-    "save_generator_config",
-    "load_generator_config",
-    
+    # Legacy utilities
+    "save_simulator",
+    "load_simulator",
+    # New I/O functions
+    "save_simulator_to_yaml",
+    "load_simulator_from_yaml",
+    "validate_simulator_config_yaml",
+    "validate_simulator_config_dict",
+    # Registry functions
+    "create_simulator_from_dict",
+    "get_supported_model_types",
+    "validate_config_dict",
     # Models
     "StatisticalModel",
     "GaussGaussModel",
-    "GAndKModel"
+    "GAndKModel",
 ]

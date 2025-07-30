@@ -1,0 +1,35 @@
+# Example: mlp.yaml - Configuration for MLP networks with size variants
+
+# Base configuration shared by all variants
+base:
+  network_type: "mlp"
+  network_args:
+    activation: "relu"
+    use_layer_norm: false
+    dropout_rate: 0.0
+
+# Size variants that override/extend the base configuration
+variants:
+  small:
+    network_args:
+      hidden_dims: [32, 32]
+      
+  default:
+    network_args:
+      hidden_dims: [64, 64, 64]
+      
+  large:
+    network_args:
+      hidden_dims: [128, 128, 128, 128]
+      
+  xl:
+    network_args:
+      hidden_dims: [256, 256, 256, 256, 256]
+      dropout_rate: 0.1  # Add dropout for very large networks
+      
+  # Specialized variant with different activation
+  relu_large:
+    network_args:
+      hidden_dims: [128, 128, 128]
+      activation: "relu"
+      use_layer_norm: true

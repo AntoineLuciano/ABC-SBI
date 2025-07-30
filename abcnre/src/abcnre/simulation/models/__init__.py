@@ -9,47 +9,61 @@ Available models:
 - GaussGaussMultiDimModel: Multidimensional Gaussian-Gaussian model
 - GAndKModel: G-and-K distribution model
 
-Example:
-    from abcnre.simulation import ABCSimulator
+Example YAML-first workflow:
+    from abcnre.simulation.models import create_model_from_yaml, save_model_to_yaml
+
+    # Load any model from YAML
+    model = create_model_from_yaml("my_model.yml")
+
+    # Save any model to YAML
+    save_model_to_yaml(model, "output_model.yml")
+
+Example direct usage:
     from abcnre.simulation.models import GaussGaussModel
-    
-    # Create model
+
+    # Create model directly
     model = GaussGaussModel(mu0=0.0, sigma0=2.0, sigma=0.5)
-    
-    # Create simulator
-    simulator = ABCSimulator(
-        model=model,
-        observed_data=my_data,
-        quantile_distance=0.01
-    )
 """
 
 from .base import StatisticalModel
-from .gauss_gauss import (
-    GaussGaussModel,
-    GaussGaussMultiDimModel
+from .gauss_gauss_1D import GaussGaussModel
+from .gauss_gauss_multi import GaussGaussMultiDimModel
+from .g_and_k import GAndKModel, generate_g_and_k_samples, create_synthetic_g_and_k_data
+
+# Registry functions
+from .registry import (
+    register_model,
+    get_available_models,
+    get_example_model_configs,
+    MODEL_REGISTRY,
 )
-from .g_and_k import (
-    GAndKModel,
-    generate_g_and_k_samples,
-    create_synthetic_g_and_k_data
+
+# I/O functions
+from .io import (
+    create_model_from_yaml,
+    create_model_from_dict,
+    save_model_to_yaml,
+    validate_model_config_yaml,
+    validate_model_config_dict,
 )
 
 __all__ = [
-    # Base class
-    'StatisticalModel',
-    
-    # Gaussian models
-    'GaussGaussModel',
-    'GaussGaussMultiDimModel',
-    
-    # G-and-K models
-    'GAndKModel',
-    'generate_g_and_k_samples', 
-    'create_synthetic_g_and_k_data',
+    # I/O functions
+    "create_model_from_yaml",
+    "create_model_from_dict",
+    "save_model_to_yaml",
+    "validate_model_config_yaml",
+    "validate_model_config_dict",
+    # Registry functions
+    "register_model",
+    "get_available_models",
+    "get_example_model_configs",
+    "MODEL_REGISTRY",
+    # Models
+    "StatisticalModel",
+    "GaussGaussModel",
+    "GaussGaussMultiDimModel",
+    "GAndKModel",
+    "generate_g_and_k_samples",
+    "create_synthetic_g_and_k_data",
 ]
-
-# Future models will be added here:
-# from .linear_regression import LinearRegressionModel  
-# from .logistic_regression import LogisticRegressionModel
-# from .potus import PotusFullModel, PotusNatModel

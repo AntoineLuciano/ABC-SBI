@@ -1,0 +1,34 @@
+# Configuration for MLP-based summary statistics learning
+# Unified config format matching inference module patterns
+# Used when sample_is_iid = False (correlated/sequential data)
+
+# Network selection (automatic based on sample_is_iid)
+type : "MLP"              # Network type
+verbose: true               # Verbose output
+
+# Network architecture
+network_config:
+  hidden_dims: [64, 32]       # Hidden layer dimensions
+  summary_dim: 1              # Output parameter dimension
+  use_layer_norm: true        # Layer normalization
+  dropout_rate: 0.0           # Dropout rate
+  activation: "relu"          # Activation function
+
+training_config:
+  # Training parameters (same format as inference/config.py)
+  learning_rate: 0.0003       # Learning rate
+  num_epochs: 100             # Number of training epochs
+  batch_size: 256             # Batch size for training
+  n_batch: 40                 # Number of batches per epoch
+
+  # Optimizer settings
+  optimizer: "adam"           # Optimizer type
+  weight_decay: 0.0           # Weight decay
+
+  # Learning rate scheduling
+  lr_scheduler: "constant"    # 'constant', 'cosine', 'exponential', 'reduce_on_plateau'
+  lr_scheduler_args: {}       # Additional scheduler arguments
+
+  # Training control
+  n_sim_max: null            # Maximum simulations (null = unlimited)
+

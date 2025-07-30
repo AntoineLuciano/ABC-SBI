@@ -1,0 +1,50 @@
+abcnre_version: 0.1.0
+classifier_hash: 03405013d665
+epsilon: .inf
+network_config:
+  network_type: ConditionedDeepSetNetwork
+  network_args:
+    network_type: ConditionedDeepSetNetwork
+    output_dim: 1
+    phi_hidden_dims:
+    - 64
+    - 32
+    rho_hidden_dims:
+    - 128
+    - 64
+    pooling_type: mean
+    activation: relu
+    use_batch_norm: true
+    dropout_rate: 0.1
+    conditioning_mode: concat
+  input_dims:
+    total_feature_dim: 22
+    phi_dim: 1
+    summary_stat_dim: 1
+training_config:
+  learning_rate: 0.001
+  n_samples_per_epoch: 10240
+  batch_size: 256
+  num_epochs: 50
+  validation_split: 0.2
+  early_stopping_patience: 10
+  optimizer: adam
+  weight_decay: 0.0
+  lr_scheduler:
+    schedule_name: reduce_on_plateau
+    schedule_args:
+      patience: 7
+      factor: 0.5
+      min_lr: 1.0e-06
+  store_thetas: true
+  num_thetas_to_store: 10000
+metrics:
+  final_val_loss: 0.3493569493293762
+  final_val_accuracy: 0.84619140625
+  epochs_trained: 50
+  total_sim_count: 256000
+paths:
+  classifier_config_path: /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/gauss_2D/results/gauss_2D_marginal1_classifier_eps_inf_03405013d665.yml
+  weights_path: /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/gauss_2D/results/gauss_2D_marginal1_weights_eps_inf_03405013d665.npy
+  phis_path: null
+  simulator_config_path: gauss_2D_marginal1_simulator_eps_inf_1e62eb531277.yml

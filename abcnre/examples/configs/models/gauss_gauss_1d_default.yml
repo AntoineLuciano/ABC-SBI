@@ -1,0 +1,16 @@
+# Configuration template for 1D Gaussian-Gaussian Model
+# 
+# Model: X | theta ~ N(theta, sigma^2)
+# Prior: theta ~ N(mu0, sigma0^2)
+#
+# This is a standard conjugate prior setup where the posterior
+# has a closed-form analytical solution.
+
+model_type: GaussGaussModel
+model_class: GaussGaussModel
+
+model_args:
+  mu0: 0.0        # Prior mean for theta
+  sigma0: 2.0     # Prior standard deviation for theta
+  sigma: 0.5      # Known observation noise standard deviation
+  n_obs : 10  # Number of observations per sample

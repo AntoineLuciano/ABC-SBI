@@ -1,0 +1,109 @@
+# Stopping rules configurations - Règles d'arrêt explicites pour l'entraînement
+
+# Base configuration for stopping rules
+base:
+  # Multiple stopping criteria can be active simultaneously
+  max_epochs: 1000           # Hard limit on epochs
+  early_stopping:
+    enabled: true
+    monitor: "validation_loss"  # What metric to monitor
+    patience: 10               # Number of epochs without improvement
+    min_delta: 1.0e-4         # Minimum change to qualify as improvement
+    restore_best_weights: true # Restore best weights when stopping
+  
+  lr_stopping:
+    enabled: false            # Stop when LR becomes too small
+    min_lr: 1.0e-8           # Minimum learning rate threshold
+    
+  convergence_stopping:
+    enabled: false            # Stop when loss converges
+    tolerance: 1.0e-6        # Convergence tolerance
+    patience: 5              # Number of epochs to check convergence
+    
+  plateau_stopping:
+    enabled: false            # Stop when loss plateaus
+    patience: 20             # Epochs without significant change
+    threshold: 1.0e-5        # Threshold for "significant" change
+    
+  time_stopping:
+    enabled: false            # Stop after maximum time
+    max_time_hours: null
+         # Maximum training time in hours
+  sample_stopping:
+    enabled: false
+    max_samples: null
+
+  simulation_stopping:
+    enabled: false            # Stop after a certain number of simulations
+    max_simulations: null     # Maximum number of simulations to run
+
+# Variants with different stopping strategies
+variants:
+  # Conservative - let training run long
+  conservative:
+    max_epochs: 2000
+    early_stopping:
+      patience: 50
+      min_delta: 1.0e-5
+    lr_stopping:
+      enabled: true
+      min_lr: 1.0e-9
+      
+  # Aggressive - stop early to prevent overfitting  
+  aggressive:
+    max_epochs: 100
+    early_stopping:
+      patience: 5
+      min_delta: 1.0e-3
+    convergence_stopping:
+      enabled: true
+      tolerance: 1.0e-5
+      patience: 3
+      
+  # Balanced - good default
+  balanced:
+    max_epochs: 500
+    early_stopping:
+      patience: 15
+      min_delta: 1.0e-4
+    lr_stopping:
+      enabled: true
+      min_lr: 1.0e-7
+      
+  # Research - multiple criteria for thorough training
+  research:
+    max_epochs: 1000
+    early_stopping:
+      patience: 30
+      min_delta: 1.0e-5
+    lr_stopping:
+      enabled: true
+      min_lr: 1.0e-8
+    convergence_stopping:
+      enabled: true
+      tolerance: 1.0e-6
+      patience: 10
+    plateau_stopping:
+      enabled: true
+      patience: 25
+      threshold: 1.0e-6
+      
+  # Time-constrained - for limited compute
+  time_limited:
+    max_epochs: 10000  # High limit
+    early_stopping:
+      patience: 10
+    time_stopping:
+      enabled: true
+      max_time_hours: 2.0  # Stop after 2 hours
+      
+  # Debug - fast stopping for testing
+  debug:
+    max_epochs: 10
+    early_stopping:
+      patience: 2
+      min_delta: 1.0e-2
+    convergence_stopping:
+      enabled: true
+      tolerance: 1.0e-3
+      patience: 1
