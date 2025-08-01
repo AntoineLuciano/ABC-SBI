@@ -1,0 +1,7 @@
+is_trained: true
+paths:
+  classifier_config: estimator_classif_config.yaml
+  classifier_params: estimator_classif_params.npz
+  simulator_config: estimator_simulator.yaml
+  stored_phis: estimator_stored_phis.npy
+summary_as_input: false

@@ -6,6 +6,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+debug = False
+
+
 class MLP(nn.Module):
     """
     MLP for learning classification or regression tasks.
@@ -14,7 +17,7 @@ class MLP(nn.Module):
     present temporal or spatial correlations.
 
     Args:
-        output_dim: Output dimension 
+        output_dim: Output dimension
         hidden_dims: List of hidden layer dimensions
         activation: Activation function to use
         use_layer_norm: Use LayerNorm after each layer
@@ -30,6 +33,29 @@ class MLP(nn.Module):
     def setup(self):
         if self.hidden_dims is None:
             self.hidden_dims = [64, 32]
+
+        if debug:
+            print(f"DEBUG MLP: setup hidden_dims={self.hidden_dims}")
+        if debug:
+            print(f"DEBUG MLP: setup output_dim={self.output_dim}")
+
+        # Convert activation string to function if needed
+        if isinstance(self.activation, str):
+            activation_map = {
+                "relu": nn.relu,
+                "tanh": nn.tanh,
+                "sigmoid": nn.sigmoid,
+                "gelu": nn.gelu,
+                "swish": nn.swish,
+                "elu": nn.elu,
+                "leaky_relu": nn.leaky_relu,
+            }
+            if self.activation in activation_map:
+                self.activation_fn = activation_map[self.activation]
+            else:
+                raise ValueError(f"Unknown activation function: {self.activation}")
+        else:
+            self.activation_fn = self.activation
 
         # Hidden layers - use local variable
         layers = []
@@ -61,22 +87,38 @@ class MLP(nn.Module):
         Returns:
             output: Summary statistics, shape (batch_size, output_dim)
         """
+        if debug:
+            print(f"DEBUG MLP.__call__: input x.shape={x.shape}")
+        if debug:
+            print(f"DEBUG MLP.__call__: input x.ndim={x.ndim}")
+
         # Flatten if necessary (sequence handling)
         if x.ndim > 2:
             batch_size = x.shape[0]
             x = x.reshape(batch_size, -1)
+            if debug:
+                print(f"DEBUG MLP.__call__: flattened x.shape={x.shape}")
 
-        # Pass through layers
         for i, layer in enumerate(self.layers):
             if isinstance(layer, nn.Dense):
                 x = layer(x)
+                if debug:
+                    print(f"DEBUG MLP.__call__: after_dense_{i}.shape={x.shape}")
+                x = self.activation_fn(x)
+                if debug:
+                    print(f"DEBUG MLP.__call__: after_activation_{i}.shape={x.shape}")
             elif isinstance(layer, nn.LayerNorm):
                 x = layer(x)
-                x = self.activation(x)  # Activation after normalization
+                if debug:
+                    print(f"DEBUG MLP.__call__: after_layernorm_{i}.shape={x.shape}")
             elif isinstance(layer, nn.Dropout):
                 x = layer(x, deterministic=not training)
+                if debug:
+                    print(f"DEBUG MLP.__call__: after_dropout_{i}.shape={x.shape}")
 
         # Output layer
         output = self.output_layer(x)
+        if debug:
+            print(f"DEBUG MLP.__call__: final_output.shape={output.shape}")
 
         return output

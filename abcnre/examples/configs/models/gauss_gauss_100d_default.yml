@@ -13,7 +13,7 @@ model_args:
   mu0: 0
   
   # Prior std value
-  sigma0: 5.0
+  sigma0: 10.0
   
   # Model noise std value 
   sigma: 1.0
@@ -26,17 +26,3 @@ model_args:
   
   # Index of marginal parameter of interest for phi transformation (0 = first component)
   marginal_of_interest: 0
-
-metadata:
-  parameter_space_dim: 100
-  analytical_posterior: true
-  module: abcnre.simulation.models.gauss_gauss
-  version: '1.0'
-  description: "2D Gaussian location model with known covariance"
-  use_case: "Multidimensional parameter inference"
-  
-  # Mathematical details
-  conjugate_prior: true
-  sufficient_statistic: "sample_mean_vector"
-  phi_transformation: "theta[0]"  # Extract first component (marginal_of_interest=0)
-  

@@ -6,6 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+debug = False  # Set to True for detailed debug output
 
 class DeepSet(nn.Module):
     """
@@ -39,6 +40,9 @@ class DeepSet(nn.Module):
             self.phi_hidden_dims = [32, 16]
         if self.rho_hidden_dims is None:
             self.rho_hidden_dims = [32, 16]
+
+        if debug: print(f"DEBUG DeepSet: setup phi_hidden_dims={self.phi_hidden_dims}")
+        if debug: print(f"DEBUG DeepSet: setup rho_hidden_dims={self.rho_hidden_dims}")
 
         # Convert activation string to function if needed
         if isinstance(self.activation, str):
@@ -104,44 +108,58 @@ class DeepSet(nn.Module):
         Returns:
             output: Summary statistics, shape (batch_size, output_dim)
         """
-        
+        if debug: print(f"DEBUG DeepSet.__call__: input x.shape={x.shape}")
         
         batch_size, n_samples, feature_dim = x.shape
+        if debug: print(f"DEBUG DeepSet.__call__: batch_size={batch_size}, n_samples={n_samples}, feature_dim={feature_dim}")
 
         # φ phase: per-element processing
         # Reshape to process all elements in parallel
         x_flat = x.reshape(-1, feature_dim)  # (batch_size * n_samples, feature_dim)
+        if debug: print(f"DEBUG DeepSet.__call__: x_flat.shape={x_flat.shape}")
 
         # Manual forward pass through phi layers to handle deterministic correctly
         phi_output = x_flat
-        for layer in self.phi_layers.layers:
+        for i, layer in enumerate(self.phi_layers.layers):
             if isinstance(layer, nn.Dense):
                 phi_output = layer(phi_output)
+                if debug: print(f"DEBUG DeepSet.__call__: phi after_dense_{i}.shape={phi_output.shape}")
             elif isinstance(layer, nn.LayerNorm):
                 phi_output = layer(phi_output)
+                if debug: print(f"DEBUG DeepSet.__call__: phi after_layernorm_{i}.shape={phi_output.shape}")
                 phi_output = self.activation_fn(phi_output)
+                if debug: print(f"DEBUG DeepSet.__call__: phi after_activation_{i}.shape={phi_output.shape}")
             elif isinstance(layer, nn.Dropout):
                 phi_output = layer(phi_output, deterministic=not training)
+                if debug: print(f"DEBUG DeepSet.__call__: phi after_dropout_{i}.shape={phi_output.shape}")
 
         # Reshape back
         phi_output = phi_output.reshape(batch_size, n_samples, -1)
+        if debug: print(f"DEBUG DeepSet.__call__: phi_output_reshaped.shape={phi_output.shape}")
 
         # Pooling phase
         pooled = self._apply_pooling(phi_output, self.pooling_type)
 
         # ρ phase: post-pooling processing
         rho_output = pooled
-        for layer in self.rho_layers.layers:
+        if debug: print(f"DEBUG DeepSet.__call__: rho_input.shape={rho_output.shape}")
+        
+        for i, layer in enumerate(self.rho_layers.layers):
             if isinstance(layer, nn.Dense):
                 rho_output = layer(rho_output)
+                if debug: print(f"DEBUG DeepSet.__call__: rho after_dense_{i}.shape={rho_output.shape}")
             elif isinstance(layer, nn.LayerNorm):
                 rho_output = layer(rho_output)
+                if debug: print(f"DEBUG DeepSet.__call__: rho after_layernorm_{i}.shape={rho_output.shape}")
                 rho_output = self.activation_fn(rho_output)
+                if debug: print(f"DEBUG DeepSet.__call__: rho after_activation_{i}.shape={rho_output.shape}")
             elif isinstance(layer, nn.Dropout):
                 rho_output = layer(rho_output, deterministic=not training)
+                if debug: print(f"DEBUG DeepSet.__call__: rho after_dropout_{i}.shape={rho_output.shape}")
 
         # Final output layer
         output = self.output_layer(rho_output)
+        if debug: print(f"DEBUG DeepSet.__call__: final_output.shape={output.shape}")
 
         return output
 
@@ -156,19 +174,26 @@ class DeepSet(nn.Module):
         Returns:
             Pooled tensor of shape (batch, phi_dim)
         """
+        if debug: print(f"DEBUG DeepSet._apply_pooling: input.shape={x.shape}, pooling_type={pooling_type}")
+        
         if pooling_type == "mean":
-            return jnp.mean(x, axis=1)
+            result = jnp.mean(x, axis=1)
         elif pooling_type == "max":
-            return jnp.max(x, axis=1)
+            result = jnp.max(x, axis=1)
         elif pooling_type == "sum":
-            return jnp.sum(x, axis=1)
+            result = jnp.sum(x, axis=1)
         elif pooling_type == "attention":
             # Attention-based pooling
             attention_weights = self.attention_layer(x)  # (batch, n_samples, 1)
+            if debug: print(f"DEBUG DeepSet._apply_pooling: attention_weights.shape={attention_weights.shape}")
             attention_weights = nn.softmax(attention_weights, axis=1)
-            return jnp.sum(x * attention_weights, axis=1)  # (batch, phi_dim)
+            if debug: print(f"DEBUG DeepSet._apply_pooling: attention_weights_softmax.shape={attention_weights.shape}")
+            result = jnp.sum(x * attention_weights, axis=1)  # (batch, phi_dim)
         else:
             raise ValueError(
                 f"Unsupported pooling type: {pooling_type}. "
                 f"Supported types: 'mean', 'max', 'sum', 'attention'"
             )
+        
+        if debug: print(f"DEBUG DeepSet._apply_pooling: output.shape={result.shape}")
+        return result

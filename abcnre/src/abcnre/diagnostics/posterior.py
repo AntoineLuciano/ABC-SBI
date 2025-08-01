@@ -6,7 +6,7 @@ from scipy.integrate import trapz
 from typing import Callable, Tuple, Optional
 from scipy.stats import gaussian_kde
 from scipy.integrate import cumulative_trapezoid
-
+import logging
 import jax
 
 # To avoid circular imports, we use TYPE_CHECKING
@@ -15,6 +15,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ..inference.estimator import NeuralRatioEstimator
     from ..simulation.simulator import ABCSimulator
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 def _find_optimal_grid(
@@ -81,7 +84,7 @@ def _find_optimal_grid(
 
 
 def get_unnormalized_nre_pdf(
-    estimator: "NeuralRatioEstimator"
+    estimator: "NeuralRatioEstimator", x: Optional[jnp.ndarray] = None
 ) -> Callable[[jnp.ndarray], jnp.ndarray]:
     """
     Creates a function for the unnormalized NRE posterior PDF.
@@ -97,36 +100,48 @@ def get_unnormalized_nre_pdf(
     """
     simulator = estimator.simulator
     model = simulator.model
-    obs_summary = simulator.observed_summary_stats
 
+    if x is None:
+        x = simulator.observed_data
+        s_x = simulator.observed_summary_stats
+    else:
+        s_x = simulator.summary_stat_fn(x)
 
     def unnormalized_pdf(phi_values: jnp.ndarray) -> jnp.ndarray:
         # Ensure phi_values is 2D for concatenation
-        
+
+        n_batch = phi_values.shape[0]
+
+        x_batch = jnp.repeat(x[None, :], n_batch, axis=0)
+        s_x_batch = jnp.repeat(s_x[None, :], n_batch, axis=0)
+
+        if s_x_batch.ndim == 1:
+            s_x_batch = s_x_batch[:, jnp.newaxis]
+
         if estimator.summary_as_input:
-            log_ratios = estimator.log_ratio_fn(phi=phi_values,
-                                                x=simulator.observed_data,
-                                                summary_stats=obs_summary)
+            log_ratios = estimator.log_ratio_fn(
+                phi=phi_values, x=x_batch, s_x=s_x_batch
+            )
         else:
-            log_ratios = estimator.log_ratio_fn(phi=phi_values,
-                                                x=simulator.observed_data)
+            log_ratios = estimator.log_ratio_fn(phi=phi_values, x=x_batch)
         # Note: This assumes model.prior_logpdf exists. Add it to your models.
-        prior_log_pdf = model.prior_logpdf(phi_values)
+        prior_log_pdf = model.prior_phi_logpdf(phi_values)
 
         # p(phi|x) ∝ exp(log_r) * p(phi) => log(p(phi|x)) = log_r + log(p(phi))
-        unnormalized_log_pdf = -log_ratios + prior_log_pdf
+        unnormalized_log_pdf = log_ratios + prior_log_pdf
 
         return jnp.exp(unnormalized_log_pdf)
-    
+
     return unnormalized_pdf
 
 
-def get_unormalized_corrected_nre_pdf(
+def get_unnormalized_corrected_nre_pdf(
     estimator: "NeuralRatioEstimator",
-    simulator: "ABCSimulator",
+    x: Optional[jnp.ndarray] = None,
+    s_x: Optional[jnp.ndarray] = None,
     phi_samples: Optional[jnp.ndarray] = None,
     kde_approximation: Optional[Callable] = None,
-    num_samples_for_kde: int = 10000,
+    num_samples_for_kde: Optional[int] = 1000,
 ) -> Callable[[jnp.ndarray], jnp.ndarray]:
     """
     Creates a function for the unnormalized corrected NRE posterior PDF.
@@ -140,58 +155,52 @@ def get_unormalized_corrected_nre_pdf(
     Returns:
         A callable function that evaluates the unnormalized posterior at given phi values.
     """
-
+    simulator = estimator.simulator
     obs_summary = simulator.observed_summary_stats
     if kde_approximation is not None:
         kde_func = kde_approximation
     elif phi_samples is not None:
         kde_func = gaussian_kde(phi_samples.flatten())
+    elif estimator.stored_phis is not None:
+        kde_func = gaussian_kde(estimator.stored_phis.flatten())
     else:
+        key = jax.random.PRNGKey(42)  # Use a fixed key for reproducibility
         phi_samples = simulator.get_phi_samples(num_samples_for_kde)
         kde_func = gaussian_kde(phi_samples.flatten())
 
-    # Detect the feature format that the estimator expects (same logic as get_unnormalized_nre_pdf)
-    expected_dim = estimator.input_dim
-    phi_dim = 1  # Assuming 1D phi for now
-    summary_dim = len(obs_summary)
-    data_dim = len(simulator.observed_data)
-
-    # Determine feature format based on expected dimension
-    if expected_dim == phi_dim + summary_dim:
-        # Legacy format: [phi, summary_stats]
-        feature_format = "legacy"
-    elif expected_dim == data_dim + phi_dim + summary_dim:
-        # New format: [data, phi, summary_stats]
-        feature_format = "full"
+    if x is None:
+        x = simulator.observed_data
+        s_x = simulator.observed_summary_stats
     else:
-        raise ValueError(
-            f"Unexpected feature dimension: {expected_dim}. Expected either {phi_dim + summary_dim} (legacy) or {data_dim + phi_dim + summary_dim} (full)"
-        )
+        s_x = simulator.summary_stat_fn(x)
 
     def unnormalized_pdf(phi_values: jnp.ndarray) -> jnp.ndarray:
         # Ensure phi_values is 2D for concatenation
-        phi_features = phi_values[:, None] if phi_values.ndim == 1 else phi_values
 
-        if feature_format == "legacy":
-            # Legacy format: [phi, summary_stats]
-            z_features = np.repeat(obs_summary[None, :], len(phi_values), axis=0)
-            features = np.concatenate([phi_features, z_features], axis=1)
-        else:
-            # Full format: [data, phi, summary_stats]
-            data_features = np.repeat(
-                simulator.observed_data[None, :], len(phi_values), axis=0
+        n_batch = phi_values.shape[0]
+
+        x_batch = jnp.repeat(x[None, :], n_batch, axis=0)
+        s_x_batch = jnp.repeat(s_x[None, :], n_batch, axis=0)
+        print("DEBUG: s_x_batch shape:", s_x_batch.shape)
+        print("DEBUG: x_batch shape:", x_batch.shape)
+        print("DEBUG: phi_values shape:", phi_values.shape)
+        if s_x_batch.ndim == 1:
+            s_x_batch = s_x_batch[:, jnp.newaxis]
+            
+        if estimator.summary_as_input:
+            log_ratios = estimator.log_ratio_fn(
+                phi=phi_values, x=x_batch, s_x=s_x_batch
             )
-            z_features = np.repeat(obs_summary[None, :], len(phi_values), axis=0)
-            features = np.concatenate([data_features, phi_features, z_features], axis=1)
+        else:
+            log_ratios = estimator.log_ratio_fn(phi=phi_values, x=x_batch)
 
-        # Get log-ratio from the NRE
-        log_ratios = estimator.log_ratio(features)
+        # Note: This assumes model.prior_logpdf exists. Add it to your models.
+        pseudo_posterior_pdf = kde_func(phi_values.flatten())
 
-        # Evaluate KDE approximation at phi_values
-        kde_vals = kde_func(phi_values)
+        # p(phi|x) ∝ exp(log_r) * p(phi) => log(p(phi|x)) = log_r + log(p(phi))
+        unnormalized_pdf = jnp.exp(log_ratios) * pseudo_posterior_pdf
 
-        # p(phi|x) ∝ exp(-log_r) * kde(phi)
-        return jnp.exp(-log_ratios) * kde_vals
+        return unnormalized_pdf
 
     return unnormalized_pdf
 

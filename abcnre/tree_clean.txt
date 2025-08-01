@@ -1,0 +1,225 @@
+.
+├── CHANGELOG.md
+├── LICENSE
+├── README.md
+│   └── config_improved.cpython-310.pyc
+├── abc_debug.log
+├── data
+│   ├── cache
+│   └── reference
+├── examples
+│   ├── configs
+│   │   ├── lr_schedulers
+│   │   │   ├── cosine.yaml
+│   │   │   ├── exponential.yaml
+│   │   │   └── reduce_on_plateau.yaml
+│   │   ├── models
+│   │   │   ├── gauss_gauss_100d_default.yml
+│   │   │   ├── gauss_gauss_1d_default.yml
+│   │   │   ├── gauss_gauss_2d_default.yml
+│   │   │   ├── gauss_gauss_2d_marginal1.yml
+│   │   │   ├── gauss_gauss_3d_correlated.yml
+│   │   │   └── gauss_gauss_3d_marginal2.yml
+│   │   ├── networks
+│   │   │   ├── conditioned_deepset.yaml
+│   │   │   ├── deepset.yaml
+│   │   │   └── mlp.yaml
+│   │   ├── stopping_rules
+│   │   │   └── stopping_rules.yaml
+│   │   └── training
+│   │       └── training.yaml
+│   ├── gauss_100D
+│   │   ├── notebooks
+│   │   │   ├── gauss_gauss_load.ipynb
+│   │   │   ├── gauss_gauss_train.ipynb
+│   │   │   ├── old_load.ipynb
+│   │   │   └── old_train.ipynb
+│   │   └── results
+│   │       ├── estimator
+│   │       │   ├── estimator.yaml
+│   │       │   ├── estimator_classif_config.yaml
+│   │       │   ├── estimator_classif_params.npz
+│   │       │   ├── estimator_simulator.yaml
+│   │       │   ├── estimator_simulator_model.yml
+│   │       │   ├── estimator_simulator_observed_data.npy
+│   │       │   ├── estimator_simulator_summary_network_config.yml
+│   │       │   ├── estimator_simulator_summary_network_weights.npz
+│   │       │   └── estimator_stored_phis.npy
+│   │       └── simulator
+│   │           ├── simulator.yaml
+│   │           ├── simulator_model.yml
+│   │           ├── simulator_observed_data.npy
+│   │           ├── simulator_summary_network_config.yml
+│   │           └── simulator_summary_network_weights.npz
+│   ├── gauss_1D
+│   │   ├── notebooks
+│   │   │   ├── gauss_gauss_load.ipynb
+│   │   │   ├── gauss_gauss_train.ipynb
+│   │   │   ├── old_load.ipynb
+│   │   │   └── old_train.ipynb
+│   │   └── results
+│   │       ├── estimator
+│   │       │   ├── estimator.yaml
+│   │       │   ├── estimator_classif_config.yaml
+│   │       │   ├── estimator_classif_params.npz
+│   │       │   ├── estimator_simulator.yaml
+│   │       │   ├── estimator_simulator_model.yml
+│   │       │   ├── estimator_simulator_observed_data.npy
+│   │       │   ├── estimator_simulator_summary_network_config.yml
+│   │       │   ├── estimator_simulator_summary_network_weights.npz
+│   │       │   └── estimator_stored_phis.npy
+│   │       └── simulator
+│   │           ├── simulator.yaml
+│   │           ├── simulator_model.yml
+│   │           ├── simulator_observed_data.npy
+│   │           ├── simulator_summary_network_config.yml
+│   │           └── simulator_summary_network_weights.npz
+│   ├── gauss_2D
+│   │   ├── notebooks
+│   │   │   ├── gauss_gauss_2D-load.ipynb
+│   │   │   └── gauss_gauss_2D-train.ipynb
+│   │   ├── results
+│   │   │   ├── config_mlp_reduce_on_plateau.yml
+│   │   │   ├── gauss_2D_marginal1_classifier_eps_inf_03405013d665.yml
+│   │   │   ├── gauss_2D_marginal1_phis_eps_inf_03405013d665.npy
+│   │   │   ├── gauss_2D_marginal1_simulator.yml
+│   │   │   ├── gauss_2D_marginal1_simulator_eps_inf_1e62eb531277.yml
+│   │   │   ├── gauss_2D_marginal1_weights_eps_inf_03405013d665.npy
+│   │   │   ├── model_config.yml
+│   │   │   ├── observed_data_eps_inf_ce73450df121.npy
+│   │   │   ├── summary_params_add3fd7a02be.npz
+│   │   │   └── summary_stats_eps_inf_ce73450df121.yaml
+│   │   └── test_2d_marginal_setup.py
+│   └── scripts
+├── pyproject.toml
+├── requirements-dev.txt
+├── requirements.txt
+├── src
+│   ├── abcnre
+│   │   ├── __init__.py
+│   │   │   ├── __init__.cpython-310.pyc
+│   │   │   ├── __init__.cpython-39.pyc
+│   │   │   ├── _version.cpython-310.pyc
+│   │   │   └── _version.cpython-39.pyc
+│   │   ├── _version.py
+│   │   ├── diagnostics
+│   │   │   │   ├── calibration.cpython-310.pyc
+│   │   │   │   ├── metrics.cpython-310.pyc
+│   │   │   │   ├── posterior.cpython-310.pyc
+│   │   │   │   └── viz.cpython-310.pyc
+│   │   │   ├── calibration.py
+│   │   │   ├── classifier.py
+│   │   │   ├── metrics.py
+│   │   │   ├── posterior.py
+│   │   │   └── viz.py
+│   │   ├── inference
+│   │   │   ├── __init__.py
+│   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   ├── config.cpython-310.pyc
+│   │   │   │   ├── diagnostics_integration.cpython-310.pyc
+│   │   │   │   ├── estimator.cpython-310.pyc
+│   │   │   │   ├── io.cpython-310.pyc
+│   │   │   │   ├── networks_registry.cpython-310.pyc
+│   │   │   │   ├── persistence.cpython-310.pyc
+│   │   │   │   ├── trainer.cpython-310.pyc
+│   │   │   │   ├── utils.cpython-310.pyc
+│   │   │   │   └── validation.cpython-310.pyc
+│   │   │   ├── estimator.py
+│   │   │   ├── io.py
+│   │   │   ├── registry.py
+│   │   │   ├── utils.py
+│   │   │   └── validation.py
+│   │   ├── simulation
+│   │   │   ├── __init__.py
+│   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   ├── __init__.cpython-39.pyc
+│   │   │   │   ├── base.cpython-310.pyc
+│   │   │   │   ├── io.cpython-310.pyc
+│   │   │   │   ├── registry.cpython-310.pyc
+│   │   │   │   ├── sampler.cpython-310.pyc
+│   │   │   │   ├── simulator.cpython-310.pyc
+│   │   │   │   ├── simulator.cpython-39.pyc
+│   │   │   │   ├── utils.cpython-310.pyc
+│   │   │   │   └── utils.cpython-39.pyc
+│   │   │   ├── base.py
+│   │   │   ├── io.py
+│   │   │   ├── models
+│   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   ├── base.cpython-310.pyc
+│   │   │   │   │   ├── g_and_k.cpython-310.pyc
+│   │   │   │   │   ├── gauss_gauss.cpython-310.pyc
+│   │   │   │   │   ├── gauss_gauss_1D.cpython-310.pyc
+│   │   │   │   │   ├── gauss_gauss_multi.cpython-310.pyc
+│   │   │   │   │   ├── io.cpython-310.pyc
+│   │   │   │   │   └── registry.cpython-310.pyc
+│   │   │   │   ├── base.py
+│   │   │   │   ├── g_and_k.py
+│   │   │   │   ├── gauss_gauss_1D.py
+│   │   │   │   ├── gauss_gauss_multi.py
+│   │   │   │   ├── io.py
+│   │   │   │   ├── linear_regression.py
+│   │   │   │   └── registry.py
+│   │   │   ├── registry.py
+│   │   │   ├── sampler.py
+│   │   │   ├── simulator.py
+│   │   │   └── utils.py
+│   │   └── training
+│   │       ├── __init__.py
+│   │       │   ├── __init__.cpython-310.pyc
+│   │       │   ├── config.cpython-310.pyc
+│   │       │   ├── registry.cpython-310.pyc
+│   │       │   └── train.cpython-310.pyc
+│   │       ├── config.py
+│   │       ├── networks
+│   │       │   │   ├── conditioned_deepset.cpython-310.pyc
+│   │       │   │   ├── deepset.cpython-310.pyc
+│   │       │   │   └── mlp.cpython-310.pyc
+│   │       │   ├── conditioned_deepset.py
+│   │       │   ├── deepset.py
+│   │       │   └── mlp.py
+│   │       ├── registry.py
+│   │       └── train.py
+│   └── abcnre.egg-info
+│       ├── PKG-INFO
+│       ├── SOURCES.txt
+│       ├── dependency_links.txt
+│       ├── entry_points.txt
+│       ├── requires.txt
+│       └── top_level.txt
+├── tests
+│   ├── __init__.py
+│   ├── benchmarks
+│   ├── conftest.py
+│   ├── fixtures
+│   │   ├── configs
+│   │   └── data
+│   ├── integration
+│   │   └── __init__.py
+│   └── unit
+│       ├── __init__.py
+│       ├── test_config
+│       │   └── __init__.py
+│       ├── test_diagnostics
+│       │   └── __init__.py
+│       ├── test_inference
+│       │   ├── __init__.py
+│       │   ├── src
+│       │   │   └── abcnre
+│       │   │       └── inference
+│       │   │           └── networks
+│       │   ├── test_compatibility.py
+│       │   ├── test_inference_advanced.py
+│       │   ├── test_inference_basic.py
+│       │   ├── test_integration_simulation.py
+│       │   └── tests
+│       │       └── unit
+│       │           └── test_inference
+│       └── test_simulation
+│           ├── __init__.py
+│           ├── test_gauss_gauss_simple.py
+│           ├── test_simulator.py
+│           └── test_yaml_persistence.py
+└── tree.txt
+
+60 directories, 171 files

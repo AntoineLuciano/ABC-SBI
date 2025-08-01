@@ -1,0 +1,18 @@
+# Classifier configuration for neural ratio estimation
+# Used with: abcnre create_estimator --classifier-config this_file.yaml
+
+network_name: "mlp"
+network_size: "default"
+training_size: "default"
+lr_scheduler_name: "reduce_on_plateau"
+lr_scheduler_variant: "default"
+stopping_rules_variant: "balanced"
+experiment_name: "classifier_mlp_default"
+
+# Training overrides
+overrides:
+  num_epochs: 500
+  batch_size: 1024
+  learning_rate: 0.01
+  optimizer: "adamw"
+  weight_decay: 0.001

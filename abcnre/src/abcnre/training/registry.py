@@ -37,9 +37,22 @@ def register_networks():
         logger.warning(f"Could not register networks: {e}")
 
 
+def normalize_name(name: str) -> str:
+    """
+    Normalize name to lowercase without underscores/hyphens for comparison.
+    
+    Args:
+        name: Raw name string
+        
+    Returns:
+        Normalized string (lowercase, no separators)
+    """
+    return name.lower().replace("_", "").replace("-", "")
+
+
 def create_network_from_config(network_config: NetworkConfig, task_type: str) -> Any:
     """
-    Create a network instance from NetworkConfig.
+    Create a network instance from NetworkConfig with flexible network type matching.
 
     Args:
         network_config: NetworkConfig with network_type and network_args
@@ -51,24 +64,29 @@ def create_network_from_config(network_config: NetworkConfig, task_type: str) ->
     Raises:
         ValueError: If network_type is unknown or required args are missing
     """
-
+    
     register_networks()
     registry = NETWORK_REGISTRY
-    network_type = network_config.network_type
-
-    # Handle network type mapping and aliases (case-insensitive)
-    # Build a mapping from lower-case names to actual keys
-    lower_to_key = {k.lower(): k for k in registry.keys()}
-    network_type_key = lower_to_key.get(network_type.lower())
-
-    if network_type_key is None:
+    input_type = network_config.network_type
+    
+    # Normalize input type
+    normalized_input = normalize_name(input_type)
+    
+    # Find matching registry key by normalizing all registry keys
+    matched_key = None
+    for registry_key in registry.keys():
+        if normalize_name(registry_key) == normalized_input:
+            matched_key = registry_key
+            break
+    
+    if matched_key is None:
         available = list(registry.keys())
         raise ValueError(
-            f"Unknown network type '{network_type}' for task '{task_type}'. "
+            f"Unknown network type '{input_type}' for task '{task_type}'. "
             f"Available: {available}"
         )
 
-    network_class = registry[network_type_key]
+    network_class = registry[matched_key]
 
     # Get network arguments and ensure output_dim is set
     network_args = network_config.network_args.copy()
@@ -76,14 +94,14 @@ def create_network_from_config(network_config: NetworkConfig, task_type: str) ->
     # Always ensure output_dim=1 for all networks (classifier and summary_learner)
     if "output_dim" not in network_args:
         network_args["output_dim"] = 1
-        logger.info(f"Set output_dim=1 for {network_type_key} network")
+        logger.info(f"Set output_dim=1 for {matched_key} network")
 
     try:
         # Create network instance
         network = network_class(**network_args)
 
         if logger.isEnabledFor(logging.INFO):
-            logger.info(f"Created {network_type_key} network for {task_type}")
+            logger.info(f"Created {matched_key} network (from '{input_type}') for {task_type}")
             logger.info(f"Network args: {network_args}")
 
         return network
@@ -96,12 +114,11 @@ def create_network_from_config(network_config: NetworkConfig, task_type: str) ->
         params = list(sig.parameters.keys())[1:]  # Skip 'self'
 
         raise TypeError(
-            f"Failed to create {network_type_key} network. "
+            f"Failed to create {matched_key} network (from '{input_type}'). "
             f"Error: {e}. "
             f"Expected parameters: {params}. "
             f"Provided: {list(network_args.keys())}"
         ) from e
-
 
 def create_network_from_nn_config(nn_config: NNConfig) -> Any:
     """

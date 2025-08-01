@@ -2,7 +2,7 @@
 
 # Base configuration shared by all variants
 base:
-  network_type: "mlp"
+  network_type: "MLP"
   network_args:
     activation: "relu"
     use_layer_norm: false

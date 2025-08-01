@@ -2,63 +2,76 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from tqdm import tqdm
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 import pandas as pd
 from pathlib import Path
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from ..inference.estimator import NeuralRatioEstimator
 from ..simulation.simulator import ABCSimulator
 
-from .posterior import get_unnormalized_nre_pdf, get_normalized_pdf, sample_from_pdf, get_unormalized_corrected_nre_pdf
+from .posterior import (
+    get_unnormalized_nre_pdf,
+    get_normalized_pdf,
+    sample_from_pdf,
+    get_unnormalized_corrected_nre_pdf,
+)
 
 
 def run_abc_sbc(
     key: jax.random.PRNGKey,
-    estimator: 'NeuralRatioEstimator',
-    simulator: 'ABCSimulator',
-    abc_phi_samples: np.ndarray,
+    estimator: "NeuralRatioEstimator",
     num_sbc_rounds: int = 500,
     num_posterior_samples: int = 1000,
-    true_phis_for_sbc: Optional[np.ndarray] = None 
-
+    correction: Optional[bool] = False,
+    initial_bounds: Optional[Tuple[float, float]] = (0.0, 10.0),
 ) -> Dict[str, Any]:
     """
     Performs ABC-based Simulation-Based Calibration (ABC-SBC).
-    
+
     If `true_phis_for_sbc` is provided, it will be used as the set of
     ground truth parameters. Otherwise, `num_sbc_rounds` parameters will be
     randomly drawn from `abc_phi_samples`.
-    
+
     Args:
         true_phis_for_sbc: An optional array of pre-defined "true" phi values to use for calibration.
     """
-    if true_phis_for_sbc is not None:
-        print(f"Running ABC-SBC using {len(true_phis_for_sbc)} provided true phi values...")
-        phis_to_iterate = true_phis_for_sbc
+
+    simulator = estimator.simulator
+    sampler = simulator.sampler
+
+    key, key_sample = jax.random.split(key)
+    abc_results = sampler.sample(key_sample, n_samples=num_sbc_rounds)
+    print(
+        f"DEBUG: ABC-SBC sampled {num_sbc_rounds} data points. Type abc_results={type(abc_results)}"
+    )
+    datas = abc_results.data
+    phi_samples = abc_results.phi
+
+    if estimator.stored_phis is not None:
+        abc_phi_samples = estimator.stored_phis
     else:
-        print(f"Running ABC-SBC by drawing {num_sbc_rounds} phi values from the ABC posterior...")
-        key, choice_key = jax.random.split(key)
-        phis_to_iterate = jax.random.choice(choice_key, abc_phi_samples, shape=(num_sbc_rounds,))
+        abc_phi_samples = phi_samples
 
     ranks = []
-    true_phis_used = []
-    initial_bounds = (np.min(abc_phi_samples), np.max(abc_phi_samples))
+    posterior_phis = []
 
-    for phi_true in tqdm(phis_to_iterate, desc="ABC-SBC Progress"):
-        key, sim_key, sample_key = jax.random.split(key, 3)
+    for i in tqdm(range(num_sbc_rounds), desc="ABC-SBC Progress"):
 
-       
-        n_obs = simulator.observed_data.shape[0]
-        x_sim = simulator.model.simulate(sim_key, phi_true)
-        
-        temp_simulator = ABCSimulator(model=simulator.model, observed_data=x_sim)
+        data = datas[i]
+        phi_true = phi_samples[i]
 
-        unnormalized_pdf_func = get_unormalized_corrected_nre_pdf(estimator, temp_simulator, 
-                                                                  phi_samples=abc_phi_samples)
+        if correction:
+            unnormalized_pdf_func = get_unnormalized_nre_pdf(estimator, x=data)
+        else:
+            unnormalized_pdf_func = get_unnormalized_corrected_nre_pdf(
+                estimator, x=data, phi_samples=abc_phi_samples
+            )
+
         grid, normalized_pdf = get_normalized_pdf(unnormalized_pdf_func, initial_bounds)
-
+        key, sample_key = jax.random.split(key)
         # 3. Draw samples from this NRE posterior
         posterior_samples = sample_from_pdf(
             grid, normalized_pdf, num_posterior_samples, sample_key
@@ -67,15 +80,17 @@ def run_abc_sbc(
         # 4. Compute the rank of phi_true
         rank = jnp.sum(posterior_samples < phi_true)
         ranks.append(int(rank))
-        true_phis_used.append(float(phi_true.item()))
+        posterior_phis.append(posterior_samples)
 
     print("ABC-SBC complete.")
     return {
-        'ranks': np.array(ranks),
-        'true_phis': np.array(true_phis_used)
+        "ranks": np.array(ranks),
+        "phis": np.array(phi_samples),
+        "posterior_phis": np.array(posterior_phis),
+        "datas": np.array(datas),
     }
-    
-    
+
+
 def save_sbc_results_to_csv(sbc_results: Dict[str, np.ndarray], filepath: Path):
     """
     Saves the results of a Simulation-Based Calibration run to a CSV file.

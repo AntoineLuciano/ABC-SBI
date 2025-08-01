@@ -8,7 +8,7 @@ to be used with the ABCSimulator.
 from abc import ABC, abstractmethod
 import jax.numpy as jnp
 from jax import random, vmap
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 
 
 class StatisticalModel(ABC):
@@ -62,7 +62,7 @@ class StatisticalModel(ABC):
     
     
     @abstractmethod
-    def simulate(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
+    def simulate_data(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
         """
         Simulate data given parameters.
         
@@ -75,8 +75,8 @@ class StatisticalModel(ABC):
         """
         pass
     
-    def simulate_multiple(
-        self, key: random.PRNGKey, theta: jnp.ndarray, n_samples: int
+    def simulate_datas(
+        self, key: random.PRNGKey, theta: jnp.ndarray
     ) -> jnp.ndarray:
         """
         Simulate multiple datasets given parameters.
@@ -84,13 +84,14 @@ class StatisticalModel(ABC):
         Args:
             key: JAX random key
             theta: Parameter values
-            n_samples: Number of datasets to simulate
             
         Returns:
             Array of simulated datasets of shape (n_samples, data_shape)
         """
+        print('theta.shape = ', theta.shape)
+        n_samples = theta.shape[0] if theta.ndim > 1 else 1
         keys = random.split(key, n_samples)
-        return vmap(lambda k: self.simulate(k, theta))(keys)
+        return vmap(lambda k: self.simulate_data(k, theta))(keys)
     
     def sample_theta_x(
         self, key: random.PRNGKey
@@ -106,7 +107,7 @@ class StatisticalModel(ABC):
         """
         key_theta, key_data = random.split(key)
         theta = self.get_prior_sample(key_theta)
-        return theta, self.simulate(key_data, theta)
+        return theta, self.simulate_data(key_data, theta)
 
     def sample_theta_x_multiple(
         self, key: random.PRNGKey,  n_samples: int
@@ -126,7 +127,7 @@ class StatisticalModel(ABC):
     
     def sample_phi_x(
         self, key: random.PRNGKey
-    ) -> jnp.ndarray:
+    ) -> Tuple[jnp.ndarray, jnp.ndarray]:
         """
         Sample phi and simulate data in one step.
 
@@ -134,16 +135,18 @@ class StatisticalModel(ABC):
             key: JAX random key
 
         Returns:
-            Simulated dataset
+            tuple: (phi, data)
+            - phi: Transformed parameter (typically scalar)
+            - data: Simulated dataset
         """
         key_theta, key_data = random.split(key)
         theta = self.get_prior_sample(key_theta)
         phi = self.transform_phi(theta)
-        return phi, self.simulate(key_data, theta)
+        return phi, self.simulate_data(key_data, theta)
 
     def sample_phi_x_multiple(
         self, key: random.PRNGKey, n_samples: int
-    ) -> jnp.ndarray:
+    ) -> Tuple[jnp.ndarray, jnp.ndarray]:
         """
         Sample multiple phi and simulate data in one step.
 
@@ -152,8 +155,11 @@ class StatisticalModel(ABC):
             n_samples: Number of samples to draw
 
         Returns:
-            Array of simulated datasets of shape (n_samples, data_shape)
+            tuple: (phi_samples, data_samples)
+            - phi_samples: Array of transformed parameters (shape (n_samples,))
+            - data_samples: Array of simulated datasets (shape (n_samples, data_shape))
         """
+  
         keys = random.split(key, n_samples)
         return vmap(lambda k: self.sample_phi_x(k))(keys)
     

@@ -10,10 +10,10 @@ paths:
   summary_network_config: simulator_summary_network_config.yml
   summary_network_weights: simulator_summary_network_weights.npz
 metadata:
-  created_date: '2025-07-30T18:11:32.851527'
+  created_date: '2025-08-01T19:32:31.642970'
   abcnre_version: 0.1.0
   simulator_type: ABCSimulator
-  sampler_id: 391a2beade3a
+  sampler_id: 545e528a3e5f
 observed_data_shape:
 - 10
-- 1
+- 100

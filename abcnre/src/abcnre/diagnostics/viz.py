@@ -12,7 +12,8 @@ def plot_posterior_comparison(
     prior_pdf: Optional[Tuple[np.ndarray, np.ndarray]] = None,
     true_value: Optional[float] = None,
     title: str = "Comparison of Posterior Distributions",
-    save_path: Optional[str] = None
+    save_path: Optional[str] = None, 
+    xlim: Optional[Tuple[float, float]] = None,
 ):
     """
     Plots a comprehensive comparison of multiple posterior distributions.
@@ -51,23 +52,26 @@ def plot_posterior_comparison(
     plt.xlabel('Parameter value (phi)', fontsize=12)
     plt.ylabel('Density', fontsize=12)
     plt.legend(fontsize=11)
-    plt.grid(True, alpha=0.2)
     plt.tight_layout()
-
+    if xlim:
+        plt.xlim(xlim)
     if save_path:
         plt.savefig(save_path, dpi=300)
     plt.show()
 
 
 def plot_sbc_ranks(
-    ranks: np.ndarray,
-    num_posterior_samples: int,
+    sbc_results: Dict[str, Any],
     title: str = "SBC Rank Distribution",
     save_path: Optional[str] = None
 ):
     """
     Plots the histogram of ranks from a Simulation-Based Calibration (SBC).
     """
+    ranks = sbc_results["ranks"]
+    num_posterior_samples = (sbc_results["posterior_phis"][0]).shape[0]
+    
+
     plt.figure(figsize=(10, 6))
     n_sbc_rounds = len(ranks)
     
@@ -87,7 +91,7 @@ def plot_sbc_ranks(
     plt.xlabel('Rank Statistic')
     plt.ylabel('Frequency (Count)')
     plt.legend()
-    plt.grid(True, axis='y', alpha=0.2)
+    # plt.grid(True, axis='y', alpha=0.2)
     plt.tight_layout()
 
     if save_path:

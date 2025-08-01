@@ -1,0 +1,16 @@
+# Constant learning rate scheduler configuration
+
+# Base configuration  
+base:
+  name: "constant"
+  enabled: true
+
+# Variants
+variants:
+  default:
+    # No parameters needed for constant LR - uses base learning_rate from training config
+    pass
+
+  high:
+    # Could add a multiplier if needed in the future
+    pass

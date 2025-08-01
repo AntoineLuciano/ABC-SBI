@@ -8,6 +8,7 @@ from the original ABCDataGenerator implementations.
 
 from jax import random
 import jax.numpy as jnp
+import numpy as np
 from typing import Dict, Optional, Any
 import scipy.stats as scstats
 
@@ -81,7 +82,7 @@ class GaussGaussModel(StatisticalModel):
         self.parameter_dim = 1  # Single parameter (theta)
         self.data_shape = (n_obs,)  # Shape of simulated data
         self.n_obs = n_obs  # Number of observations per sample
-    
+
     def get_prior_sample(self, key: random.PRNGKey) -> jnp.ndarray:
         """
         Sample from Gaussian prior: theta ~ N(mu0, sigma0^2).
@@ -92,7 +93,7 @@ class GaussGaussModel(StatisticalModel):
         Returns:
             Scalar parameter sample from prior
         """
-        return self.mu0 + self.sigma0 * random.normal(key)
+        return self.mu0 + self.sigma0 * random.normal(key, shape=(1,))
 
     def get_prior_samples(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
         """
@@ -105,7 +106,7 @@ class GaussGaussModel(StatisticalModel):
         Returns:
             Array of parameter samples of shape (n_samples,)
         """
-        return self.mu0 + self.sigma0 * random.normal(key, shape=(n_samples,))
+        return self.mu0 + self.sigma0 * random.normal(key, shape=(n_samples, 1))
 
     def get_prior_dist(self):
         """
@@ -143,7 +144,31 @@ class GaussGaussModel(StatisticalModel):
         theta_val = float(theta) if jnp.isscalar(theta) else (theta.flatten())
         return scstats.norm.pdf(theta_val, loc=self.mu0, scale=self.sigma0)
 
-    def simulate(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
+    def prior_phi_logpdf(self, phi: jnp.ndarray) -> float:
+        """
+        Log-density of the prior at phi.
+
+        Args:
+            phi: Transformed parameter value (scalar or array)
+
+        Returns:
+            Log-probability under the prior for phi
+        """
+        return scstats.norm.logpdf(phi, loc=self.mu0, scale=self.sigma0)
+
+    def prior_phi_pdf(self, phi: jnp.ndarray) -> float:
+        """
+        Density of the prior at phi.
+
+        Args:
+            phi: Transformed parameter value (scalar or array)
+
+        Returns:
+            Probability density under the prior for phi
+        """
+        return scstats.norm.pdf(phi, loc=self.mu0, scale=self.sigma0)
+
+    def simulate_data(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
         """
         Sample from Gaussian likelihood: X | theta ~ N(theta, sigma^2).
 
@@ -266,6 +291,97 @@ class GaussGaussModel(StatisticalModel):
         stats = self.get_posterior_stats(observed_data)
         return scstats.norm(loc=stats["posterior_mean"], scale=stats["posterior_std"])
 
+    def get_posterior_phi_distribution(self, observed_data: jnp.ndarray):
+        """
+        Get posterior distribution for the parameter of interest phi.
+
+        For the 1D Gaussian model, phi is just theta, so this is equivalent
+        to get_posterior_distribution().
+
+        Args:
+            observed_data: Observed dataset
+
+        Returns:
+            Scipy normal distribution object for phi
+        """
+        return self.get_posterior_distribution(observed_data)
+
+    def get_analytical_posterior_stats(
+        self, observed_data: jnp.ndarray
+    ) -> Dict[str, float]:
+        """
+        Get analytical posterior statistics for this model.
+
+        This is an alias for get_posterior_stats() to clarify that this model
+        supports analytical posteriors.
+
+        Args:
+            observed_data: Observed dataset
+
+        Returns:
+            Dictionary with analytical posterior statistics
+        """
+        return self.get_posterior_stats(observed_data)
+
+    def get_pymc_posterior(self, observed_data: jnp.ndarray, n_samples: int = 1000):
+        """
+        Get PyMC posterior samples for the analytical posterior.
+
+        This allows integration with PyMC for advanced sampling and diagnostics.
+
+        Args:
+            observed_data: Observed dataset
+            n_samples: Number of samples to draw (default: 1000)
+
+        Returns:
+            PyMC trace with posterior samples
+
+        Raises:
+            ImportError: If PyMC is not installed
+        """
+        try:
+            import pymc as pm
+            import pytensor.tensor as pt
+        except ImportError:
+            raise ImportError(
+                "PyMC is required for get_pymc_posterior(). "
+                "Please install it with: pip install pymc"
+            )
+
+        # Get analytical posterior parameters
+        stats = self.get_posterior_stats(observed_data)
+        mu_post = float(stats["posterior_mean"])  # Convert to Python float
+        sigma_post = float(stats["posterior_std"])  # Convert to Python float
+
+        # Create PyMC model and sample
+        with pm.Model() as model:
+            # Define the posterior distribution for theta
+            theta = pm.Normal(
+                "theta", mu=mu_post, sigma=sigma_post, shape=()  # Scalar parameter
+            )
+
+            # Store analytical parameters as model attributes for reference
+            model.analytical_mu = mu_post
+            model.analytical_sigma = sigma_post
+            model.observed_data = observed_data
+            model.prior_mu = self.mu0
+            model.prior_sigma = self.sigma0
+            model.likelihood_sigma = self.sigma
+
+            # Sample from the posterior
+            trace = pm.sample(n_samples, tune=500, chains=2, return_inferencedata=True)
+
+        return trace
+
+    def has_analytical_posterior(self) -> bool:
+        """
+        Check if this model supports analytical posterior computation.
+
+        Returns:
+            True for Gaussian-Gaussian conjugate model
+        """
+        return True
+
     def get_model_args(self) -> Dict[str, Any]:
         """Get model parameters for serialization."""
         return {
@@ -329,8 +445,6 @@ class GaussGaussModel(StatisticalModel):
             f"GaussGaussModel("
             f"mu0={self.mu0}, sigma0={self.sigma0}, sigma={self.sigma})"
         )
-
-
 
 
 # Export main classes

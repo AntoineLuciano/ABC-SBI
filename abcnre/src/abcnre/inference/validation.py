@@ -1,8 +1,5 @@
 """
-Validation and advanced metrics for neural ratio estimation.
-
-This module provides comprehensive validation tools and advanced metrics
-for evaluating the quality of neural ratio estimators in ABC inference.
+OUTDATED
 """
 
 from typing import Dict, Any, Tuple, Optional

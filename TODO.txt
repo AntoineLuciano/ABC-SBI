@@ -1,19 +1,32 @@
 
 TO DO (HIGH LEVEL)
-- Litterature review (by end of June) Google Doc? Sequential NRE?
-- Code review (Ryan ASAP)
+- Code review (Ryan ASAP) -> Correctness and what could make experiments easier to run??
 - Consistency condition (Lipschitz condition on the posterior/loss) 
-- Experiments
+- Experiments!!!
 
+
+
+TO DO ANTOINE :
+- 🔄 Finish the interactive CLI (src/abcnre/utils/interactive.py) -> MOSTLY DONE, needs debugging for pipe inputs
+- Fix the virtual env!!! (requirements_antoine.txt)
+- Run tests with all the NNConfig possible
+- Speed up SBC 
+- Improve the Diagnostic section
+- Think of an experiment structure (same number of simulations different epsilons)
+- Summary Leaner -> Regressor in all the code 
+ 
 
 NEW IDEAS
-- Think to the non-binary kernel
-- Learning the summary statistics (e.g. using a neural network)
+- Think to the non-binary kernel? 
 
 GOALS: 
-- ArXiv paper (by end of June 11) 
-- Submit to Bayesian Analysis (by end of August)???
+- Presentation at Greek Stochastics (end of Aug) Which experiment? 
+        - Run with MCMC? 
+        - Efficiency vs NRE in terms of speed and simulations? 
+        - Show that we indeed break the dimension curse?
+- ArXiv paper (when we are happy)
+- Submit to Bayesian Analysis (by end of Spring 26)???
 
 
-CODE NOTES:
+RYAN'S CODE NOTES:
 - Let's use virtual envioronments with a requirements file.  This requires agreeing on a Jupyter kernel name.  I used ABC-SBI-kernel

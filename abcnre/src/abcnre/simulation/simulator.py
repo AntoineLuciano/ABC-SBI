@@ -205,7 +205,7 @@ class ABCSimulator:
             temp_key = random.PRNGKey(42)  # Fixed seed for reproducibility
             temp_theta = self.model.get_prior_sample(temp_key)
             temp_key, sim_key = random.split(temp_key)
-            observed_data_for_sampler = self.model.simulate(sim_key, temp_theta)
+            observed_data_for_sampler = self.model.simulate_data(sim_key, temp_theta)
 
             if self.config.get("verbose", False):
                 print("📝 Created temporary observed data for prior sampling mode")
@@ -227,7 +227,7 @@ class ABCSimulator:
 
         self.sampler = RejectionSampler(
             prior_simulator=self.model.get_prior_sample,
-            data_simulator=self.model.simulate,
+            data_simulator=self.model.simulate_data,
             discrepancy_fn=self.model.discrepancy_fn,
             summary_stat_fn=summary_stat_fn,
             transform_fn=transform_fn,
@@ -407,10 +407,11 @@ class ABCSimulator:
         return self.sampler.get_epsilon_quantile(key, alpha, n_samples)
 
     def learn_summary_stats(
+        
         self,
         key: random.PRNGKey,
         nn_config: Optional[Union[NNConfig, Dict[str, Any]]] = None,
-        n_samples_max: int = 50000,
+        n_samples_max: int = jnp.inf,
         override_model_summary_stats: bool = True,
     ):
         """

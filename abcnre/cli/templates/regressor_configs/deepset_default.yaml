@@ -1,0 +1,16 @@
+# Regressor configuration for summary statistics learning
+# Used with: abcnre create_simulator --learn-stats --regressor-config this_file.yaml
+
+network_name: "deepset"
+network_size: "default"
+training_size: "default"
+lr_scheduler_name: "cosine"
+experiment_name: "summary_learner_deepset"
+
+# Training overrides
+overrides:
+  num_epochs: 100
+  batch_size: 256
+  learning_rate: 0.0003
+  optimizer: "adam"
+  weight_decay: 0.0

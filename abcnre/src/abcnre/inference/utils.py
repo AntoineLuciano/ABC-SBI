@@ -1,8 +1,5 @@
 """
-Utility functions for neural ratio estimation.
-
-This module provides utilities for configuration management, 
-metrics computation, and other helper functions.
+OUTDATED
 """
 
 import os

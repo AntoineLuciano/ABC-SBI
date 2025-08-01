@@ -54,7 +54,7 @@ training:
       max_time_hours: null
     sample_stopping:
       enabled: true
-      max_samples: 10000000
+      max_samples: .inf
     simulation_stopping:
       enabled: false
       max_simulations: null
