@@ -2,7 +2,7 @@ metadata:
   analytical_posterior: true
   module: abcnre.simulation.models.gauss_gauss_multi
   parameter_space_dim: 100
-  saved_at: '2025-08-01T19:32:55.341930'
+  saved_at: '2025-08-02T11:25:40.969693'
 model_args:
   dim: 100
   marginal_of_interest: 0

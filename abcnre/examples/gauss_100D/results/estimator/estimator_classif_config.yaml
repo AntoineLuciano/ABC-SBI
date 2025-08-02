@@ -1,4 +1,4 @@
-experiment_name: classifier_conditioned_deepset_large_heavy
+experiment_name: classifier_conditioned_deepset_xl_heavy
 output_dir: ./experiments
 task_type: classifier
 network:
@@ -6,15 +6,15 @@ network:
   network_args:
     activation: relu
     use_layer_norm: true
-    dropout_rate: 0.0
+    dropout_rate: 0.1
     pooling_type: mean
     conditioning_mode: concat
     phi_hidden_dims:
-    - 64
+    - 128
     - 64
     - 32
     rho_hidden_dims:
-    - 64
+    - 128
     - 64
     - 32
 training:

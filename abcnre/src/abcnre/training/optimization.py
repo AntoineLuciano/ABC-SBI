@@ -13,9 +13,14 @@ def create_loss_function(task_type: str, network) -> Callable:
         def binary_crossentropy_loss(params, batch_data, rng_key=None):
             batch_input = batch_data["input"]
             batch_output = batch_data["output"]
-            # Use RNG key for dropout if provided
-            rngs = {"dropout": rng_key} if rng_key is not None else None
-            logits = network.apply(params, batch_input, training=True, rngs=rngs)
+            # Use RNG key for dropout if provided, and set training mode accordingly
+            if rng_key is not None:
+                rngs = {"dropout": rng_key}
+                training = True
+            else:
+                rngs = None
+                training = False
+            logits = network.apply(params, batch_input, training=training, rngs=rngs)
             # Convert to probabilities and compute BCE
             probs = jax.nn.sigmoid(logits.squeeze(-1))
             # Clip to avoid log(0)
@@ -32,9 +37,16 @@ def create_loss_function(task_type: str, network) -> Callable:
         def mse_loss(params, batch_data, rng_key=None):
             batch_input = batch_data["input"]
             batch_output = batch_data["output"]
-            # Use RNG key for dropout if provided
-            rngs = {"dropout": rng_key} if rng_key is not None else None
-            predictions = network.apply(params, batch_input, training=True, rngs=rngs)
+            # Use RNG key for dropout if provided, and set training mode accordingly
+            if rng_key is not None:
+                rngs = {"dropout": rng_key}
+                training = True
+            else:
+                rngs = None
+                training = False
+            predictions = network.apply(
+                params, batch_input, training=training, rngs=rngs
+            )
             return jnp.mean((batch_output - predictions) ** 2)
 
         return mse_loss
