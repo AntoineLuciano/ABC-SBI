@@ -43,3 +43,11 @@ variants:
       phi_hidden_dims: [64, 32]
       rho_hidden_dims: [64, 32]
       dropout_rate: 0.1
+      
+  # Extra large variant
+  xl:
+    network_args:
+      phi_hidden_dims: [128, 128, 64]
+      rho_hidden_dims: [128, 128, 64]
+      dropout_rate: 0.1
+      use_layer_norm: true

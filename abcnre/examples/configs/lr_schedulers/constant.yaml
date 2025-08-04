@@ -2,15 +2,15 @@
 
 # Base configuration  
 base:
-  name: "constant"
-  enabled: true
+  schedule_name: "constant"
+  schedule_args: {}
 
 # Variants
 variants:
   default:
-    # No parameters needed for constant LR - uses base learning_rate from training config
-    pass
+    schedule_name: "constant"
+    schedule_args: {}
 
   high:
-    # Could add a multiplier if needed in the future
-    pass
+    schedule_name: "constant"
+    schedule_args: {}

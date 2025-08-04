@@ -8,13 +8,29 @@ epoch execution and phi storage management.
 import jax
 import jax.numpy as jnp
 import numpy as np
+import time
 from typing import List, Tuple, Optional, Callable, Dict, Any
 import logging
 
-# Import phi extraction function from existing train.py
-from ..train_old import get_phi_from_batch
 
 logger = logging.getLogger(__name__)
+
+
+def get_phi_from_batch(batch_data: Dict[str, jnp.ndarray]) -> jnp.ndarray:
+    """
+    Extract phi from the batch data.
+
+    Args:
+        batch_data: Dictionary containing batch data with keys 'input' and 'output'
+
+    Returns:
+        Extracted phi values as a jnp.ndarray
+    """
+    inputs = batch_data["input"]
+    if type(inputs) is dict:
+        return np.unique(inputs["theta"][:, 0])
+
+    return np.unique(inputs[:, -1])
 
 
 def run_training_epoch(
@@ -23,7 +39,7 @@ def run_training_epoch(
     io_generator: Callable,
     training_config,
     stored_phi: Optional[np.ndarray] = None,
-) -> Tuple[List[float], int, int, Optional[np.ndarray]]:
+) -> Tuple[List[float], int, int, Optional[np.ndarray], Dict[str, float]]:
     """
     Run a single training epoch.
 
@@ -35,7 +51,7 @@ def run_training_epoch(
         stored_phi: Current stored phi values (for phi storage feature)
 
     Returns:
-        (epoch_losses, batch_count, simulations_this_epoch, updated_stored_phi)
+        (epoch_losses, batch_count, simulations_this_epoch, updated_stored_phi, timing_data)
     """
     n_batch = training_components["n_batch"]
     batch_size = training_config.batch_size
@@ -47,14 +63,21 @@ def run_training_epoch(
     epoch_losses = []
     simulations_this_epoch = 0
 
+    # Initialize timing trackers
+    epoch_start_time = time.time()
+    total_simulation_time = 0.0
+    total_training_time = 0.0
+
     # Check if phi storage is enabled
     n_phi_to_store = getattr(training_config, "n_phi_to_store", 0)
     phi_storage_enabled = n_phi_to_store > 0 and stored_phi is not None
 
     for batch_idx in range(n_batch):
-        # Generate batch data
+        # Generate batch data - TIME SIMULATION
         key, subkey = jax.random.split(key)
+        sim_start = time.time()
         batch_data = io_generator(subkey, batch_size)
+        total_simulation_time += time.time() - sim_start
 
         # Validate batch data format
         if not isinstance(batch_data, dict) or "n_simulations" not in batch_data:
@@ -84,13 +107,15 @@ def run_training_epoch(
                     f"Failed to extract/store phi values in epoch {epoch}, batch {batch_idx}: {e}"
                 )
 
-        # Training step
+        # Training step - TIME TRAINING
         try:
             # Generate new RNG key for each batch to ensure proper dropout randomness
             key, batch_key = jax.random.split(key)
+            train_start = time.time()
             params, opt_state, loss = train_step(
                 params, opt_state, batch_data, batch_key
             )
+            total_training_time += time.time() - train_start
             epoch_losses.append(loss)
             simulations_this_epoch += batch_data["n_simulations"]
         except Exception as e:
@@ -104,7 +129,20 @@ def run_training_epoch(
     training_components["opt_state"] = opt_state
     training_components["key"] = key
 
-    return epoch_losses, n_batch, simulations_this_epoch, stored_phi
+    # Calculate timing data
+    total_epoch_time = time.time() - epoch_start_time
+    overhead_time = total_epoch_time - total_simulation_time - total_training_time
+
+    timing_data = {
+        "total_time": total_epoch_time,
+        "simulation_time": total_simulation_time,
+        "training_time": total_training_time,
+        "overhead_time": overhead_time,
+        "sim_to_train_ratio": total_simulation_time
+        / max(total_training_time, 1e-6),  # Avoid division by zero
+    }
+
+    return epoch_losses, n_batch, simulations_this_epoch, stored_phi, timing_data
 
 
 def initialize_phi_storage(training_config) -> Optional[np.ndarray]:

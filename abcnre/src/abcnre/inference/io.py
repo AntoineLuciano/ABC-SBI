@@ -3,6 +3,7 @@ from pathlib import Path
 import yaml
 import logging
 import numpy as np
+from datetime import datetime
 from ..training import NNConfig
 
 from .estimator import NeuralRatioEstimator
@@ -93,14 +94,22 @@ def _create_estimator_config(estimator, output_path: Path) -> Dict[str, Any]:
     classif_config_filename = f"{output_path.stem}_classif_config.yaml"
     simulator_filename = f"{output_path.stem}_simulator.yaml"
 
-    return {
+    config = {
         "summary_as_input": estimator.summary_as_input,
         "is_trained": estimator.is_trained,
         "paths": {
             "classifier_config": classif_config_filename,
             "simulator_config": simulator_filename,
         },
+        "metadata": {
+            "created_date": datetime.now().isoformat(),
+            "abcnre_version": "0.1.0",
+            "estimator_type": type(estimator).__name__,
+            "sampler_id": getattr(estimator.simulator, "sampler_id", None),
+        },
     }
+
+    return config
 
 
 def _save_trained_parameters(

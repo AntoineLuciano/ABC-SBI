@@ -14,8 +14,12 @@ from .sampler import RejectionSampler, BaseSampler
 # Result structures
 from .base import ABCSampleResult, ABCTrainingResult, ABCSingleResult
 
-# Utility functions
-from .utils import save_simulator, load_simulator
+# Utility functions - now only from io.py (utils.py is minimal)
+# Legacy imports redirected to io.py for backward compatibility
+from .io import (
+    save_simulator_to_yaml as save_simulator,
+    load_simulator_from_yaml as load_simulator,
+)
 
 # New dedicated I/O functions
 from .io import (

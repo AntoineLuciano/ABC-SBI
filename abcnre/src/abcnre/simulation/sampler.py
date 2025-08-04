@@ -43,7 +43,7 @@ tree_util.register_dataclass(
 )
 
 
-# Core ABC sampling function (JIT compiled)
+# Core ABC sampling function (JIT compiled) - Fixed version
 @partial(jit, static_argnums=(1, 2, 3, 4, 5))
 def get_abc_sample(
     key: random.PRNGKey,
@@ -56,7 +56,7 @@ def get_abc_sample(
     observed_data: jnp.ndarray,
     observed_summary_stats: Optional[jnp.ndarray],
 ) -> Tuple[
-    jnp.ndarray, jnp.ndarray, float, Optional[jnp.ndarray], Optional[jnp.ndarray]
+    jnp.ndarray, jnp.ndarray, float, Optional[jnp.ndarray], Optional[jnp.ndarray], int
 ]:
     """
     Sample single ABC draw using rejection sampling with summary statistics.
@@ -73,14 +73,14 @@ def get_abc_sample(
         observed_summary_stats: Pre-computed observed summary statistics
 
     Returns:
-        Tuple of (simulated_data, theta, distance, summary_statistics, phi)
+        Tuple of (simulated_data, theta, distance, summary_statistics, phi, count)
     """
 
-    # Determine what to compare against
-    if summary_stat_fn is not None and observed_summary_stats is not None:
-        comparison_target = observed_summary_stats
-    else:
-        comparison_target = observed_data
+    # Determine what to compare against outside the loop for better JIT performance
+    use_summary_stats = (
+        summary_stat_fn is not None and observed_summary_stats is not None
+    )
+    comparison_target = observed_summary_stats if use_summary_stats else observed_data
 
     def should_continue(state: RejectionState) -> bool:
         return state.distance >= epsilon
@@ -88,20 +88,19 @@ def get_abc_sample(
     def rejection_step(state: RejectionState) -> RejectionState:
         """
         JAX-compatible rejection step using typed dataclass.
-        Much safer than manual tuple unpacking!
+        Optimized to minimize conditionals in the loop.
         """
         key, key_theta, key_data = random.split(state.key, 3)
         theta_proposal = prior_simulator(key_theta)
         data_proposal = data_simulator(key_data, theta_proposal)
 
         # Transform theta to phi if transform function is provided
-        if transform_fn is not None:
-            phi_proposal = transform_fn(theta_proposal)
-        else:
-            phi_proposal = None
+        phi_proposal = (
+            transform_fn(theta_proposal) if transform_fn is not None else None
+        )
 
-        # Use summary statistics if provided, otherwise raw data
-        if summary_stat_fn is not None:
+        # Optimized: choose computation path based on pre-determined flag
+        if use_summary_stats:
             summary_proposal = summary_stat_fn(data_proposal)
             distance = discrepancy_fn(summary_proposal, comparison_target)
         else:
@@ -200,6 +199,11 @@ class RejectionSampler(BaseSampler):
         self.observed_data = observed_data
         self.observed_summary_stats = observed_summary_stats
 
+        # Precompute observed summary statistics if summary_stat_fn is provided
+        if self.summary_stat_fn is not None and self.observed_data is not None:
+            if self.observed_summary_stats is None:
+                self.observed_summary_stats = self.summary_stat_fn(self.observed_data)
+
     def sample_single(self, key: random.PRNGKey) -> ABCSingleResult:
         """
         Generate single ABC sample using rejection sampling.
@@ -223,7 +227,7 @@ class RejectionSampler(BaseSampler):
         )
 
         return ABCSingleResult(
-            data=data,
+            sim_data=data,
             theta=theta,
             distance=distance,
             summary_stat=summary_stat,
@@ -302,49 +306,53 @@ class RejectionSampler(BaseSampler):
         # Generate base ABC samples from the approximate posterior
         abc_result = self.sample(key, half_samples)
         key = abc_result.key  # Use the updated key from the result
-        
-        
+
         key, perm_key = random.split(key)
         data = abc_result.data
         permutation_indices = random.permutation(perm_key, jnp.arange(half_samples))
-        
+
         phi = abc_result.phi
         theta = abc_result.theta
-        phi_permuted = abc_result.phi[permutation_indices] if abc_result.phi is not None else None
+        phi_permuted = (
+            abc_result.phi[permutation_indices] if abc_result.phi is not None else None
+        )
         theta_permuted = abc_result.theta[permutation_indices]
 
-        summary_stats = abc_result.summary_stats if abc_result.summary_stats is not None else None
-        
+        summary_stats = (
+            abc_result.summary_stats if abc_result.summary_stats is not None else None
+        )
+
         distances = abc_result.distances
-        
-        training_data = jnp.concatenate( [data, data], axis=0)
-        training_summary_stats = jnp.concatenate(
-            [summary_stats, summary_stats], axis=0
-        ) if summary_stats is not None else None
-        
-        training_phi = jnp.concatenate([phi_permuted, phi], axis=0) if phi_permuted is not None else None
+
+        training_data = jnp.concatenate([data, data], axis=0)
+        training_summary_stats = (
+            jnp.concatenate([summary_stats, summary_stats], axis=0)
+            if summary_stats is not None
+            else None
+        )
+
+        training_phi = (
+            jnp.concatenate([phi_permuted, phi], axis=0)
+            if phi_permuted is not None
+            else None
+        )
         training_theta = jnp.concatenate([theta_permuted, theta], axis=0)
         training_distances = jnp.concatenate([distances, distances], axis=0)
-        
+
         training_labels = jnp.concatenate(
             [jnp.zeros(half_samples, dtype=int), jnp.ones(half_samples, dtype=int)]
         )
-        
-        
+
         return ABCTrainingResult(
-            labels = training_labels,
-            data = training_data,
-            distances = training_distances,
-            summary_stats = training_summary_stats,
-            key = key,
-            theta = training_theta,
-            phi = training_phi,
+            labels=training_labels,
+            data=training_data,
+            distances=training_distances,
+            summary_stats=training_summary_stats,
+            key=key,
+            theta=training_theta,
+            phi=training_phi,
             total_sim_count=int(abc_result.simulation_count.sum()),
         )
-        
-        
-        
-   
 
     def update_epsilon(self, new_epsilon: float):
         """Update epsilon value."""
@@ -387,54 +395,8 @@ class RejectionSampler(BaseSampler):
         return epsilon_quantile, result.distances, result.key
 
 
-# # Backward compatibility functions
-# def get_abc_samples_vectorized(
-#     key: random.PRNGKey,
-#     n_samples: int,
-#     prior_simulator: Callable,
-#     data_simulator: Callable,
-#     discrepancy_fn: Callable,
-#     summary_stat_fn: Optional[Callable],
-#     epsilon: float,
-#     observed_data: jnp.ndarray,
-#     observed_summary_stats: Optional[jnp.ndarray] = None
-# ) -> ABCSampleResult:
-#     """
-#     Backward compatibility function for get_abc_samples_vectorized.
-#     """
-#     sampler = RejectionSampler(
-#         prior_simulator, data_simulator, discrepancy_fn,
-#         summary_stat_fn, epsilon, observed_data, observed_summary_stats
-#     )
-#     return sampler.sample(key, n_samples)
-
-
-# def get_training_samples(
-#     key: random.PRNGKey,
-#     n_samples: int,
-#     prior_simulator: Callable,
-#     data_simulator: Callable,
-#     discrepancy_fn: Callable,
-#     summary_stat_fn: Optional[Callable],
-#     epsilon: float,
-#     observed_data: jnp.ndarray,
-#     observed_summary_stats: Optional[jnp.ndarray] = None,
-#     marginal_index: int = 0
-# ) -> ABCTrainingResult:
-#     """
-#     Backward compatibility function for get_training_samples.
-#     """
-#     sampler = RejectionSampler(
-#         prior_simulator, data_simulator, discrepancy_fn,
-#         summary_stat_fn, epsilon, observed_data, observed_summary_stats
-#     )
-#     return sampler.generate_training_samples(key, n_samples, marginal_index)
-
-
 # Export all functions
 __all__ = [
     "RejectionSampler",
     "get_abc_sample",
-    "get_abc_samples_vectorized",
-    "get_training_samples",
 ]

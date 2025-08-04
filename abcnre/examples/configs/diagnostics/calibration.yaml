@@ -1,0 +1,104 @@
+
+quick_test:
+  num_sbc_rounds: 200
+  num_posterior_samples: 16
+  use_correction: "no"  # Only uncorrected for speed
+  initial_bounds: [0.0, 5.0]
+  estimator_path: "path/to/your/estimator.yaml"
+  output_results_path: "results/sbc_quick_test.csv"
+  output_plots_path: "plots/sbc_quick_test.png"
+  save_results: true
+  save_plots: true
+  seed: 42
+
+
+
+default:
+  num_sbc_rounds: 500
+  num_posterior_samples: 64
+  use_correction: "both"  # Run both corrected and uncorrected
+  initial_bounds: [0.0, 10.0]
+  estimator_path: "path/to/your/estimator.yaml"
+  output_results_path: "results/sbc_default.csv"
+  output_plots_path: "plots/sbc_default.png"
+  save_results: true
+  save_plots: true
+  seed: 42
+
+
+heavy:
+  num_sbc_rounds: 1000
+  num_posterior_samples: 128
+  use_correction: "both"  # Run both corrected and uncorrected
+  initial_bounds: [0.0, 15.0]
+  estimator_path: "path/to/your/estimator.yaml"
+  output_results_path: "results/sbc_heavy.csv"
+  output_plots_path: "plots/sbc_heavy.png"
+  save_results: true
+  save_plots: true
+  seed: 42
+
+# ==============================================================================
+# CONFIGURATION NOTES
+# ==============================================================================
+# 
+# num_sbc_rounds: Number of SBC calibration rounds
+#   - quick_test: 50 (fast, minimal validation)
+#   - defaults: 500 (good balance of speed/accuracy)
+#   - heavy: 2000 (thorough validation, slower)
+#
+# num_posterior_samples: Samples drawn from posterior per round
+#   - More samples = better rank estimation but slower
+#   - Typical range: 200-2000
+#
+# use_correction: Whether to apply correction
+#   - "no": Only uncorrected NRE posterior
+#   - "yes": Only corrected NRE posterior
+#   - "both": Run both variants for comparison
+#
+# initial_bounds: [min, max] bounds for parameter space
+#   - Should cover the expected parameter range
+#   - Wider bounds = more robust but potentially slower
+#
+# File paths:
+#   - estimator_path: Path to your trained estimator YAML
+#   - output_results_path: Where to save CSV results
+#   - output_plots_path: Where to save diagnostic plots
+#
+# seed: Random seed for reproducibility
+#
+# ==============================================================================
+# USAGE EXAMPLES
+# ==============================================================================
+#
+# Python usage:
+# ```python
+# from abcnre.diagnostics.sbc_accelerated import run_sbc_from_yaml
+# 
+# # Quick test
+# results = run_sbc_from_yaml("calibration.yaml#quick_test")
+# 
+# # Default run
+# results = run_sbc_from_yaml("calibration.yaml#defaults")
+# 
+# # Heavy analysis
+# results = run_sbc_from_yaml("calibration.yaml#heavy")
+# ```
+#
+# Or create config manually:
+# ```python
+# from abcnre.diagnostics.sbc_accelerated import SBCConfig, run_abc_sbc
+# 
+# config = SBCConfig(
+#     num_sbc_rounds=500,
+#     num_posterior_samples=1000,
+#     use_correction="both",
+#     initial_bounds=(0.0, 10.0),
+#     estimator_path="my_estimator.yaml",
+#     output_results_path="my_results.csv",
+#     save_results=True,
+#     seed=42
+# )
+# 
+# results = run_abc_sbc(config)
+# ```

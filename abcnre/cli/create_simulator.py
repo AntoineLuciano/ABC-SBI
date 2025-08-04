@@ -62,7 +62,7 @@ def create_simulator_command(args):
         regressor_config = load_regressor_config(args.regressor_config)
 
         key, subkey_learn = jax.random.split(key)
-        simulator.learn_summary_stats(subkey_learn, regressor_config)
+        simulator.train_summary_network(subkey_learn, regressor_config)
 
         # Check correlation
         key, subkey_check = jax.random.split(key)

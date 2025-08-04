@@ -14,16 +14,16 @@ import yaml
 
 from .sampler import RejectionSampler
 from .base import ABCSampleResult, ABCTrainingResult, ABCSingleResult
-from . import utils
 from functools import cached_property
-from .utils import generate_sampler_hash
+from .io import generate_sampler_hash
+from ..utils.comparison import are_simulators_equivalent
 import jax
 import flax.linen as nn
 
 from ..training import (
     NNConfig,
     get_nn_config,
-    train_summary_learner,
+    train_regressor,
     TrainingConfig,
     NetworkConfig,
 )
@@ -36,23 +36,23 @@ def create_summary_stats_fn(
 ) -> Callable[[jnp.ndarray], jnp.ndarray]:
     """
     Create summary statistics function adapted to different network architectures.
-    
+
     Args:
         network: Trained summary statistics network
         params: Trained parameters
         network_type: Type of network ("deepset", "conditioned_deepset", "MLP")
-        
+
     Returns:
         Summary statistics function that takes observations and returns summary stats
     """
-    
+
     def summary_stats_fn(x: jnp.ndarray) -> jnp.ndarray:
         """
         Compute summary statistics S(x) from observations.
-        
+
         Args:
             x: Observations, shape (batch, n, d) or (batch, d)
-            
+
         Returns:
             Summary statistics, shape (batch, summary_dim)
         """
@@ -61,8 +61,9 @@ def create_summary_stats_fn(
         summary_stats = network.apply(params, x, training=False)
 
         return summary_stats  # (batch, summary_dim)
-    
+
     return summary_stats_fn
+
 
 class ABCSimulator:
     """
@@ -95,6 +96,10 @@ class ABCSimulator:
         """
         self.model = model
         self.trained_summary_stats = False
+
+        # Store whether epsilon was explicitly provided
+        self._epsilon_provided = epsilon is not None
+
         # Set epsilon first to determine if observed_data is required
         self.epsilon = jnp.inf if epsilon is None else epsilon
 
@@ -145,6 +150,34 @@ class ABCSimulator:
             epsilon=self.epsilon,
         )
 
+    def __eq__(self, other) -> bool:
+        """
+        Compare this simulator with another for equivalence.
+
+        Uses the robust comparison function from utils.comparison that checks:
+        - Model equivalence (type + configuration)
+        - Observed data equivalence
+        - Epsilon equivalence
+        - Summary network equivalence (configuration + trained parameters)
+        """
+        if not isinstance(other, ABCSimulator):
+            return False
+        return are_simulators_equivalent(self, other)
+
+    def __hash__(self):
+        """Make simulator hashable for use in sets/dicts (based on sampler_id)."""
+        try:
+            return hash(self.sampler_id)
+        except ValueError:
+            # Fallback if sampler_id can't be computed
+            return hash(
+                (
+                    id(self.model),
+                    id(self.observed_data) if self.observed_data is not None else None,
+                    self.epsilon,
+                )
+            )
+
     def _init_summary_stats(self):
         """Initializes summary statistics based on the model and data."""
         self.observed_summary_stats = None
@@ -166,7 +199,8 @@ class ABCSimulator:
     def _init_epsilon(self):
         """Initializes epsilon, computing it from a quantile if requested."""
 
-        if self.quantile_distance is not None:
+        # Only compute epsilon from quantile if epsilon was not explicitly provided
+        if self.quantile_distance is not None and not self._epsilon_provided:
             if not (0 < self.quantile_distance <= 1):
                 raise ValueError("quantile_distance must be between 0 and 1")
 
@@ -190,6 +224,8 @@ class ABCSimulator:
 
                 if self.config.get("verbose", False):
                     print(f"Computed epsilon = {self.epsilon:.6f}")
+        elif self._epsilon_provided and self.config.get("verbose", False):
+            print(f"Using provided epsilon = {self.epsilon:.6f}")
 
     def _initialize_sampler(self):
         """Initialize the rejection sampler with the current configuration."""
@@ -406,8 +442,7 @@ class ABCSimulator:
             self._initialize_sampler()
         return self.sampler.get_epsilon_quantile(key, alpha, n_samples)
 
-    def learn_summary_stats(
-        
+    def train_summary_network(
         self,
         key: random.PRNGKey,
         nn_config: Optional[Union[NNConfig, Dict[str, Any]]] = None,
@@ -415,7 +450,7 @@ class ABCSimulator:
         override_model_summary_stats: bool = True,
     ):
         """
-        Learn summary statistics using the unified training system.
+        Train a summary statistics network using the unified training system.
 
         This method generates training data from the model and uses the unified
         training system to learn optimal summary statistics for the ABC procedure.
@@ -439,17 +474,15 @@ class ABCSimulator:
             # Create default configuration based on model properties
             learner_type = "DeepSet" if self.model.sample_is_iid else "MLP"
             # Create default NNConfig for summary learning
-            nn_config = get_nn_config(
-                network_name=learner_type, task_type="summary_learner"
-            )
+            nn_config = get_nn_config(network_name=learner_type, task_type="regressor")
 
         elif isinstance(nn_config, dict):
             # Convert dictionary to NNConfig
             nn_config = NNConfig.from_dict(nn_config)
 
         # Ensure task_type is correct
-        if nn_config.task_type != "summary_learner":
-            raise ValueError("nn_config.task_type must be 'summary_learner'")
+        if nn_config.task_type != "regressor":
+            raise ValueError("nn_config.task_type must be 'regressor'")
 
         # Configure sample stopping rule based on n_samples_max
         if hasattr(nn_config.training, "stopping_rules"):
@@ -475,24 +508,23 @@ class ABCSimulator:
             nn_config.training.stopping_rules = {
                 "sample_stopping": {"enabled": True, "max_samples": n_samples_max}
             }
-        
+
         # Create data generator that matches the expected interface
         def io_generator(key: random.PRNGKey, batch_size: int):
             """Adapter for the unified training interface."""
             results = self.model.sample_phi_x_multiple(key, batch_size)
-            phi, x = results 
+            phi, x = results
             return {"input": x, "output": phi, "n_simulations": batch_size}
 
         # Train using the unified system
         key, train_key = random.split(key)
-        summary_results = train_summary_learner(
+        summary_results = train_regressor(
             key=train_key, config=nn_config, io_generator=io_generator
         )
 
         # Update configuration
         self.config["summary_stats_enabled"] = True
 
-        
         # Update the model if it doesn't have a summary_stat_fn or we want to override it
         if not hasattr(self.model, "summary_stat_fn") or override_model_summary_stats:
             if nn_config.training.verbose:

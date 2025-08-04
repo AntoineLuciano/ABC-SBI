@@ -59,9 +59,9 @@ def validate_training_config(config: NNConfig):
         )
 
     # Validate task type
-    if config.task_type not in ["classifier", "summary_learner"]:
+    if config.task_type not in ["classifier", "regressor"]:
         raise ValueError(
-            f"Unknown task_type: {config.task_type}. Must be 'classifier' or 'summary_learner'"
+            f"Unknown task_type: {config.task_type}. Must be 'classifier' or 'regressor'"
         )
 
     # Validate optimizer type
@@ -74,6 +74,20 @@ def validate_training_config(config: NNConfig):
     # Validate weight decay
     if training_config.weight_decay < 0:
         raise ValueError("weight_decay must be non-negative")
+
+    # Validate loss function
+    if config.task_type == "classifier":
+        valid_classifier_losses = ["default", "bce", "focal", "label_smoothing"]
+        if training_config.loss_function not in valid_classifier_losses:
+            raise ValueError(
+                f"Unknown classifier loss: {training_config.loss_function}. Must be one of {valid_classifier_losses}"
+            )
+    elif config.task_type == "regressor":
+        valid_regressor_losses = ["default", "mse", "huber", "mae", "pinball"]
+        if training_config.loss_function not in valid_regressor_losses:
+            raise ValueError(
+                f"Unknown regressor loss: {training_config.loss_function}. Must be one of {valid_regressor_losses}"
+            )
 
     # Validate phi storage config if present
     n_phi_to_store = getattr(training_config, "n_phi_to_store", 0)
@@ -198,8 +212,13 @@ def setup_training_components(
     )
     opt_state = optimizer.init(params)
 
-    # Create loss function
-    loss_fn = create_loss_function(task_type, network)
+    # Create loss function with custom loss support
+    loss_fn = create_loss_function(
+        task_type=task_type,
+        network=network,
+        loss_name=training_config.loss_function,
+        loss_args=training_config.loss_args,
+    )
 
     # Create validation function
     evaluate_val = create_validation_function(task_type, network, loss_fn)
@@ -318,9 +337,9 @@ def validate_io_generator_compatibility(io_generator: Callable, config: NNConfig
             if not jnp.all((output_data == 0) | (output_data == 1)):
                 logger.warning("Classifier output should be binary (0/1)")
 
-        elif config.task_type == "summary_learner":
+        elif config.task_type == "regressor":
             if output_data.ndim != 2:
-                raise ValueError("Summary learner output must be 2D (batch, features)")
+                raise ValueError("Regressor output must be 2D (batch, features)")
 
         logger.debug("io_generator validation passed")
 

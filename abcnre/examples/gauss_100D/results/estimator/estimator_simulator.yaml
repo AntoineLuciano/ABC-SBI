@@ -1,5 +1,5 @@
-epsilon: .inf
-quantile_distance: 1.0
+epsilon: 4.291406631469727
+quantile_distance: 0.5
 simulator_config:
   quantile_n_samples: 10000
   verbose: true
@@ -10,10 +10,10 @@ paths:
   summary_network_config: estimator_simulator_summary_network_config.yml
   summary_network_weights: estimator_simulator_summary_network_weights.npz
 metadata:
-  created_date: '2025-08-02T11:25:40.969080'
+  created_date: '2025-08-04T19:00:29.309486'
   abcnre_version: 0.1.0
   simulator_type: ABCSimulator
-  sampler_id: 545e528a3e5f
+  sampler_id: ec216e84a60a
 observed_data_shape:
 - 10
 - 100

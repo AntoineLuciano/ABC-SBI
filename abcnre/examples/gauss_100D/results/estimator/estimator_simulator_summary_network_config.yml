@@ -1,6 +1,6 @@
-experiment_name: summary_learner_DeepSet_default_default
+experiment_name: regressor_deepset_default_default
 output_dir: ./experiments
-task_type: summary_learner
+task_type: regressor
 network:
   network_type: DeepSet
   network_args:
@@ -23,11 +23,11 @@ training:
   early_stopping_patience: 10
   optimizer: adam
   weight_decay: 0.0
+  loss_function: default
+  loss_args: {}
   lr_scheduler:
-    schedule_name: cosine
-    schedule_args:
-      warmup_epochs: 0
-      eta_min: 0.0
+    schedule_name: constant
+    schedule_args: {}
   store_thetas: true
   num_thetas_to_store: 10000
   stopping_rules:

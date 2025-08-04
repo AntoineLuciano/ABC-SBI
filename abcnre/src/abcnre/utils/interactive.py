@@ -560,7 +560,7 @@ def _create_advanced_network_config() -> NNConfig:
     task_type = prompt_with_default(
         "Task type",
         default_value="classifier",
-        choices=["classifier", "summary_learner"],
+        choices=["classifier", "regressor"],
     )
 
     # Create network config dict
@@ -653,9 +653,9 @@ def interactive_create_full_workflow(
 
     if learn_summary:
         print("\nSTEP 2A: Summary Statistics Network")
-        print("Creating network constrained to summary_learner task...")
+        print("Creating network constrained to regressor task...")
 
-        # Force summary_learner for this step
+        # Force regressor for this step
         results["summary_network_config"] = _create_summary_network(str(workflow_dir))
         session.add_step(
             "summary_network",
@@ -773,10 +773,10 @@ def interactive_create_full_workflow(
 
 
 def _create_summary_network(output_dir: str) -> str:
-    """Create a network configuration constrained to summary_learner task."""
-    print("Creating summary statistics network (task_type: summary_learner)")
+    """Create a network configuration constrained to regressor task."""
+    print("Creating summary statistics network (task_type: regressor)")
 
-    # Force summary_learner task
+    # Force regressor task
     network_type = prompt_with_default(
         "Network type for summary statistics",
         default_value="mlp",
@@ -808,7 +808,7 @@ def _create_summary_network(output_dir: str) -> str:
     nn_config = NNConfig(
         experiment_name="summary_statistics_learning",
         network=network_config,
-        task_type="summary_learner",  # Force summary_learner
+        task_type="regressor",  # Force regressor
     )
 
     # Save configuration
@@ -870,7 +870,7 @@ def _create_summary_training_config(
     complete_config = {
         "model_config": model_path,
         "network_config": network_path,
-        "task_type": "summary_learner",
+        "task_type": "regressor",
         "training": training_config,
         "lr_scheduler": scheduler_config,
     }

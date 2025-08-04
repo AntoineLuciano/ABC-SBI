@@ -19,6 +19,8 @@ import logging
 import numpy as np
 import jax.numpy as jnp
 from datetime import datetime
+import json
+import hashlib
 
 if TYPE_CHECKING:
     from .simulator import ABCSimulator
@@ -26,6 +28,39 @@ if TYPE_CHECKING:
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+def generate_sampler_hash(
+    model_config: Dict[str, Any],
+    observed_data: jnp.ndarray,
+    epsilon: float,
+    length: int = 12,
+) -> str:
+    """
+    Generates a unique and deterministic hash for a sampler instance.
+
+    Args:
+        model_config: A dictionary with the statistical model's configuration.
+        observed_data: The observed data array.
+        epsilon: The ABC tolerance threshold.
+        length: The desired length of the final hash string.
+
+    Returns:
+        A unique truncated SHA-256 hash as a hexadecimal string.
+    """
+    hasher = hashlib.sha256()
+
+    # Serialize the config dictionary into a canonical JSON string
+    config_str = json.dumps(model_config, sort_keys=True, ensure_ascii=False)
+    hasher.update(config_str.encode("utf-8"))
+
+    # Update with the raw bytes of the observed data array
+    hasher.update(observed_data.tobytes())
+
+    # Update with the string representation of epsilon
+    hasher.update(str(epsilon).encode("utf-8"))
+
+    return hasher.hexdigest()[:length]
 
 
 def save_simulator_to_yaml(

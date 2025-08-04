@@ -1,0 +1,116 @@
+# Loss function configurations with variants
+
+# Base configuration shared by all loss variants
+base:
+  learning_rate: 0.001
+  num_epochs: 100
+  batch_size: 256
+  n_samples_per_epoch: 10240
+  lr_scheduler_name: "cosine"
+  lr_scheduler_variant: "default"
+
+# Loss function variants for different use cases
+variants:
+  # Standard losses (default behavior)
+  default_classifier:
+    loss_function: "default"  # or "bce"
+    loss_args: {}
+    # Usage: For standard binary classification tasks
+    
+  default_regressor:
+    loss_function: "mse"  # or "default" for regressor
+    loss_args: {}
+    # Usage: For standard regression tasks
+
+  # Advanced classifier losses
+  focal:
+    loss_function: "focal"
+    loss_args:
+      alpha: 0.25      # Weight for rare class
+      gamma: 2.0       # Focusing parameter
+    # Usage: Imbalanced datasets, hard examples
+    
+  focal_strong:
+    loss_function: "focal"
+    loss_args:
+      alpha: 0.75      # Higher weight for rare class
+      gamma: 3.0       # Stronger focusing
+    # Usage: Very imbalanced data
+    
+  label_smoothing:
+    loss_function: "label_smoothing"
+    loss_args:
+      epsilon: 0.1     # Smoothing factor
+    # Usage: Reducing overconfidence, better calibration
+
+  label_smoothing_strong:
+    loss_function: "label_smoothing"
+    loss_args:
+      epsilon: 0.2     # Stronger smoothing
+    # Usage: High uncertainty scenarios
+
+  # Advanced regressor losses  
+  huber:
+    loss_function: "huber"
+    loss_args:
+      delta: 1.0       # Threshold for switching from squared to linear loss
+    # Usage: Data with outliers
+    
+  huber_sensitive:
+    loss_function: "huber"
+    loss_args:
+      delta: 0.5       # More sensitive to outliers
+    # Usage: Noisy data with moderate outliers
+    
+  mae:
+    loss_function: "mae"
+    loss_args: {}
+    # Usage: When you care about median rather than mean
+
+  # Quantile regression losses (Pinball Loss)
+  pinball_median:
+    loss_function: "pinball"
+    loss_args:
+      tau: 0.5         # Median regression
+    # Usage: Robust central tendency estimation
+    
+  pinball_upper:
+    loss_function: "pinball"
+    loss_args:
+      tau: 0.9         # 90th percentile
+    # Usage: Upper bound estimation, risk assessment
+    
+  pinball_lower:
+    loss_function: "pinball"
+    loss_args:
+      tau: 0.1         # 10th percentile
+    # Usage: Lower bound estimation, conservative estimates
+
+  pinball_75:
+    loss_function: "pinball"
+    loss_args:
+      tau: 0.75        # 75th percentile
+    # Usage: Upper-moderate quantile estimation
+
+  pinball_25:
+    loss_function: "pinball"
+    loss_args:
+      tau: 0.25        # 25th percentile
+    # Usage: Lower-moderate quantile estimation
+
+  # Custom combinations with modified training settings
+  focal_extended:
+    loss_function: "focal"
+    loss_args:
+      alpha: 0.25
+      gamma: 2.0
+    num_epochs: 150      # Extended training for focal loss
+    early_stopping_patience: 20
+    
+  pinball_fast:
+    loss_function: "pinball"
+    loss_args:
+      tau: 0.5
+    num_epochs: 50       # Faster training for testing
+    batch_size: 512
+    n_samples_per_epoch: 5120

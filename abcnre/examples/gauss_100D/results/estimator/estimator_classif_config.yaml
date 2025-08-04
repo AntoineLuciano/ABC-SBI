@@ -18,14 +18,16 @@ network:
     - 64
     - 32
 training:
-  learning_rate: 0.01
-  n_samples_per_epoch: 10240
-  batch_size: 1024
+  learning_rate: 0.001
+  n_samples_per_epoch: 51200
+  batch_size: 512
   num_epochs: 500
   validation_split: 0.2
   early_stopping_patience: 50
-  optimizer: adamw
-  weight_decay: 0.001
+  optimizer: adam
+  weight_decay: 0.0
+  loss_function: default
+  loss_args: {}
   lr_scheduler:
     schedule_name: reduce_on_plateau
     schedule_args:

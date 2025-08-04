@@ -9,6 +9,7 @@ import os
 import yaml
 from typing import Dict, Any, Optional, Callable, Tuple, Union
 from pathlib import Path
+from functools import cached_property
 import jax
 import jax.numpy as jnp
 from jax import random
@@ -25,6 +26,7 @@ from ..training import (
 )
 from ..simulation.base import ABCTrainingResult
 from ..simulation.simulator import ABCSimulator
+from ..utils.comparison import are_estimators_equivalent
 import logging
 
 logger = logging.getLogger(__name__)
@@ -169,6 +171,31 @@ class NeuralRatioEstimator:
         self.is_trained = False
         self.summary_as_input = summary_as_input
 
+    def __eq__(self, other) -> bool:
+        """
+        Compare this estimator with another for equivalence.
+
+        Uses the robust comparison function from utils.comparison that checks:
+        - Simulator equivalence (model, observed_data, epsilon, summary networks)
+        - Network configuration equivalence
+        - Trained parameters equivalence (if trained)
+        - Stored phi samples equivalence (if available)
+        """
+        if not isinstance(other, NeuralRatioEstimator):
+            return False
+        return are_estimators_equivalent(self, other)
+
+    def __hash__(self):
+        """Make estimator hashable for use in sets/dicts (based on configuration only)."""
+        # Use only configuration elements, not trained parameters
+        return hash(
+            (
+                id(self.simulator),  # Simulator identity
+                str(self.nn_config),  # Network configuration
+                self.summary_as_input,  # Input type flag
+            )
+        )
+
     def train(
         self,
         key: jax.random.PRNGKey,
@@ -229,12 +256,9 @@ class NeuralRatioEstimator:
             if hasattr(self.nn_config.training, "stopping_rules"):
                 # Check if stopping_rules is a dict or StoppingRulesConfig object
                 if isinstance(self.nn_config.training.stopping_rules, dict):
-                    if (
-                        "sample_stopping"
-                        not in self.nn_config.training.stopping_rules
-                    ):
+                    if "sample_stopping" not in self.nn_config.training.stopping_rules:
                         self.nn_config.training.stopping_rules["sample_stopping"] = {}
-                        
+
                     self.nn_config.training.stopping_rules["sample_stopping"][
                         "enabled"
                     ] = True

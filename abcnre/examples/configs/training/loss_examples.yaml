@@ -1,0 +1,88 @@
+# Example: loss_examples.yaml - Examples of different loss function configurations
+
+# Base configuration shared by all variants
+base:
+  optimizer: "adam"
+  weight_decay: 0.001
+  validation_split: 0.2
+  early_stopping_patience: 10
+  store_thetas: true
+  num_thetas_to_store: 10000
+  learning_rate: 0.001
+  num_epochs: 100
+  batch_size: 256
+  n_samples_per_epoch: 10240
+
+# Loss function variants for different use cases
+variants:
+  # Standard losses (default behavior)
+  standard_classifier:
+    loss_function: "default"  # or "bce"
+    loss_args: {}
+    
+  standard_regressor:
+    loss_function: "mse"  # or "default" for regressor
+    loss_args: {}
+
+  # Advanced classifier losses
+  focal_loss:
+    loss_function: "focal"
+    loss_args:
+      alpha: 0.25      # Weight for rare class
+      gamma: 2.0       # Focusing parameter
+    # Good for: Imbalanced datasets, hard examples
+    
+  label_smoothing:
+    loss_function: "label_smoothing"
+    loss_args:
+      epsilon: 0.1     # Smoothing factor
+    # Good for: Reducing overconfidence, better calibration
+
+  # Advanced regressor losses  
+  robust_regression:
+    loss_function: "huber"
+    loss_args:
+      delta: 1.0       # Threshold for switching from squared to linear loss
+    # Good for: Data with outliers
+    
+  absolute_error:
+    loss_function: "mae"
+    loss_args: {}
+    # Good for: When you care about median rather than mean
+
+  # Quantile regression losses
+  median_regression:
+    loss_function: "pinball"
+    loss_args:
+      tau: 0.5         # Median regression
+    # Good for: Robust central tendency estimation
+    
+  upper_quantile:
+    loss_function: "pinball"
+    loss_args:
+      tau: 0.9         # 90th percentile
+    # Good for: Upper bound estimation, risk assessment
+    
+  lower_quantile:
+    loss_function: "pinball"
+    loss_args:
+      tau: 0.1         # 10th percentile
+    # Good for: Lower bound estimation, conservative estimates
+
+  # Custom combinations
+  heavy_focal:
+    loss_function: "focal" 
+    loss_args:
+      alpha: 0.75      # Higher weight for rare class
+      gamma: 3.0       # Stronger focusing
+    optimizer: "adamw"
+    weight_decay: 0.001
+    # Good for: Very imbalanced data
+    
+  smooth_robust:
+    loss_function: "huber"
+    loss_args:
+      delta: 0.5       # More sensitive to outliers
+    optimizer: "adamw"
+    weight_decay: 0.0005
+    # Good for: Noisy data with moderate outliers

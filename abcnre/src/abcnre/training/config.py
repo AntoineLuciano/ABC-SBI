@@ -259,6 +259,12 @@ class TrainingConfig:
     early_stopping_patience: int = 10
     optimizer: str = "adam"
     weight_decay: float = 0.0
+    loss_function: str = (
+        "default"  # "default", "bce", "focal", "label_smoothing", "mse", "huber", "mae"
+    )
+    loss_args: Dict[str, Any] = field(
+        default_factory=dict
+    )  # Arguments spécifiques à la loss
     lr_scheduler: LRSchedulerConfig = field(default_factory=LRSchedulerConfig)
     store_thetas: bool = True
     num_thetas_to_store: int = 10000
@@ -402,6 +408,54 @@ def get_predefined_training_config(size: str = "default") -> Dict[str, Any]:
             )
 
 
+def get_predefined_loss_config(
+    loss_variant: str = "default_regressor",
+) -> Dict[str, Any]:
+    """Load a predefined loss function configuration with variants."""
+    config_dir = (
+        Path(__file__).parent.parent.parent.parent / "examples" / "configs" / "training"
+    )
+    config_file = config_dir / "loss.yaml"
+
+    if not config_file.exists():
+        available = [f.stem for f in config_dir.glob("*.yaml")]
+        raise FileNotFoundError(
+            f"Loss config file 'loss.yaml' not found. Available: {available}"
+        )
+
+    with open(config_file, "r") as f:
+        all_configs = yaml.safe_load(f)
+
+    # Check if the file contains variants
+    if isinstance(all_configs, dict) and "variants" in all_configs:
+        # New format with variants
+        if loss_variant not in all_configs["variants"]:
+            available_variants = list(all_configs["variants"].keys())
+            raise ValueError(
+                f"Loss variant '{loss_variant}' not found. "
+                f"Available variants: {available_variants}"
+            )
+
+        # Merge base config with variant-specific config
+        base_config = all_configs.get("base", {})
+        variant_config = all_configs["variants"][loss_variant]
+
+        # Deep merge the configurations
+        merged_config = _deep_merge_configs(base_config, variant_config)
+        return merged_config
+
+    else:
+        # Legacy format - direct variant keys
+        if loss_variant in all_configs:
+            return all_configs[loss_variant]
+        else:
+            available_variants = list(all_configs.keys())
+            raise ValueError(
+                f"Loss variant '{loss_variant}' not found. "
+                f"Available variants: {available_variants}"
+            )
+
+
 def get_predefined_lr_scheduler_config(
     scheduler_name: str, variant: str = "default"
 ) -> Dict[str, Any]:
@@ -514,7 +568,7 @@ class NNConfig:
     network: NetworkConfig = field(default_factory=NetworkConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
     output_dir: str = "./experiments"
-    task_type: str = "classifier"  # "classifier" or "summary_learner"
+    task_type: str = "classifier"  # "classifier" or "regressor"
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -542,7 +596,9 @@ class NNConfig:
         filepath.parent.mkdir(parents=True, exist_ok=True)
 
         if filepath.exists() and not overwrite:
-            logger.info(f"Configuration file already exists and overwrite is False: {filepath}")
+            logger.info(
+                f"Configuration file already exists and overwrite is False: {filepath}"
+            )
         else:
             # Save configuration to YAML
             with open(filepath, "w") as f:
@@ -569,15 +625,15 @@ class NNConfig:
         """Check if this is a classifier task."""
         return self.task_type == "classifier"
 
-    def is_summary_learner(self) -> bool:
-        """Check if this is a summary learner task."""
-        return self.task_type == "summary_learner"
+    def is_regressor(self) -> bool:
+        """Check if this is a regressor task."""
+        return self.task_type == "regressor"
 
     def get_default_loss_function(self) -> str:
         """Get the default loss function for this task type."""
         if self.is_classifier():
             return "binary_crossentropy"
-        elif self.is_summary_learner():
+        elif self.is_regressor():
             return "mse"
         else:
             raise ValueError(f"Unknown task_type: {self.task_type}")
@@ -592,6 +648,9 @@ def get_nn_config(
     lr_scheduler_variant: str = "default",
     stopping_rules_variant: str = "balanced",
     experiment_name: Optional[str] = None,
+    loss_function: Optional[str] = None,
+    loss_args: Optional[Dict[str, Any]] = None,
+    loss_variant: Optional[str] = None,
 ) -> NNConfig:
     """Get a complete NN configuration based on predefined templates.
 
@@ -599,14 +658,22 @@ def get_nn_config(
         network_name: Name of the network type (e.g., "mlp", "deepset")
         network_size: Size variant of the network (e.g., "small", "large", "default")
         training_size: Size variant of training config (e.g., "fast", "extended", "default")
-        task_type: Type of task ("classifier" or "summary_learner")
+        task_type: Type of task ("classifier" or "regressor")
         lr_scheduler_name: Optional override for lr scheduler name
         lr_scheduler_variant: Variant of the lr scheduler (default: "default")
         stopping_rules_variant: Variant of stopping rules (default: "balanced")
         experiment_name: Optional name for the experiment
+        loss_function: Optional override for loss function (e.g., "focal", "pinball", "huber")
+        loss_args: Optional arguments for the loss function (e.g., {"tau": 0.5} for pinball)
+        loss_variant: Optional predefined loss variant (e.g., "pinball_median", "focal", "huber")
 
     Returns:
         A fully configured NNConfig object.
+
+    Note:
+        - If loss_variant is provided, it takes precedence over loss_function/loss_args
+        - loss_variant loads complete configurations from loss.yaml
+        - loss_function/loss_args provide direct parameter override
     """
     try:
         # Load network configuration
@@ -618,19 +685,27 @@ def get_nn_config(
 
         # Override lr_scheduler if specified
         if lr_scheduler_name:
-            try:
-                scheduler_config = get_predefined_lr_scheduler_config(
-                    lr_scheduler_name, lr_scheduler_variant
-                )
+            # Special handling for constant scheduler - ignore variant and use only learning_rate
+            if lr_scheduler_name == "constant":
+                scheduler_config = {"schedule_name": "constant", "schedule_args": {}}
                 training_config_dict["lr_scheduler"] = scheduler_config
                 logger.info(
-                    f"Using custom lr_scheduler: {lr_scheduler_name}_{lr_scheduler_variant}"
+                    f"Using constant lr_scheduler with base learning_rate from training config"
                 )
-            except Exception as e:
-                logger.warning(
-                    f"Failed to load custom lr_scheduler '{lr_scheduler_name}_{lr_scheduler_variant}': {e}"
-                )
-                logger.info("Using lr_scheduler from training config")
+            else:
+                try:
+                    scheduler_config = get_predefined_lr_scheduler_config(
+                        lr_scheduler_name, lr_scheduler_variant
+                    )
+                    training_config_dict["lr_scheduler"] = scheduler_config
+                    logger.info(
+                        f"Using custom lr_scheduler: {lr_scheduler_name}_{lr_scheduler_variant}"
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to load custom lr_scheduler '{lr_scheduler_name}_{lr_scheduler_variant}': {e}"
+                    )
+                    logger.info("Using lr_scheduler from training config")
 
         # Load stopping rules
         try:
@@ -647,6 +722,41 @@ def get_nn_config(
             logger.info("Using default stopping rules")
 
         training_config = TrainingConfig.from_dict(training_config_dict)
+
+        # Apply loss configuration (loss_variant takes precedence over direct parameters)
+        if loss_variant is not None:
+            try:
+                loss_config = get_predefined_loss_config(loss_variant)
+                # Apply loss-specific parameters to training config
+                if "loss_function" in loss_config:
+                    training_config.loss_function = loss_config["loss_function"]
+                if "loss_args" in loss_config:
+                    training_config.loss_args = loss_config["loss_args"]
+
+                # Also apply any other training parameters from loss config
+                for key, value in loss_config.items():
+                    if key not in ["loss_function", "loss_args"] and hasattr(
+                        training_config, key
+                    ):
+                        setattr(training_config, key, value)
+
+                logger.info(
+                    f"Using predefined loss variant: {loss_variant} with function: {training_config.loss_function}"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to load loss variant '{loss_variant}': {e}")
+                logger.info("Falling back to direct loss parameters")
+
+        # Override loss function if specified directly (takes precedence over loss_variant)
+        if loss_function is not None:
+            training_config.loss_function = loss_function
+            if loss_args is not None:
+                training_config.loss_args = loss_args
+            else:
+                training_config.loss_args = {}
+            logger.info(
+                f"Using direct loss function: {loss_function} with args: {training_config.loss_args}"
+            )
 
         # Create complete configuration
         nn_config = NNConfig(
