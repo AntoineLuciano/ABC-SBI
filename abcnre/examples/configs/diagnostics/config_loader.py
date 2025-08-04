@@ -55,7 +55,7 @@ def load_sbc_config_from_yaml(
     # Convert to SBCConfig object
     config = SBCConfig(**config_dict)
 
-    logger.info(f"✅ Configuration loaded successfully:")
+    logger.info(f"Configuration loaded successfully:")
     logger.info(f"  Rounds: {config.num_sbc_rounds}")
     logger.info(f"  Posterior samples: {config.num_posterior_samples}")
     logger.info(f"  Correction: {config.use_correction}")
@@ -125,7 +125,7 @@ def print_config_summary(yaml_path: Union[str, Path]):
     yaml_path = Path(yaml_path)
 
     if not yaml_path.exists():
-        print(f"❌ Configuration file not found: {yaml_path}")
+        print(f"Configuration file not found: {yaml_path}")
         return
 
     with open(yaml_path, "r") as f:
@@ -188,7 +188,7 @@ def create_custom_config(
         seed=seed,
     )
 
-    logger.info("✅ Custom configuration created")
+    logger.info("Custom configuration created")
     return config
 
 
@@ -237,11 +237,11 @@ if __name__ == "__main__":
         # Load a specific config
         try:
             config = load_sbc_config_from_yaml(config_file, "default")
-            print(f"\n✅ Loaded 'default' configuration successfully")
+            print(f"\nLoaded 'default' configuration successfully")
             print(f"   Rounds: {config.num_sbc_rounds}")
             print(f"   Samples: {config.num_posterior_samples}")
         except Exception as e:
-            print(f"\n❌ Error loading configuration: {e}")
+            print(f"\nError loading configuration: {e}")
     else:
-        print(f"❌ Configuration file not found: {config_file}")
+        print(f"Configuration file not found: {config_file}")
         print("Please run this script from the diagnostics config directory.")

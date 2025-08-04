@@ -61,14 +61,14 @@ def run_sbc_command(args):
         num_posterior_samples=args.num_posterior_samples,
     )
 
-    logger.info("✅ SBC computation complete")
+    logger.info("SBC computation complete")
 
     # Generate SBC plot
     plot_path = plots_dir / args.plot_filename
     logger.info(f"Generating SBC ranks plot...")
 
     plot_sbc_ranks(sbc_results, save_path=plot_path)
-    logger.info(f"✅ SBC plot saved to: {plot_path}")
+    logger.info(f"SBC plot saved to: {plot_path}")
 
     # Save SBC results
     results_path = output_dir / args.results_filename
@@ -81,7 +81,7 @@ def run_sbc_command(args):
         save_posterior_samples=args.save_posterior_samples,
     )
 
-    logger.info(f"✅ SBC results saved to: {results_path}")
+    logger.info(f"SBC results saved to: {results_path}")
 
     # Analyze SBC results
     _analyze_sbc_results(sbc_results, args)
@@ -126,7 +126,7 @@ def _analyze_sbc_results(sbc_results, args):
     )
 
     if is_well_calibrated:
-        logger.info("✅ SBC suggests good calibration")
+        logger.info("SBC suggests good calibration")
     else:
         logger.warning("⚠️  SBC suggests potential calibration issues")
 

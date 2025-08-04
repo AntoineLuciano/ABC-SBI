@@ -237,7 +237,7 @@ class TestCalibrationYAML(unittest.TestCase):
                 self.assertIn(config.use_correction, ["yes", "no", "both"])
                 self.assertEqual(len(config.initial_bounds), 2)
 
-                print(f"✅ Variant '{variant}' loaded successfully")
+                print(f"Variant '{variant}' loaded successfully")
 
             except Exception as e:
                 self.fail(f"Failed to load variant '{variant}': {e}")
@@ -317,7 +317,7 @@ def run_tests():
     if result.wasSuccessful():
         print("🎉 ALL TESTS PASSED!")
     else:
-        print("❌ SOME TESTS FAILED")
+        print("SOME TESTS FAILED")
         print(f"Failures: {len(result.failures)}")
         print(f"Errors: {len(result.errors)}")
 

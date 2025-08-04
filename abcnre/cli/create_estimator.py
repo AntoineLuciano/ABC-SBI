@@ -100,7 +100,7 @@ def create_estimator_command(args):
     estimator_path = output_dir / "estimator.yaml"
     save_estimator_to_yaml(estimator, estimator_path, overwrite=True)
 
-    print(f"✅ Estimator saved to: {estimator_path}")
+    print(f"Estimator saved to: {estimator_path}")
 
     # Save summary report
     save_estimator_report(estimator, res, output_dir, args)

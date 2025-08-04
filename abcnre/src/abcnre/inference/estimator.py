@@ -384,7 +384,7 @@ class NeuralRatioEstimator:
         self.is_trained = True
 
         if self.nn_config.training.verbose:
-            print("✅ Neural Ratio Estimator training completed successfully!")
+            print("Neural Ratio Estimator training completed successfully!")
             print(
                 f"   - Final train loss: {self.classifier_result.training_history.get('final_loss', 'N/A')}"
             )

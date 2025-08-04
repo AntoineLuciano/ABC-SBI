@@ -132,7 +132,7 @@ def plot_posterior_comparison_command(args):
         save_path=output_path,
     )
 
-    logger.info(f"✅ Posterior comparison plot saved to: {output_path}")
+    logger.info(f"Posterior comparison plot saved to: {output_path}")
 
     # Save a summary report
     _save_plotting_report(args, estimator, output_dir, distributions)

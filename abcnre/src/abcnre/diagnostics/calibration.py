@@ -107,4 +107,4 @@ def save_sbc_results_to_csv(sbc_results: Dict[str, np.ndarray], filepath: Path):
 
     # Save to CSV
     df.to_csv(filepath, index=False)
-    print(f"✅ SBC results saved to {filepath}")
+    print(f"SBC results saved to {filepath}")

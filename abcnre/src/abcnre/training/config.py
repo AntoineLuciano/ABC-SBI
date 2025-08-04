@@ -262,9 +262,7 @@ class TrainingConfig:
     loss_function: str = (
         "default"  # "default", "bce", "focal", "label_smoothing", "mse", "huber", "mae"
     )
-    loss_args: Dict[str, Any] = field(
-        default_factory=dict
-    )  # Arguments spécifiques à la loss
+    loss_args: Dict[str, Any] = field(default_factory=dict)  # Loss specific arguments
     lr_scheduler: LRSchedulerConfig = field(default_factory=LRSchedulerConfig)
     store_thetas: bool = True
     num_thetas_to_store: int = 10000
@@ -780,7 +778,7 @@ def get_nn_config(
         raise
 
 
-# Configurations par défaut pour démarrage rapide
+# Default configurations for quick start
 def get_quick_nn_config(
     network_type: str = "mlp",
     learning_rate: float = 1e-3,

@@ -177,17 +177,17 @@ def create_simulator_and_estimator_command(args):
 
     # === Summary ===
     print("--- Summary ---")
-    print(f"✅ Model: {model.__class__.__name__}")
-    print(f"✅ True theta: {true_theta}")
-    print(f"✅ Observed data shape: {observed_data.shape}")
-    print(f"✅ Epsilon: {epsilon}")
-    print(f"✅ Network: {nn_config.network.network_type}")
-    print(f"✅ Experiment: {nn_config.experiment_name}")
-    print(f"✅ Simulator saved to: {simulator_path}")
-    print(f"✅ Estimator saved to: {estimator_path}")
+    print(f"Model: {model.__class__.__name__}")
+    print(f"True theta: {true_theta}")
+    print(f"Observed data shape: {observed_data.shape}")
+    print(f"Epsilon: {epsilon}")
+    print(f"Network: {nn_config.network.network_type}")
+    print(f"Experiment: {nn_config.experiment_name}")
+    print(f"Simulator saved to: {simulator_path}")
+    print(f"Estimator saved to: {estimator_path}")
 
     if args.with_summary_stats:
-        print(f"✅ Summary statistics: Enabled")
+        print(f"Summary statistics: Enabled")
 
     print(f"\n🎉 Combined setup completed successfully!")
     print(f"📁 Output directory: {output_dir}")

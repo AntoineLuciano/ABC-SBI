@@ -528,7 +528,7 @@ class ABCSimulator:
         # Update the model if it doesn't have a summary_stat_fn or we want to override it
         if not hasattr(self.model, "summary_stat_fn") or override_model_summary_stats:
             if nn_config.training.verbose:
-                print("✅ Updating model's summary statistics function...")
+                print("Updating model's summary statistics function...")
             summary_fn = create_summary_stats_fn(
                 network=summary_results.network,
                 params=summary_results.params,
@@ -551,7 +551,7 @@ class ABCSimulator:
         self.trained_summary_stats = True
 
         if nn_config.training.verbose:
-            print("✅ Summary statistics learned and updated successfully!")
+            print("Summary statistics learned and updated successfully!")
             print(f"   - Original data dimension: {self.model.data_shape}")
             print(f"   - Learned summary function integrated into model")
 

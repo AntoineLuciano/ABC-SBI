@@ -113,7 +113,7 @@ def create_simulator_command(args):
     simulator_path = output_dir / "simulator.yaml"
     save_simulator_to_yaml(simulator, simulator_path, overwrite=True)
 
-    print(f"✅ Simulator saved to: {simulator_path}")
+    print(f"Simulator saved to: {simulator_path}")
 
     # Save summary report
     save_simulator_report(simulator, output_dir, args)

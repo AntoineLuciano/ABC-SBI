@@ -153,7 +153,7 @@ def compute_metrics_command(args):
         # Save to CSV
         csv_path = output_dir / args.csv_filename
         save_metrics_to_csv(all_metrics_results, csv_path)
-        logger.info(f"✅ Metrics saved to: {csv_path}")
+        logger.info(f"Metrics saved to: {csv_path}")
 
         # Save detailed JSON report
         _save_metrics_report(
