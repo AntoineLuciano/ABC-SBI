@@ -125,6 +125,8 @@ class GaussGaussMultiDimModel(StatisticalModel):
         """
         z = random.normal(key, shape=(n_samples, self.dim))
         return self.mu0[None, :] + (self.chol_sigma0 @ z.T).T
+    # RG: A nice idea but it breaks the expected relationship between the key randomness
+    #     Is it actually true that this is more efficient after vectorization?
 
     def get_prior_dist(self):
         """

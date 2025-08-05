@@ -58,7 +58,7 @@ class StatisticalModel(ABC):
         """
         keys = random.split(key, n_samples)
         
-        return vmap(self.prior_sample)(keys)
+        return vmap(self.get_prior_sample)(keys)
     
     
     @abstractmethod
@@ -295,10 +295,15 @@ class SummarizedStatisticalModel(StatisticalModel):
         self.summary_fn = summary_fn
 
     def get_prior_sample(self, key: random.PRNGKey) -> jnp.ndarray:
-        return self.summary_fn(self.model.get_prior_sample(key))
+        phi = self.summary_fn(self.model.get_prior_sample(key))
+        return phi
 
     def get_prior_samples(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
-        return super().get_prior_samples(key, n_samples)
+        theta = self.model.get_prior_samples(key, n_samples)
+        return vmap(self.summary_fn)(theta)
+        # Cannot use the super because sometimes the model uses different
+        # drawing schemes for a single draw and for multiple draws
+        #return super().get_prior_samples(key, n_samples)
 
     def sample_theta_x(self, key: random.PRNGKey) -> jnp.ndarray:
         theta, x = self.model.sample_theta_x(key)
@@ -308,7 +313,7 @@ class SummarizedStatisticalModel(StatisticalModel):
             self, key: random.PRNGKey,  n_samples: int) -> jnp.ndarray:
         # keys = random.split(key, n_samples)
         # return vmap(lambda k: self.sample_theta_x(k))(keys)
-        return super.sample_theta_multiple(key, n_samples)
+        return super().sample_theta_x_multiple(key, n_samples)
 
     def simulate_data(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
         self.model.simulate_data(key, theta)
