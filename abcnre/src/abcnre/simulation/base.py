@@ -69,4 +69,4 @@ class ABCSingleResult(NamedTuple):
 
 
 # Export main components
-__all__ = ["ABCSampleResult", "ABCTrainingResult", "ABCSingleResult", "BaseSampler"]
+__all__ = ["ABCSampleResult", "ABCTrainingResult", "ABCSingleResult" ]

@@ -2,6 +2,7 @@ import unittest
 from numpy.testing import assert_array_almost_equal
 from abcnre.simulation.models import GaussGaussMultiDimModel
 from abcnre.simulation.models.base import SummarizedStatisticalModel
+from abcnre.simulation.sampler import RejectionSampler
 import jax
 import jax.numpy as jnp
 
@@ -10,6 +11,7 @@ from jax import random, vmap
 def get_2d_normal():
     return GaussGaussMultiDimModel(
         mu0=0., sigma0=1.0, sigma=2.0, dim=2, n_obs=5)
+
 
 class TestSampler(unittest.TestCase):
     """
@@ -33,6 +35,7 @@ class TestSampler(unittest.TestCase):
         self.assertEqual(x_draw.shape, (5, 2))
         self.assertEqual(x_draws.shape, (10, 5, 2))
 
+    ##############
     def test_draw_summary(self):
         n_samples = 10
         model = get_2d_normal()
@@ -84,6 +87,21 @@ class TestSampler(unittest.TestCase):
         assert_array_almost_equal(2 * theta_prior_draws, phi_prior_draws)
         assert_array_almost_equal(2 * theta_draws, phi_draws)
 
+
+    ####################
+    def test_rejection_sampler(self):
+        n_samples = 10
+        model = get_2d_normal()
+        key = jax.random.PRNGKey(123)
+
+        phi_draws, x_draws = model.sample_theta_x_multiple(key, n_samples)
+
+        def d_fn(x):
+            xm = jnp.mean(x)
+            dist = xm ** 2
+            return xm, dist
+
+        rej_sampler = RejectionSampler(model, d_fn, 1.0)
 
 # --- How to run the tests ---
 if __name__ == '__main__':

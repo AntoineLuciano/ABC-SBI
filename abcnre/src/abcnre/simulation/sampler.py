@@ -25,7 +25,6 @@ class RejectionState:
     summary_stat: Optional[jnp.ndarray]
     distance: float
     count: int
-    phi: Optional[jnp.ndarray] = None
 
 
 # Register the dataclass as a JAX pytree
@@ -65,7 +64,7 @@ def get_epsilon_quantile(
 
 
 # Core ABC sampling function (JIT compiled) - Fixed version
-@partial(jit, static_argnums=(1, 2, 3, 4, 5))
+@partial(jit, static_argnums=(1, 2, 3))
 def get_abc_sample(
     key: random.PRNGKey,
     sample_theta_x: Callable,
@@ -208,6 +207,9 @@ class RejectionSampler(StatisticalModel):
             discrepancy_fn: Function to compute summary statistic and distance between datasets
             epsilon: ABC tolerance threshold
         """
+
+        # TODO: call super().__init__ for cacheing support?
+
         self.model = model
         self.discrepancy_fn = discrepancy_fn
         self.set_epsilon(epsilon)
@@ -218,6 +220,16 @@ class RejectionSampler(StatisticalModel):
         # if self.summary_stat_fn is not None and self.observed_data is not None:
         #     if self.observed_summary_stats is None:
         #         self.observed_summary_stats = self.summary_stat_fn(self.observed_data)
+
+    def get_model_args(self):
+        # TODO: fill this out for serialization
+        return dict()
+
+    def get_prior_sample(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
+        raise NotImplementedError("get_prior_samples not implemented for RejectionSampler")
+
+    def simulate_data(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
+        raise NotImplementedError("simulate_data not implemented for RejectionSampler")
 
     def set_epsilon(self, epsilon):
         if epsilon <= 0:

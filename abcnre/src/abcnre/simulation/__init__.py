@@ -9,7 +9,7 @@ and generating training data for neural ratio estimation.
 from .simulator import ABCSimulator
 
 # Sampling utilities
-from .sampler import RejectionSampler, BaseSampler
+from .sampler import RejectionSampler #, BaseSampler
 
 # Result structures
 from .base import ABCSampleResult, ABCTrainingResult, ABCSingleResult
@@ -45,7 +45,7 @@ __all__ = [
     # Main classes
     "ABCSimulator",
     "RejectionSampler",
-    "BaseSampler",
+    #"BaseSampler",
     "SummarizedStatisticalModel",
     # Result structures
     "ABCSampleResult",
