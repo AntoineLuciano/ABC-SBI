@@ -53,18 +53,19 @@ class ABCSingleResult(NamedTuple):
     phi: Optional[jnp.ndarray] = None
 
 
-class BaseSampler(ABC):
-    """Base class for ABC samplers."""
+# RG: redundant with StatisticalModel
+# class BaseSampler(ABC):
+#     """Base class for ABC samplers."""
 
-    @abstractmethod
-    def sample(self, key: random.PRNGKey, n_samples: int) -> ABCSampleResult:
-        """Generate ABC samples."""
-        pass
+#     @abstractmethod
+#     def sample(self, key: random.PRNGKey, n_samples: int) -> ABCSampleResult:
+#         """Generate ABC samples."""
+#         pass
 
-    @abstractmethod
-    def sample_single(self, key: random.PRNGKey) -> ABCSingleResult:
-        """Generate single ABC sample."""
-        pass
+#     @abstractmethod
+#     def sample_single(self, key: random.PRNGKey) -> ABCSingleResult:
+#         """Generate single ABC sample."""
+#         pass
 
 
 # Export main components

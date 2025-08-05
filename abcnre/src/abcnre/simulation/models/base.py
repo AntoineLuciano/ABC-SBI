@@ -11,12 +11,14 @@ from jax import random, vmap
 from typing import Callable, Dict, Any, Optional, Tuple
 
 
+# RG: It would be better to call this a "sampler."  A statistical
+# model does sampling and more.  Currently the naming is the opposite.
 class StatisticalModel(ABC):
     """
     Abstract base class for all statistical models used in ABC.
     
     This class defines the interface that statistical models must implement
-    to be compatib7le with the ABCSimulator and RejectionSampler.
+    to be compatible with the ABCSimulator and RejectionSampler.
     
     All models must implement:
     - prior_sample(): Sample parameters from prior distribution
@@ -75,9 +77,7 @@ class StatisticalModel(ABC):
         """
         pass
     
-    def simulate_datas(
-        self, key: random.PRNGKey, theta: jnp.ndarray
-    ) -> jnp.ndarray:
+    def simulate_datas(self, key: random.PRNGKey, theta: jnp.ndarray):
         """
         Simulate multiple datasets given parameters.
         
@@ -96,7 +96,7 @@ class StatisticalModel(ABC):
         keys = random.split(key, n_samples)
         return vmap(lambda k: self.simulate_data(k, theta))(keys)
     
-    def sample_theta_x(self, key: random.PRNGKey) -> jnp.ndarray:
+    def sample_theta_x(self, key: random.PRNGKey):
         """
         Sample theta and simulate data in one step.
 
@@ -284,7 +284,8 @@ class StatisticalModel(ABC):
 
 class SummarizedStatisticalModel(StatisticalModel):
     """
-    Draw from a statistical model but using a summary of the parameter.
+    Draw from a statistical model but using a summary of the parameter
+    given by summary_fn.
     """
     def __init__(
             self,
@@ -328,7 +329,6 @@ class SummarizedStatisticalModel(StatisticalModel):
     def get_model_args(self):
         # TODO: annotate the summary function, too
         return self.model.get_model_args()
-
 
 
 

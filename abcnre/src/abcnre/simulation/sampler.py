@@ -11,7 +11,8 @@ from typing import Callable, Tuple, Optional
 from functools import partial
 from dataclasses import dataclass
 
-from .base import BaseSampler, ABCSampleResult, ABCTrainingResult, ABCSingleResult
+from .base import ABCSampleResult, ABCTrainingResult, ABCSingleResult
+from .models.base import StatisticalModel
 
 
 @dataclass
@@ -37,24 +38,44 @@ tree_util.register_dataclass(
         "summary_stat",
         "distance",
         "count",
-        "phi",
     ],
     meta_fields=[],
 )
+
+def get_epsilon_quantile(
+    key: random.PRNGKey,
+    sample_theta_x: Callable,
+    discrepancy_fn: Callable,
+    alpha: float,
+    n_samples: int = 10000) -> Tuple[float, jnp.ndarray, random.PRNGKey]:
+    """
+    Get epsilon value corresponding to alpha quantile of distance distribution.
+
+    Returns:
+        Tuple of (epsilon_quantile, all_distances, updated_key)
+    """
+    # Sample with infinite epsilon
+    _, x_draws = sample_theta_x(key, n_samples)
+    _, epsilons = vmap(discrepancy_fn)(x_draws)
+
+    # Compute alpha-quantile
+    epsilon_quantile = float(jnp.quantile(epsilons, alpha))
+
+    return epsilon_quantile, epsilons
 
 
 # Core ABC sampling function (JIT compiled) - Fixed version
 @partial(jit, static_argnums=(1, 2, 3, 4, 5))
 def get_abc_sample(
     key: random.PRNGKey,
-    prior_simulator: Callable,
-    data_simulator: Callable,
+    sample_theta_x: Callable,
+    # data_simulator: Callable,
     discrepancy_fn: Callable,
-    summary_stat_fn: Optional[Callable],
-    transform_fn: Optional[Callable],
     epsilon: float,
-    observed_data: jnp.ndarray,
-    observed_summary_stats: Optional[jnp.ndarray],
+    # summary_stat_fn: Optional[Callable],
+    # transform_fn: Optional[Callable],
+    # observed_data: jnp.ndarray,
+    # observed_summary_stats: Optional[jnp.ndarray],
 ) -> Tuple[
     jnp.ndarray, jnp.ndarray, float, Optional[jnp.ndarray], Optional[jnp.ndarray], int
 ]:
@@ -63,24 +84,20 @@ def get_abc_sample(
 
     Args:
         key: JAX random key
-        prior_simulator: Function to sample from prior
-        data_simulator: Function to simulate data given parameters
-        discrepancy_fn: Function to compute distance between datasets
+        simulator: Function to sample from prior and data
+        discrepancy_fn: Function to return a summary state and scalar discrepancy
         summary_stat_fn: Optional function to compute summary statistics
-        transform_fn: Optional function to transform theta to phi
         epsilon: ABC tolerance threshold
-        observed_data: Observed dataset
-        observed_summary_stats: Pre-computed observed summary statistics
 
     Returns:
         Tuple of (simulated_data, theta, distance, summary_statistics, phi, count)
     """
 
     # Determine what to compare against outside the loop for better JIT performance
-    use_summary_stats = (
-        summary_stat_fn is not None and observed_summary_stats is not None
-    )
-    comparison_target = observed_summary_stats if use_summary_stats else observed_data
+    # use_summary_stats = (
+    #     summary_stat_fn is not None and observed_summary_stats is not None
+    # )
+    # comparison_target = observed_summary_stats if use_summary_stats else observed_data
 
     def should_continue(state: RejectionState) -> bool:
         return state.distance >= epsilon
@@ -90,81 +107,85 @@ def get_abc_sample(
         JAX-compatible rejection step using typed dataclass.
         Optimized to minimize conditionals in the loop.
         """
-        key, key_theta, key_data = random.split(state.key, 3)
-        theta_proposal = prior_simulator(key_theta)
-        data_proposal = data_simulator(key_data, theta_proposal)
+        # key, key_theta, key_data = random.split(state.key, 3)
+        key, key_sim = random.split(state.key, 2)
+        theta_proposal, data_proposal = sample_theta_x(key)
+        # theta_proposal = prior_simulator(key_theta)
+        # data_proposal = data_simulator(key_data, theta_proposal)
 
         # Transform theta to phi if transform function is provided
         # RG: Don't transform here, just keep the draws that are given.
-        phi_proposal = (
-            transform_fn(theta_proposal) if transform_fn is not None else None
-        )
+        # phi_proposal = (
+        #     transform_fn(theta_proposal) if transform_fn is not None else None
+        # )
 
         # Optimized: choose computation path based on pre-determined flag
         # RG: Just use a user-provided discrepancy function, don't do the
         # summary stat computation here.
-        if use_summary_stats:
-            summary_proposal = summary_stat_fn(data_proposal)
-            distance = discrepancy_fn(summary_proposal, comparison_target)
-        else:
-            summary_proposal = state.summary_stat  # Keep the same structure
-            distance = discrepancy_fn(data_proposal, comparison_target)
+        # if use_summary_stats:
+        #     summary_proposal = summary_stat_fn(data_proposal)
+        #     distance = discrepancy_fn(summary_proposal, comparison_target)
+        # else:
+        #     summary_proposal = state.summary_stat  # Keep the same structure
+        #     distance = discrepancy_fn(data_proposal, comparison_target)
+
+        summary_stat, distance = discrepancy_fn(data_proposal)
 
         return RejectionState(
             key=key,
             data=data_proposal,
             theta=theta_proposal,
-            summary_stat=summary_proposal,
+            summary_stat=summary_stat,
             distance=distance,
-            count=state.count + 1,
-            phi=phi_proposal,
+            count=state.count + 1
         )
 
     # Initialize with dummy values using typed state
     key, key_theta = random.split(key)
-    initial_theta = prior_simulator(key_theta)
-    initial_data = jnp.zeros_like(observed_data).astype(float)
+    initial_theta, initial_data = sample_theta_x(key_theta)
+    #initial_data = jnp.zeros_like(observed_data).astype(float) # Why?
 
     # Initialize phi with transform function if provided
     # RG: Don't transform here, just keep the draws that are given.
-    if transform_fn is not None:
-        initial_phi = transform_fn(initial_theta)
-    else:
-        initial_phi = None
+    # if transform_fn is not None:
+    #     initial_phi = transform_fn(initial_theta)
+    # else:
+    #     initial_phi = None
 
     # Initialize summary with consistent structure
-    if summary_stat_fn is not None:
-        # Create dummy summary with same shape as expected output
-        dummy_summary = summary_stat_fn(initial_data)
-        initial_summary = jnp.zeros_like(dummy_summary)
-    else:
-        initial_summary = None
+    # if summary_stat_fn is not None:
+    #     # Create dummy summary with same shape as expected output
+    #     dummy_summary = summary_stat_fn(initial_data)
+    #     initial_summary = jnp.zeros_like(dummy_summary)
+    # else:
+    #     initial_summary = None
+    summary_stat, distance = discrepancy_fn(initial_data)
 
     initial_state = RejectionState(
         key=key,
         data=initial_data,
         theta=initial_theta,
-        summary_stat=initial_summary,
-        distance=epsilon + 1.0,
+        summary_stat=summary_stat,
+        distance=distance,
         count=0,
-        phi=initial_phi,
     )
 
     #RG: This should be a standalone function with all the checking done
     #    beforehand.
     final_state = lax.while_loop(should_continue, rejection_step, initial_state)
 
+    # RG: Can't you return a RejectionState object?
     return (
         final_state.data,
         final_state.theta,
         final_state.distance,
         final_state.summary_stat,
-        final_state.phi,
-        final_state.count,
+        final_state.count
     )
 
 
-class RejectionSampler(BaseSampler):
+# Inherit StatisticalModel instaed
+class RejectionSampler(StatisticalModel):
     """
     ABC rejection sampler implementation.
 
@@ -176,88 +197,62 @@ class RejectionSampler(BaseSampler):
 
     def __init__(
         self,
-        prior_simulator: Callable,
-        data_simulator: Callable,
+        model: StatisticalModel,
         discrepancy_fn: Callable,
-        summary_stat_fn: Optional[Callable] = None,
-        transform_fn: Optional[Callable] = None,
-        epsilon: float = 0.1,
-        observed_data: Optional[jnp.ndarray] = None,
-        observed_summary_stats: Optional[jnp.ndarray] = None,
-    ):
+        epsilon: float):
         """
         Initialize rejection sampler.
 
         Args:
-            prior_simulator: Function to sample from prior
-            data_simulator: Function to simulate data given parameters
-            discrepancy_fn: Function to compute distance between datasets
-            summary_stat_fn: Optional function to compute summary statistics
-            transform_fn: Optional function to transform theta to phi
+            model: Function to sample from prior and data
+            discrepancy_fn: Function to compute summary statistic and distance between datasets
             epsilon: ABC tolerance threshold
-            observed_data: Observed dataset
-            observed_summary_stats: Pre-computed observed summary statistics
         """
-        self.prior_simulator = prior_simulator
-        self.data_simulator = data_simulator
+        self.model = model
         self.discrepancy_fn = discrepancy_fn
-        self.summary_stat_fn = summary_stat_fn
-        self.transform_fn = transform_fn
-        self.epsilon = epsilon
-        self.observed_data = observed_data
-        self.observed_summary_stats = observed_summary_stats
+        self.set_epsilon(epsilon)
+        # self.observed_data = observed_data
+        # self.observed_summary_stats = observed_summary_stats
 
         # Precompute observed summary statistics if summary_stat_fn is provided
-        if self.summary_stat_fn is not None and self.observed_data is not None:
-            if self.observed_summary_stats is None:
-                self.observed_summary_stats = self.summary_stat_fn(self.observed_data)
+        # if self.summary_stat_fn is not None and self.observed_data is not None:
+        #     if self.observed_summary_stats is None:
+        #         self.observed_summary_stats = self.summary_stat_fn(self.observed_data)
 
-    def sample_single(self, key: random.PRNGKey) -> ABCSingleResult:
-        """
-        Generate single ABC sample using rejection sampling.
+    def set_epsilon(self, epsilon):
+        if epsilon <= 0:
+            raise ValueError(f'epsilon must be strictly positive (got {epsilon})')
+        self._epsilon = epsilon
 
-        Args:
-            key: JAX random key
-
-        Returns:
-            ABCSingleResult with data, theta, distance, summary_stat, and phi
-        """
-        data, theta, distance, summary_stat, phi, count = get_abc_sample(
+    def sample_theta_x(self, key: random.PRNGKey):
+        data, theta, distance, summary_stat, count = get_abc_sample(
             key,
-            self.prior_simulator,
-            self.data_simulator,
+            self.model.sample_theta_x,
+            # self.data_simulator,
             self.discrepancy_fn,
-            self.summary_stat_fn,
-            self.transform_fn,
+            # self.summary_stat_fn,
+            # self.transform_fn,
             self.epsilon,
-            self.observed_data,
-            self.observed_summary_stats,
+            # self.observed_data,
+            # self.observed_summary_stats,
         )
+        return theta, data
 
-        return ABCSingleResult(
-            sim_data=data,
-            theta=theta,
-            distance=distance,
-            summary_stat=summary_stat,
-            phi=phi,
-        )
 
-    def sample(self, key: random.PRNGKey, n_samples: int) -> ABCSampleResult:
+    def sample_theta_x_multiple(self, key: random.PRNGKey, n_samples: int):
         """
         Generate multiple ABC samples using vectorized sampling.
 
         Args:
             key: JAX random key
             n_samples: Number of samples to generate
-
-        Returns:
-            ABCSampleResult with all sampling results including phi_samples
         """
         keys = random.split(key, n_samples + 1)
 
         # Vectorize the single sample function
         vectorized_sampler = vmap(
-            get_abc_sample, in_axes=(0, None, None, None, None, None, None, None, None)
+            get_abc_sample,
+            in_axes=(0, None, None, None, None)
         )
 
         (
@@ -265,19 +260,13 @@ class RejectionSampler(BaseSampler):
             theta_samples,
             distances,
             summary_stats,
-            phi_samples,
             rejection_count,
         ) = vectorized_sampler(
             keys[1:],
-            self.prior_simulator,
-            self.data_simulator,
+            self.model.sample_theta_x,
             self.discrepancy_fn,
             self.summary_stat_fn,
-            self.transform_fn,
-            self.epsilon,
-            self.observed_data,
-            self.observed_summary_stats,
-        )
+            self.epsilon)
 
         # Ensure phi_samples is 2D for consistency
         if phi_samples is not None and phi_samples.ndim == 1:
@@ -292,6 +281,87 @@ class RejectionSampler(BaseSampler):
             simulation_count=rejection_count,
             phi=phi_samples,
         )
+
+    # def sample_single(self, key: random.PRNGKey) -> ABCSingleResult:
+    #     """
+    #     Generate single ABC sample using rejection sampling.
+
+    #     Args:
+    #         key: JAX random key
+
+    #     Returns:
+    #         ABCSingleResult with data, theta, distance, summary_stat, and phi
+    #     """
+    #     data, theta, distance, summary_stat, phi, count = get_abc_sample(
+    #         key,
+    #         self.prior_simulator,
+    #         self.data_simulator,
+    #         self.discrepancy_fn,
+    #         self.summary_stat_fn,
+    #         self.transform_fn,
+    #         self.epsilon,
+    #         self.observed_data,
+    #         self.observed_summary_stats,
+    #     )
+
+    #     return ABCSingleResult(
+    #         sim_data=data,
+    #         theta=theta,
+    #         distance=distance,
+    #         summary_stat=summary_stat,
+    #         phi=phi,
+    #     )
+
+    # def sample(self, key: random.PRNGKey, n_samples: int) -> ABCSampleResult:
+    #     """
+    #     Generate multiple ABC samples using vectorized sampling.
+
+    #     Args:
+    #         key: JAX random key
+    #         n_samples: Number of samples to generate
+
+    #     Returns:
+    #         ABCSampleResult with all sampling results including phi_samples
+    #     """
+    #     keys = random.split(key, n_samples + 1)
+
+    #     # Vectorize the single sample function
+    #     vectorized_sampler = vmap(
+    #         get_abc_sample, in_axes=(0, None, None, None, None, None, None, None, None)
+    #     )
+
+    #     (
+    #         data,
+    #         theta_samples,
+    #         distances,
+    #         summary_stats,
+    #         phi_samples,
+    #         rejection_count,
+    #     ) = vectorized_sampler(
+    #         keys[1:],
+    #         self.prior_simulator,
+    #         self.data_simulator,
+    #         self.discrepancy_fn,
+    #         self.summary_stat_fn,
+    #         self.transform_fn,
+    #         self.epsilon,
+    #         self.observed_data,
+    #         self.observed_summary_stats,
+    #     )
+
+    #     # Ensure phi_samples is 2D for consistency
+    #     if phi_samples is not None and phi_samples.ndim == 1:
+    #         phi_samples = phi_samples[:, None]
+
+    #     return ABCSampleResult(
+    #         data=data,
+    #         theta=theta_samples,
+    #         distances=distances,
+    #         summary_stats=summary_stats,
+    #         key=keys[0],
+    #         simulation_count=rejection_count,
+    #         phi=phi_samples,
+    #     )
 
     def generate_training_samples(
         self, key: random.PRNGKey, n_samples: int
@@ -362,47 +432,17 @@ class RejectionSampler(BaseSampler):
             total_sim_count=int(abc_result.simulation_count.sum()),
         )
 
-    def update_epsilon(self, new_epsilon: float):
-        """Update epsilon value."""
-        self.epsilon = new_epsilon
+    # def update_epsilon(self, new_epsilon: float):
+    #     """Update epsilon value."""
+    #     self.epsilon = new_epsilon
 
-    def update_observed_data(self, new_observed_data: jnp.ndarray):
-        """Update observed data and recompute summary statistics if needed."""
-        self.observed_data = new_observed_data
+    # def update_observed_data(self, new_observed_data: jnp.ndarray):
+    #     """Update observed data and recompute summary statistics if needed."""
+    #     self.observed_data = new_observed_data
 
-        if self.summary_stat_fn is not None:
-            self.observed_summary_stats = self.summary_stat_fn(new_observed_data)
+    #     if self.summary_stat_fn is not None:
+    #         self.observed_summary_stats = self.summary_stat_fn(new_observed_data)
 
-    def get_epsilon_quantile(
-        self, key: random.PRNGKey, alpha: float, n_samples: int = 10000
-    ) -> Tuple[float, jnp.ndarray, random.PRNGKey]:
-        """
-        Get epsilon value corresponding to alpha quantile of distance distribution.
-
-        Args:
-            key: JAX random key
-            alpha: Quantile level (e.g., 0.1 for 10th percentile)
-            n_samples: Number of samples to estimate distance distribution
-
-        Returns:
-            Tuple of (epsilon_quantile, all_distances, updated_key)
-        """
-        # RG: this should be a standalone function
-
-        # Temporarily set epsilon to infinity to get full distance distribution
-        original_epsilon = self.epsilon
-        self.epsilon = jnp.inf
-
-        # Sample with infinite epsilon
-        result = self.sample(key, n_samples)
-
-        # Restore original epsilon
-        self.epsilon = original_epsilon
-
-        # Compute alpha-quantile
-        epsilon_quantile = float(jnp.quantile(result.distances, alpha))
-
-        return epsilon_quantile, result.distances, result.key
 
 
 # Export all functions

@@ -26,10 +26,11 @@ class TestSampler(unittest.TestCase):
         self.assertEqual(theta_draw.shape, (2,))
         self.assertEqual(theta_draws.shape, (10, 2))
 
-        x_draw = model.sample_theta_x(key)
+        _, x_draw = model.sample_theta_x(key)
         theta_draws, x_draws = model.sample_theta_x_multiple(key, 10)
 
         self.assertEqual(theta_draws.shape, (10, 2))
+        self.assertEqual(x_draw.shape, (5, 2))
         self.assertEqual(x_draws.shape, (10, 5, 2))
 
     def test_draw_summary(self):
