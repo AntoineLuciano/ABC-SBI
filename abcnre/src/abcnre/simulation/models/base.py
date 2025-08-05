@@ -14,34 +14,34 @@ from typing import Dict, Any, Optional, Tuple
 class StatisticalModel(ABC):
     """
     Abstract base class for all statistical models used in ABC.
-    
+
     This class defines the interface that statistical models must implement
     to be compatible with the ABCSimulator and RejectionSampler.
-    
+
     All models must implement:
     - prior_sample(): Sample parameters from prior distribution
     - simulate(): Simulate data given parameters
     - discrepancy_fn(): Compute distance between datasets
     - get_model_args(): Return arguments for model reconstruction
-    
+
     Optional methods:
     - summary_stat_fn(): Compute summary statistics
     - transform_phi(): Transform parameters to target parameter
     """
-    
+
     @abstractmethod
     def get_prior_sample(self, key: random.PRNGKey) -> jnp.ndarray:
         """
         Sample parameters from prior distribution.
-        
+
         Args:
             key: JAX random key
-            
+
         Returns:
             Parameter sample from prior (can be scalar or vector)
         """
         pass
-    
+
     def get_prior_samples(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
         """
         Draws multiple samples from the prior distribution efficiently.
@@ -57,45 +57,41 @@ class StatisticalModel(ABC):
             An array of parameter sets of shape (n_samples, n_params).
         """
         keys = random.split(key, n_samples)
-        
+
         return vmap(self.prior_sample)(keys)
-    
-    
+
     @abstractmethod
     def simulate_data(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
         """
         Simulate data given parameters.
-        
+
         Args:
             key: JAX random key
             theta: Parameter values
-            
+
         Returns:
             Simulated dataset
         """
         pass
-    
-    def simulate_datas(
-        self, key: random.PRNGKey, theta: jnp.ndarray
-    ) -> jnp.ndarray:
+
+    def simulate_datas(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
         """
         Simulate multiple datasets given parameters.
-        
+
         Args:
             key: JAX random key
-            theta: Parameter values
-            
+            theta: Parameter values of shape (n_samples, param_dim)
+
         Returns:
             Array of simulated datasets of shape (n_samples, data_shape)
         """
-        print('theta.shape = ', theta.shape)
+        print("theta.shape = ", theta.shape)
         n_samples = theta.shape[0] if theta.ndim > 1 else 1
         keys = random.split(key, n_samples)
-        return vmap(lambda k: self.simulate_data(k, theta))(keys)
-    
-    def sample_theta_x(
-        self, key: random.PRNGKey
-    ) -> jnp.ndarray:
+        # Map over both keys and theta rows
+        return vmap(lambda k, t: self.simulate_data(k, t))(keys, theta)
+
+    def sample_theta_x(self, key: random.PRNGKey) -> jnp.ndarray:
         """
         Sample theta and simulate data in one step.
 
@@ -110,7 +106,7 @@ class StatisticalModel(ABC):
         return theta, self.simulate_data(key_data, theta)
 
     def sample_theta_x_multiple(
-        self, key: random.PRNGKey,  n_samples: int
+        self, key: random.PRNGKey, n_samples: int
     ) -> jnp.ndarray:
         """
         Sample multiple theta and simulate data in one step.
@@ -124,10 +120,8 @@ class StatisticalModel(ABC):
         """
         keys = random.split(key, n_samples)
         return vmap(lambda k: self.sample_theta_x(k))(keys)
-    
-    def sample_phi_x(
-        self, key: random.PRNGKey
-    ) -> Tuple[jnp.ndarray, jnp.ndarray]:
+
+    def sample_phi_x(self, key: random.PRNGKey) -> Tuple[jnp.ndarray, jnp.ndarray]:
         """
         Sample phi and simulate data in one step.
 
@@ -159,62 +153,62 @@ class StatisticalModel(ABC):
             - phi_samples: Array of transformed parameters (shape (n_samples,))
             - data_samples: Array of simulated datasets (shape (n_samples, data_shape))
         """
-  
+
         keys = random.split(key, n_samples)
         return vmap(lambda k: self.sample_phi_x(k))(keys)
-    
+
     @abstractmethod
     def discrepancy_fn(self, data1: jnp.ndarray, data2: jnp.ndarray) -> float:
         """
         Compute distance/discrepancy between two datasets.
-        
+
         Args:
             data1: First dataset/statistics
             data2: Second dataset/statistics
-            
+
         Returns:
             Distance/discrepancy value (scalar)
         """
         pass
-        
+
     @abstractmethod
     def get_model_args(self) -> Dict[str, Any]:
         """
         Get model-specific arguments for serialization.
-        
+
         Returns:
             Dictionary of arguments needed to recreate the model
         """
         pass
-    
+
     def summary_stat_fn(self, data: jnp.ndarray) -> jnp.ndarray:
         """
         Compute summary statistics from data (optional).
-        
+
         Override this method if you want to use summary statistics
         instead of raw data for ABC comparison.
-        
+
         Args:
             data: Input data
-            
+
         Returns:
             Summary statistics
-            
+
         Raises:
             NotImplementedError: If not implemented by subclass
         """
         raise NotImplementedError("summary_stat_fn not implemented")
-    
+
     def transform_phi(self, theta: jnp.ndarray) -> jnp.ndarray:
         """
         Transform theta to phi (target parameter of interest).
-        
+
         Override this method if you want to focus inference on a specific
         transformation or marginal of the parameter vector.
-        
+
         Args:
             theta: Full parameter vector
-            
+
         Returns:
             Transformed parameter phi (typically scalar)
         """
@@ -223,11 +217,11 @@ class StatisticalModel(ABC):
             return theta
         else:
             return theta[0]
-    
+
     def has_summary_stats(self) -> bool:
         """
         Check if summary statistics function is implemented.
-        
+
         Returns:
             True if summary_stat_fn is implemented, False otherwise
         """
@@ -238,37 +232,37 @@ class StatisticalModel(ABC):
             return True
         except NotImplementedError:
             return False
-    
+
     def get_model_info(self) -> Dict[str, Any]:
         """
         Get information about the model.
-        
+
         Returns:
             Dictionary with model information
         """
         return {
-            'model_class': self.__class__.__name__,
-            'model_module': self.__module__,
-            'has_summary_stats': self.has_summary_stats(),
-            'model_args': self.get_model_args()
+            "model_class": self.__class__.__name__,
+            "model_module": self.__module__,
+            "has_summary_stats": self.has_summary_stats(),
+            "model_args": self.get_model_args(),
         }
-    
+
     def validate_parameters(self, theta: jnp.ndarray) -> bool:
         """
         Validate parameter values (optional).
-        
+
         Override this method to add parameter validation,
         e.g., checking positivity constraints.
-        
+
         Args:
             theta: Parameter values to validate
-            
+
         Returns:
             True if parameters are valid, False otherwise
         """
         # Default: all parameters are valid
         return True
-    
+
     def __repr__(self) -> str:
         """String representation of the model."""
         return f"{self.__class__.__name__}({self.get_model_args()})"

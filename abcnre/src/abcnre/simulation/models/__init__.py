@@ -28,7 +28,7 @@ Example direct usage:
 from .base import StatisticalModel
 from .gauss_gauss_1D import GaussGaussModel
 from .gauss_gauss_multi import GaussGaussMultiDimModel
-from .g_and_k import GAndKModel, generate_g_and_k_samples, create_synthetic_g_and_k_data
+from .g_and_k import GAndKModel, generate_g_and_k_samples
 
 # Registry functions
 from .registry import (

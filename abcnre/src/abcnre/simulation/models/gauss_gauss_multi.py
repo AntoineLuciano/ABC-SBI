@@ -50,64 +50,77 @@ class GaussGaussMultiDimModel(StatisticalModel):
         # Determine dimension
         if mu0 is not None:
             if jnp.isscalar(mu0) or isinstance(mu0, (int, float)):
-                # If mu0 is scalar and dim is provided, create constant vector
                 if dim is not None:
-                    mu0 = jnp.full(dim, float(mu0))
+                    self.mu0 = float(mu0)
+                    self.dim = dim
+                    self.mu0_vect = jnp.full(dim, mu0)
                 else:
                     raise ValueError("Must provide dim when mu0 is scalar")
             else:
-                mu0 = jnp.array(mu0)
-                if mu0.ndim != 1:
+                self.mu0_vect = jnp.array(mu0)
+                self.mu0 = self.mu0_vect
+                if self.mu0_vect.ndim != 1:
                     raise ValueError("mu0 must be 1D array")
-                dim = len(mu0)
+                if dim is not None and len(self.mu0_vect) != dim:
+                    raise ValueError("Inconsistent dimensions between mu0 and dim")
+                self.dim = len(self.mu0_vect)
         elif dim is not None:
-            mu0 = jnp.zeros(dim)
+            self.dim = dim
+            self.mu0_vect = jnp.zeros(dim)
+            self.mu0 = jnp.zeros(dim)
         else:
             raise ValueError("Must provide either mu0 or dim")
 
-        self.dim = dim
+        # Store the original mu0 for serialization
+        self.mu0 = mu0
 
         # Validate marginal_of_interest
-        if marginal_of_interest < 0 or marginal_of_interest >= dim:
-            raise ValueError(f"marginal_of_interest must be between 0 and {dim-1}")
+        if marginal_of_interest < 0 or marginal_of_interest >= self.dim:
+            raise ValueError(f"marginal_of_interest must be between 0 and {self.dim-1}")
         self.marginal_of_interest = marginal_of_interest
 
         # Set default parameters
         if sigma0 is None:
-            sigma0 = jnp.eye(dim)
+            self.sigma0 = jnp.eye(self.dim)
+            self.sigma0_matrix = jnp.eye(self.dim)
         elif jnp.isscalar(sigma0) or isinstance(sigma0, (int, float)):
-            sigma0 = float(sigma0) * jnp.eye(dim)
+            self.sigma0 = float(sigma0)
+            self.sigma0_matrix = jnp.eye(self.dim) * sigma0**2
         else:
-            sigma0 = jnp.array(sigma0)
-            if sigma0.shape != (dim, dim):
-                raise ValueError(f"sigma0 must be scalar or ({dim}, {dim}) matrix")
+            self.sigma0 = jnp.array(sigma0)
+            self.sigma0_matrix = self.sigma0
+            if sigma0.shape != (self.dim, self.dim):
+                raise ValueError(
+                    f"sigma0 must be scalar or ({self.dim}, {self.dim}) matrix"
+                )
 
         if sigma is None:
-            sigma = jnp.eye(dim)
+            self.sigma = jnp.eye(self.dim)
+            self.sigma_matrix = jnp.eye(self.dim)
         elif jnp.isscalar(sigma) or isinstance(sigma, (int, float)):
-            sigma = float(sigma) * jnp.eye(dim)
+            self.sigma = float(sigma)
+            self.sigma_matrix = jnp.eye(self.dim) * sigma**2
         else:
-            sigma = jnp.array(sigma)
-            if sigma.shape != (dim, dim):
-                raise ValueError(f"sigma must be scalar or ({dim}, {dim}) matrix")
+            self.sigma = jnp.array(sigma)
+            self.sigma_matrix = self.sigma
+            if sigma.shape != (self.dim, self.dim):
+                raise ValueError(
+                    f"sigma must be scalar or ({self.dim}, {self.dim}) matrix"
+                )
 
-        # Store parameters
-        self.mu0 = mu0
-        self.sigma0 = sigma0
-        self.sigma = sigma
         self.sample_is_iid = True
-        self.parameter_dim = dim
-        self.data_shape = (n_obs, dim)
+        self.parameter_dim = self.dim
+        self.data_shape = (n_obs, self.dim)
         self.n_obs = n_obs
 
         # Precompute Cholesky decompositions for efficiency
-        self.chol_sigma0 = jnp.linalg.cholesky(sigma0)
-        self.chol_sigma = jnp.linalg.cholesky(sigma)
+        self.chol_sigma0 = jnp.linalg.cholesky(self.sigma0_matrix)
+        self.chol_sigma = jnp.linalg.cholesky(self.sigma_matrix)
 
     def get_prior_sample(self, key: random.PRNGKey) -> jnp.ndarray:
         """Sample from multivariate Gaussian prior."""
         z = random.normal(key, shape=(self.dim,))
-        return self.mu0 + self.chol_sigma0 @ z
+        return self.mu0_vect + self.chol_sigma0 @ z
 
     def get_prior_samples(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
         """
@@ -121,7 +134,7 @@ class GaussGaussMultiDimModel(StatisticalModel):
             Array of parameter samples of shape (n_samples, dim)
         """
         z = random.normal(key, shape=(n_samples, self.dim))
-        return self.mu0[None, :] + (self.chol_sigma0 @ z.T).T
+        return self.mu0_vect[None, :] + (self.chol_sigma0 @ z.T).T
 
     def get_prior_dist(self):
         """
@@ -130,7 +143,7 @@ class GaussGaussMultiDimModel(StatisticalModel):
         Returns:
             Scipy multivariate normal distribution object representing the prior
         """
-        return scstats.multivariate_normal(mean=self.mu0, cov=self.sigma0)
+        return scstats.multivariate_normal(mean=self.mu0_vect, cov=self.sigma0_matrix)
 
     def prior_logpdf(self, theta: jnp.ndarray) -> float:
         """
@@ -142,7 +155,9 @@ class GaussGaussMultiDimModel(StatisticalModel):
         Returns:
             Log-probability under the prior
         """
-        return scstats.multivariate_normal.logpdf(theta, mean=self.mu0, cov=self.sigma0)
+        return scstats.multivariate_normal.logpdf(
+            theta, mean=self.mu0_vect, cov=self.sigma0_matrix
+        )
 
     def prior_pdf(self, theta: jnp.ndarray) -> float:
         """
@@ -154,7 +169,9 @@ class GaussGaussMultiDimModel(StatisticalModel):
         Returns:
             Probability density under the prior
         """
-        return scstats.multivariate_normal.pdf(theta, mean=self.mu0, cov=self.sigma0)
+        return scstats.multivariate_normal.pdf(
+            theta, mean=self.mu0_vect, cov=self.sigma0_matrix
+        )
 
     def simulate_data(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
         """
@@ -185,9 +202,9 @@ class GaussGaussMultiDimModel(StatisticalModel):
         """
         return scstats.norm.logpdf(
             phi,
-            loc=self.mu0[self.marginal_of_interest],
+            loc=self.mu0_vect[self.marginal_of_interest],
             scale=jnp.sqrt(
-                self.sigma0[self.marginal_of_interest, self.marginal_of_interest]
+                self.sigma0_matrix[self.marginal_of_interest, self.marginal_of_interest]
             ),
         )
 
@@ -203,9 +220,9 @@ class GaussGaussMultiDimModel(StatisticalModel):
         """
         return scstats.norm.pdf(
             phi,
-            loc=self.mu0[self.marginal_of_interest],
+            loc=self.mu0_vect[self.marginal_of_interest],
             scale=jnp.sqrt(
-                self.sigma0[self.marginal_of_interest, self.marginal_of_interest]
+                self.sigma0_matrix[self.marginal_of_interest, self.marginal_of_interest]
             ),
         )
 
@@ -219,12 +236,9 @@ class GaussGaussMultiDimModel(StatisticalModel):
             # For 1D vectors (summary statistics), use L2 norm
             return jnp.linalg.norm(diff)
         else:
-            # For 2D matrices (raw data), use Frobenius norm
             return jnp.linalg.norm(diff, ord="fro")
 
-    def summary_stat_fn(self, data: jnp.ndarray) -> jnp.ndarray:
-        """Summary statistics: sample mean for each dimension."""
-        return jnp.mean(data, axis=0)
+
 
     def transform_phi(self, theta: jnp.ndarray) -> jnp.ndarray:
         """
@@ -240,6 +254,41 @@ class GaussGaussMultiDimModel(StatisticalModel):
             return jnp.array([theta])
         else:
             return jnp.array([theta[self.marginal_of_interest]])
+
+    def predefined_summary_stat_fn(self, data: jnp.ndarray) -> jnp.ndarray:
+        """
+        Predefined summary statistics function for this model.
+
+        For Gaussian-Gaussian model, the sufficient statistic is the sample mean.
+        This function computes the sample mean across observations.
+
+        Args:
+            data: Input data (observations)
+        Returns:
+            Summary statistics as a 1D array (sample mean for each dimension)
+        """
+        if data.ndim == 1:
+            # Single observation vector
+            return jnp.array([jnp.mean(data)])
+        elif data.ndim == 2:
+            # Multiple observations: (n_obs, dim)
+            if data.shape[1] == self.dim:
+                means = jnp.mean(data, axis=0)
+                return jnp.array([means[self.marginal_of_interest]])  
+            else:
+                raise ValueError(
+                    f"Expected data shape (n_obs, {self.dim}), got {data.shape}"
+                )
+        elif data.ndim == 3:
+            # Batch of datasets: (n_datasets, n_obs, dim)
+            if data.shape[1] == self.n_obs and data.shape[2] == self.dim:
+                return jnp.array([jnp.mean(data, axis=1)[:, self.marginal_of_interest]])  # Return (n_datasets, dim)
+            else:
+                raise ValueError(
+                    f"Expected data shape (n_datasets, {self.n_obs}, {self.dim}), got {data.shape}"
+                )
+        else:
+            raise ValueError(f"Unsupported data dimensionality: {data.ndim}")
 
     def get_posterior_stats(self, observed_data: jnp.ndarray) -> Dict[str, Any]:
         """
@@ -264,12 +313,12 @@ class GaussGaussMultiDimModel(StatisticalModel):
         x_bar = jnp.mean(observed_data, axis=0)
 
         # Precision matrices
-        tau0 = jnp.linalg.inv(self.sigma0)  # Prior precision
-        tau = n * jnp.linalg.inv(self.sigma)  # Likelihood precision
+        tau0 = jnp.linalg.inv(self.sigma0_matrix)  # Prior precision
+        tau = n * jnp.linalg.inv(self.sigma_matrix)  # Likelihood precision
 
         # Posterior parameters
         sigma_post = jnp.linalg.inv(tau0 + tau)
-        mu_post = sigma_post @ (tau0 @ self.mu0 + tau @ x_bar)
+        mu_post = sigma_post @ (tau0 @ self.mu0_vect + tau @ x_bar)
 
         return {
             "posterior_mean": mu_post,
@@ -397,17 +446,16 @@ class GaussGaussMultiDimModel(StatisticalModel):
             "model_type": "GaussGaussMultiDimModel",
             "model_class": self.__class__.__name__,
             "model_args": {
-                "mu0": self.mu0.tolist(),
-                "sigma0": self.sigma0.tolist(),
-                "sigma": self.sigma.tolist(),
+                "mu0": self.mu0 if jnp.isscalar(self.mu0) else self.mu0.tolist(),
+                "sigma0": (
+                    self.sigma0 if jnp.isscalar(self.sigma0) else self.sigma0.tolist()
+                ),
+                "sigma": (
+                    self.sigma if jnp.isscalar(self.sigma) else self.sigma.tolist()
+                ),
                 "dim": self.dim,
                 "n_obs": self.n_obs,
                 "marginal_of_interest": self.marginal_of_interest,
-            },
-            "metadata": {
-                "parameter_space_dim": self.dim,
-                "analytical_posterior": True,
-                "module": self.__class__.__module__,
             },
         }
 

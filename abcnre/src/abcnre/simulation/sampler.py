@@ -101,7 +101,9 @@ def get_abc_sample(
 
         # Optimized: choose computation path based on pre-determined flag
         if use_summary_stats:
+            
             summary_proposal = summary_stat_fn(data_proposal)
+
             distance = discrepancy_fn(summary_proposal, comparison_target)
         else:
             summary_proposal = state.summary_stat  # Keep the same structure
@@ -246,7 +248,6 @@ class RejectionSampler(BaseSampler):
             ABCSampleResult with all sampling results including phi_samples
         """
         keys = random.split(key, n_samples + 1)
-
         # Vectorize the single sample function
         vectorized_sampler = vmap(
             get_abc_sample, in_axes=(0, None, None, None, None, None, None, None, None)

@@ -207,20 +207,7 @@ class GaussGaussModel(StatisticalModel):
         """
         return jnp.linalg.norm(data1 - data2)
 
-    def summary_stat_fn(self, data: jnp.ndarray) -> jnp.ndarray:
-        """
-        Summary statistics: sample mean only.
 
-        For the Gaussian location model with known variance,
-        the sample mean is the sufficient statistic.
-
-        Args:
-            data: Input dataset
-
-        Returns:
-            Array containing the mean of the data
-        """
-        return jnp.array([jnp.mean(data)])
 
     def transform_phi(self, theta: jnp.ndarray) -> jnp.ndarray:
         """
@@ -237,6 +224,19 @@ class GaussGaussModel(StatisticalModel):
         else:
             # If theta is an array, return the first element as 1D array
             return jnp.array([theta.flatten()[0]])
+    
+    def predefined_summary_stat_fn(self, data: jnp.ndarray) -> jnp.ndarray:
+        """
+        Predefined summary statistics function.
+        
+        For Gaussian models, we can use the sample mean as the summary statistic.
+        Args:
+            data: Input dataset
+            
+        Returns:
+            Array containing the mean of the data
+        """
+        return jnp.array([jnp.mean(data)])
 
     def get_posterior_stats(self, observed_data: jnp.ndarray) -> Dict[str, float]:
         """

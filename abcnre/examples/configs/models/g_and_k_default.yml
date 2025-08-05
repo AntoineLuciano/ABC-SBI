@@ -1,0 +1,20 @@
+# Configuration template for G-and-K Distribution Model
+#
+# Model: X ~ G-and-K(A, B, g, k) where:
+# - A: location parameter (real)
+# - B: scale parameter (B > 0)  
+# - g: skewness parameter (real)
+# - k: kurtosis parameter (k > -1/2)
+#
+# Prior: Uniform prior on specified bounds
+# Following Fearnhead & Prangle (2011) Section 4.2
+
+model_type: GAndKModel
+model_class: GAndKModel
+
+model_args:
+  prior_bounds: [0.0, 10.0]  # Uniform prior bounds on [0, 10]^4
+  n_obs: 100
+
+  parameter_of_interest: "A" # "A", "B", "g", "k", "all' to specify which parameter to focus on
+

@@ -30,24 +30,3 @@ model_args:
   # Index of marginal parameter of interest for phi transformation (2 = third component)
   marginal_of_interest: 2
 
-metadata:
-  parameter_space_dim: 3
-  analytical_posterior: true
-  module: abcnre.simulation.models.gauss_gauss
-  version: '1.0'
-  description: "3D correlated Gaussian model focusing on third parameter component"
-  use_case: "Marginal inference for third component in correlated setting"
-  scenario: "correlated_3d_marginal2"
-  focus_parameter: "theta_2 (third component)"
-  
-  # Mathematical details
-  prior_correlation: true
-  heteroscedastic_noise: true
-  phi_transformation: "theta[2]"  # Extract third component
-  
-  # Notes sur les corrélations
-  correlation_notes: "Prior correlation affects marginal inference - even though we focus on theta[2], correlations with other components will influence the posterior"
-  
-  # Example true parameter vector
-  example_true_theta: [0.8, 1.2, -0.3]
-  example_phi_true: -0.3  # Expected phi value from example_true_theta[2]

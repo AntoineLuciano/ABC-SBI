@@ -181,9 +181,7 @@ def get_unnormalized_corrected_nre_pdf(
 
         x_batch = jnp.repeat(x[None, :], n_batch, axis=0)
         s_x_batch = jnp.repeat(s_x[None, :], n_batch, axis=0)
-        print("DEBUG: s_x_batch shape:", s_x_batch.shape)
-        print("DEBUG: x_batch shape:", x_batch.shape)
-        print("DEBUG: phi_values shape:", phi_values.shape)
+        
         if s_x_batch.ndim == 1:
             s_x_batch = s_x_batch[:, jnp.newaxis]
             

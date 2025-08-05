@@ -368,7 +368,7 @@ def _apply_summary_statistics(
         simulator.model.summary_stat_fn = summary_fn
         simulator.summary_stat_fn = summary_fn
         simulator.config["summary_stats_enabled"] = True
-        simulator._initialize_sampler()
+        simulator._init_sampler()
 
         logger.info("Summary network loaded and integrated into simulator")
 
@@ -443,7 +443,7 @@ def _extract_simulator_config(simulator: "ABCSimulator") -> Dict[str, Any]:
             "created_date": datetime.now().isoformat(),
             "abcnre_version": "0.1.0",
             "simulator_type": type(simulator).__name__,
-            "sampler_id": getattr(simulator, "sampler_id", None),
+            # "sampler_id": getattr(simulator, "sampler_id", None),
         },
     }
 

@@ -1,0 +1,15 @@
+network_name: "deepset"
+network_size: "default"
+training_size: "default"
+lr_scheduler_name: "constant"
+lr_scheduler_variant: "default"
+stopping_rules_variant: "balanced"
+experiment_name: "summary_stats_deepset_training"
+
+# Optional overrides for specific training parameters
+overrides:
+  num_epochs: 100
+  batch_size: 512
+  learning_rate: 0.001
+  # weight_decay: 1e-4
+  # optimizer: "adam"

@@ -20,10 +20,12 @@ logger = logging.getLogger(__name__)
 
 from .gauss_gauss_1D import GaussGaussModel
 from .gauss_gauss_multi import GaussGaussMultiDimModel
+from .g_and_k import GAndKModel
 
 
 MODEL_REGISTRY = {"GaussGaussModel": GaussGaussModel, 
-                  "GaussGaussMultiDimModel": GaussGaussMultiDimModel}
+                  "GaussGaussMultiDimModel": GaussGaussMultiDimModel, 
+                    "GAndKModel": GAndKModel}
 
 
 
@@ -77,7 +79,7 @@ def get_example_model_configs(model_name = None) -> Dict[str, str]:
 
             return config_content
         else:
-            raise ValueError(f"No example config found for model: {model_name}")
+            raise ValueError(f"No example config found for model: {model_name}\nAvailable models: {list(example_configs.keys())}")
 
     return example_configs
 
