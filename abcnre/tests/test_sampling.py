@@ -103,14 +103,19 @@ class TestSampler(unittest.TestCase):
             dist = xm ** 2
             return xm, dist
 
-        rej_sampler = RejectionSampler(model, d_fn, 1.0)
-
         means, dists = vmap(d_fn)(x_draws)
 
         # Check that the summary statistics are being computed correctly
         assert_array_almost_equal(jnp.mean(x_draws, axis=[1, 2]), x_draws)
 
+        key, key_eps = jax.random.split(key)
+        epsilon, _ = get_epsilon_quantile(
+            key_eps, model.sample_theta_x_multiple, d_fn, alpha=0.1)
 
+        rej_sampler = RejectionSampler(model, d_fn, epsilon)
+
+
+    ####################
     def test_get_epsilon_quantile(self):
         model = GaussGaussMultiDimModel(
             mu0=0., sigma0=1.0, sigma=1.0, dim=1, n_obs=1)
