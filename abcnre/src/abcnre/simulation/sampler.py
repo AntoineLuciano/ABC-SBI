@@ -95,11 +95,14 @@ def get_abc_sample(
         data_proposal = data_simulator(key_data, theta_proposal)
 
         # Transform theta to phi if transform function is provided
+        # RG: Don't transform here, just keep the draws that are given.
         phi_proposal = (
             transform_fn(theta_proposal) if transform_fn is not None else None
         )
 
         # Optimized: choose computation path based on pre-determined flag
+        # RG: Just use a user-provided discrepancy function, don't do the
+        # summary stat computation here.
         if use_summary_stats:
             summary_proposal = summary_stat_fn(data_proposal)
             distance = discrepancy_fn(summary_proposal, comparison_target)
@@ -123,6 +126,7 @@ def get_abc_sample(
     initial_data = jnp.zeros_like(observed_data).astype(float)
 
     # Initialize phi with transform function if provided
+    # RG: Don't transform here, just keep the draws that are given.
     if transform_fn is not None:
         initial_phi = transform_fn(initial_theta)
     else:
@@ -146,6 +150,8 @@ def get_abc_sample(
         phi=initial_phi,
     )
 
+    #RG: This should be a standalone function with all the checking done
+    #    beforehand.
     final_state = lax.while_loop(should_continue, rejection_step, initial_state)
 
     return (
@@ -165,6 +171,8 @@ class RejectionSampler(BaseSampler):
     This class encapsulates the ABC rejection sampling algorithm
     with support for summary statistics and JIT compilation.
     """
+
+    # RG: This class is a mostly unnecessary wrapper around get_abc_sample.
 
     def __init__(
         self,
@@ -379,6 +387,8 @@ class RejectionSampler(BaseSampler):
         Returns:
             Tuple of (epsilon_quantile, all_distances, updated_key)
         """
+        # RG: this should be a standalone function
+
         # Temporarily set epsilon to infinity to get full distance distribution
         original_epsilon = self.epsilon
         self.epsilon = jnp.inf

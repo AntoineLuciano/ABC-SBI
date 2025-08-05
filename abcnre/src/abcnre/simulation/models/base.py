@@ -83,12 +83,15 @@ class StatisticalModel(ABC):
         
         Args:
             key: JAX random key
-            theta: Parameter values
+            theta: Parameter values.  If 1d, a single sample is drawn.
+                   If 2d, the first dimension is the number of samples.
             
         Returns:
             Array of simulated datasets of shape (n_samples, data_shape)
         """
         print('theta.shape = ', theta.shape)
+        if theta.ndim > 2:
+            raise ValueError(f'theta must be 1d or 2d (got shape = {theta.shape})')
         n_samples = theta.shape[0] if theta.ndim > 1 else 1
         keys = random.split(key, n_samples)
         return vmap(lambda k: self.simulate_data(k, theta))(keys)
@@ -163,6 +166,11 @@ class StatisticalModel(ABC):
         keys = random.split(key, n_samples)
         return vmap(lambda k: self.sample_phi_x(k))(keys)
     
+    # RG: Make a "summarized statistical model class"
+    # that just transforms theta and x.
+
+    # RG: Make a "rejection sampler model class"
+
     @abstractmethod
     def discrepancy_fn(self, data1: jnp.ndarray, data2: jnp.ndarray) -> float:
         """
@@ -175,6 +183,7 @@ class StatisticalModel(ABC):
         Returns:
             Distance/discrepancy value (scalar)
         """
+        # RG: Why is this a property of a statistical model?
         pass
         
     @abstractmethod
