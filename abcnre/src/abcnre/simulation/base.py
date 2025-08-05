@@ -8,6 +8,8 @@ used throughout the ABC simulation framework.
 import jax.numpy as jnp
 from jax import random
 from typing import NamedTuple, Optional, List, Dict
+
+# Abstract Base Class, not Approximate Bayesian Computation
 from abc import ABC, abstractmethod
 
 
