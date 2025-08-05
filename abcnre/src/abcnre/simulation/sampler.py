@@ -53,6 +53,10 @@ def get_epsilon_quantile(
     Returns:
         Tuple of (epsilon_quantile, all_distances, updated_key)
     """
+
+    if alpha < 0 or alpha > 1:
+        raise ValueError(f'alpha must be in [0,1] (got {alpha})')
+
     # Sample with infinite epsilon
     _, x_draws = sample_theta_x(key, n_samples)
     _, epsilons = vmap(discrepancy_fn)(x_draws)
