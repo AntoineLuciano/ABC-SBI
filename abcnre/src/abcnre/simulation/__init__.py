@@ -37,7 +37,7 @@ from .registry import (
 )
 
 # Model imports
-from .models.base import StatisticalModel
+from .models.base import StatisticalModel, SummarizedStatisticalModel
 from .models.gauss_gauss_1D import GaussGaussModel
 from .models.g_and_k import GAndKModel
 
@@ -46,6 +46,7 @@ __all__ = [
     "ABCSimulator",
     "RejectionSampler",
     "BaseSampler",
+    "SummarizedStatisticalModel",
     # Result structures
     "ABCSampleResult",
     "ABCTrainingResult",

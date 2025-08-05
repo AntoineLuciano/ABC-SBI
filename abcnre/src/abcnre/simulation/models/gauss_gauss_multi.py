@@ -32,7 +32,7 @@ class GaussGaussMultiDimModel(StatisticalModel):
         sigma0: Prior covariance matrix or scalar (default: identity)
         sigma: Model covariance matrix or scalar (default: identity)
         dim: Dimension of parameter space (required if not inferred from mu0)
-        n_obs: Number of observations per sample (default: 100)
+        n_obs: Number of observations per sample
         marginal_of_interest: Index of the marginal parameter of interest for phi transformation (default: 0)
     """
 
@@ -42,10 +42,13 @@ class GaussGaussMultiDimModel(StatisticalModel):
         sigma0: Optional[jnp.ndarray] = None,
         sigma: Optional[jnp.ndarray] = None,
         dim: Optional[int] = None,
-        n_obs: int = 100,
+        n_obs: int = None,
         marginal_of_interest: int = 0,
     ):
         """Initialize multidimensional Gaussian-Gaussian model."""
+
+        if n_obs is None:
+            raise ValueError("You must specify n_obs.")
 
         # Determine dimension
         if mu0 is not None:

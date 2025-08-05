@@ -310,6 +310,12 @@ class SummarizedStatisticalModel(StatisticalModel):
         # return vmap(lambda k: self.sample_theta_x(k))(keys)
         return super.sample_theta_multiple(key, n_samples)
 
+    def simulate_data(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
+        self.model.simulate_data(key, theta)
+
+    def simulate_datas(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
+        self.model.simulate_datas(key, theta)
+
     def get_model_args(self):
         # TODO: annotate the summary function, too
         return self.model.get_model_args()
