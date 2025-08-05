@@ -8,7 +8,7 @@ to be used with the ABCSimulator.
 from abc import ABC, abstractmethod
 import jax.numpy as jnp
 from jax import random, vmap
-from typing import Dict, Any, Optional, Tuple
+from typing import Callable, Dict, Any, Optional, Tuple
 
 
 class StatisticalModel(ABC):
@@ -16,7 +16,7 @@ class StatisticalModel(ABC):
     Abstract base class for all statistical models used in ABC.
     
     This class defines the interface that statistical models must implement
-    to be compatible with the ABCSimulator and RejectionSampler.
+    to be compatib7le with the ABCSimulator and RejectionSampler.
     
     All models must implement:
     - prior_sample(): Sample parameters from prior distribution
@@ -96,9 +96,7 @@ class StatisticalModel(ABC):
         keys = random.split(key, n_samples)
         return vmap(lambda k: self.simulate_data(k, theta))(keys)
     
-    def sample_theta_x(
-        self, key: random.PRNGKey
-    ) -> jnp.ndarray:
+    def sample_theta_x(self, key: random.PRNGKey) -> jnp.ndarray:
         """
         Sample theta and simulate data in one step.
 
@@ -128,63 +126,63 @@ class StatisticalModel(ABC):
         keys = random.split(key, n_samples)
         return vmap(lambda k: self.sample_theta_x(k))(keys)
     
-    def sample_phi_x(
-        self, key: random.PRNGKey
-    ) -> Tuple[jnp.ndarray, jnp.ndarray]:
-        """
-        Sample phi and simulate data in one step.
+    # def sample_phi_x(
+    #     self, key: random.PRNGKey
+    # ) -> Tuple[jnp.ndarray, jnp.ndarray]:
+    #     """
+    #     Sample phi and simulate data in one step.
 
-        Args:
-            key: JAX random key
+    #     Args:
+    #         key: JAX random key
 
-        Returns:
-            tuple: (phi, data)
-            - phi: Transformed parameter (typically scalar)
-            - data: Simulated dataset
-        """
-        key_theta, key_data = random.split(key)
-        theta = self.get_prior_sample(key_theta)
-        phi = self.transform_phi(theta)
-        return phi, self.simulate_data(key_data, theta)
+    #     Returns:
+    #         tuple: (phi, data)
+    #         - phi: Transformed parameter (typically scalar)
+    #         - data: Simulated dataset
+    #     """
+    #     key_theta, key_data = random.split(key)
+    #     theta = self.get_prior_sample(key_theta)
+    #     phi = self.transform_phi(theta)
+    #     return phi, self.simulate_data(key_data, theta)
 
-    def sample_phi_x_multiple(
-        self, key: random.PRNGKey, n_samples: int
-    ) -> Tuple[jnp.ndarray, jnp.ndarray]:
-        """
-        Sample multiple phi and simulate data in one step.
+    # def sample_phi_x_multiple(
+    #     self, key: random.PRNGKey, n_samples: int
+    # ) -> Tuple[jnp.ndarray, jnp.ndarray]:
+    #     """
+    #     Sample multiple phi and simulate data in one step.
 
-        Args:
-            key: JAX random key
-            n_samples: Number of samples to draw
+    #     Args:
+    #         key: JAX random key
+    #         n_samples: Number of samples to draw
 
-        Returns:
-            tuple: (phi_samples, data_samples)
-            - phi_samples: Array of transformed parameters (shape (n_samples,))
-            - data_samples: Array of simulated datasets (shape (n_samples, data_shape))
-        """
+    #     Returns:
+    #         tuple: (phi_samples, data_samples)
+    #         - phi_samples: Array of transformed parameters (shape (n_samples,))
+    #         - data_samples: Array of simulated datasets (shape (n_samples, data_shape))
+    #     """
   
-        keys = random.split(key, n_samples)
-        return vmap(lambda k: self.sample_phi_x(k))(keys)
+    #     keys = random.split(key, n_samples)
+    #     return vmap(lambda k: self.sample_phi_x(k))(keys)
     
-    # RG: Make a "summarized statistical model class"
-    # that just transforms theta and x.
+    # # RG: Make a "summarized statistical model class"
+    # # that just transforms theta and x.
 
-    # RG: Make a "rejection sampler model class"
+    # # RG: Make a "rejection sampler model class"
 
-    @abstractmethod
-    def discrepancy_fn(self, data1: jnp.ndarray, data2: jnp.ndarray) -> float:
-        """
-        Compute distance/discrepancy between two datasets.
+    # @abstractmethod
+    # def discrepancy_fn(self, data1: jnp.ndarray, data2: jnp.ndarray) -> float:
+    #     """
+    #     Compute distance/discrepancy between two datasets.
         
-        Args:
-            data1: First dataset/statistics
-            data2: Second dataset/statistics
+    #     Args:
+    #         data1: First dataset/statistics
+    #         data2: Second dataset/statistics
             
-        Returns:
-            Distance/discrepancy value (scalar)
-        """
-        # RG: Why is this a property of a statistical model?
-        pass
+    #     Returns:
+    #         Distance/discrepancy value (scalar)
+    #     """
+    #     # RG: Why is this a property of a statistical model?
+    #     pass
         
     @abstractmethod
     def get_model_args(self) -> Dict[str, Any]:
@@ -196,57 +194,57 @@ class StatisticalModel(ABC):
         """
         pass
     
-    def summary_stat_fn(self, data: jnp.ndarray) -> jnp.ndarray:
-        """
-        Compute summary statistics from data (optional).
+    # def summary_stat_fn(self, data: jnp.ndarray) -> jnp.ndarray:
+    #     """
+    #     Compute summary statistics from data (optional).
         
-        Override this method if you want to use summary statistics
-        instead of raw data for ABC comparison.
+    #     Override this method if you want to use summary statistics
+    #     instead of raw data for ABC comparison.
         
-        Args:
-            data: Input data
+    #     Args:
+    #         data: Input data
             
-        Returns:
-            Summary statistics
+    #     Returns:
+    #         Summary statistics
             
-        Raises:
-            NotImplementedError: If not implemented by subclass
-        """
-        raise NotImplementedError("summary_stat_fn not implemented")
+    #     Raises:
+    #         NotImplementedError: If not implemented by subclass
+    #     """
+    #     raise NotImplementedError("summary_stat_fn not implemented")
     
-    def transform_phi(self, theta: jnp.ndarray) -> jnp.ndarray:
-        """
-        Transform theta to phi (target parameter of interest).
+    # def transform_phi(self, theta: jnp.ndarray) -> jnp.ndarray:
+    #     """
+    #     Transform theta to phi (target parameter of interest).
         
-        Override this method if you want to focus inference on a specific
-        transformation or marginal of the parameter vector.
+    #     Override this method if you want to focus inference on a specific
+    #     transformation or marginal of the parameter vector.
         
-        Args:
-            theta: Full parameter vector
+    #     Args:
+    #         theta: Full parameter vector
             
-        Returns:
-            Transformed parameter phi (typically scalar)
-        """
-        # Default: return first component as scalar
-        if jnp.isscalar(theta):
-            return theta
-        else:
-            return theta[0]
+    #     Returns:
+    #         Transformed parameter phi (typically scalar)
+    #     """
+    #     # Default: return first component as scalar
+    #     if jnp.isscalar(theta):
+    #         return theta
+    #     else:
+    #         return theta[0]
     
-    def has_summary_stats(self) -> bool:
-        """
-        Check if summary statistics function is implemented.
+    # def has_summary_stats(self) -> bool:
+    #     """
+    #     Check if summary statistics function is implemented.
         
-        Returns:
-            True if summary_stat_fn is implemented, False otherwise
-        """
-        try:
-            # Test with dummy data
-            dummy_data = jnp.array([1.0, 2.0, 3.0])
-            self.summary_stat_fn(dummy_data)
-            return True
-        except NotImplementedError:
-            return False
+    #     Returns:
+    #         True if summary_stat_fn is implemented, False otherwise
+    #     """
+    #     try:
+    #         # Test with dummy data
+    #         dummy_data = jnp.array([1.0, 2.0, 3.0])
+    #         self.summary_stat_fn(dummy_data)
+    #         return True
+    #     except NotImplementedError:
+    #         return False
     
     def get_model_info(self) -> Dict[str, Any]:
         """
@@ -258,7 +256,7 @@ class StatisticalModel(ABC):
         return {
             'model_class': self.__class__.__name__,
             'model_module': self.__module__,
-            'has_summary_stats': self.has_summary_stats(),
+            #'has_summary_stats': self.has_summary_stats(),
             'model_args': self.get_model_args()
         }
     
@@ -283,5 +281,45 @@ class StatisticalModel(ABC):
         return f"{self.__class__.__name__}({self.get_model_args()})"
 
 
+
+class SummarizedStatisticalModel(StatisticalModel):
+    """
+    Draw from a statistical model but using a summary of the parameter.
+    """
+    def __init__(
+            self,
+            model: StatisticalModel,
+            summary_fn: Callable[[jnp.ndarray], jnp.ndarray]):
+
+        self.model = model
+        self.summary_fn = summary_fn
+
+    def get_prior_sample(self, key: random.PRNGKey) -> jnp.ndarray:
+        return self.summary_fn(self.model.get_prior_sample(key))
+
+    def get_prior_samples(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
+        return super().get_prior_samples(key, n_samples)
+
+    def sample_theta_x(self, key: random.PRNGKey) -> jnp.ndarray:
+        theta, x = self.model.sample_theta_x(key)
+        return self.summary_fn(theta), x
+
+    def sample_theta_x_multiple(
+            self, key: random.PRNGKey,  n_samples: int) -> jnp.ndarray:
+        # keys = random.split(key, n_samples)
+        # return vmap(lambda k: self.sample_theta_x(k))(keys)
+        return super.sample_theta_multiple(key, n_samples)
+
+    def get_model_args(self):
+        # TODO: annotate the summary function, too
+        return self.model.get_model_args()
+
+
+
+
+
 # Export main class
-__all__ = ["StatisticalModel"]
+__all__ = ["StatisticalModel", "SummarizedStatisticalModel"]
+
+
+
