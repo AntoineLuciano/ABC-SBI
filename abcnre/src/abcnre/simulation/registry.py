@@ -11,6 +11,8 @@ Functions follow the naming convention:
 - get_example_simulator_configs()
 """
 
+# RG: Note this is all probably needs to be updated.
+
 from typing import Dict, Any, List, Union, Optional, TYPE_CHECKING
 import logging
 

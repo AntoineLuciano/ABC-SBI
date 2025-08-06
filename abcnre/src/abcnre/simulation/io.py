@@ -12,6 +12,8 @@ Functions follow the naming convention:
 - validate_simulator_config_yaml() / validate_simulator_config_dict()
 """
 
+# RG: Note this is all probably needs to be updated.
+
 from typing import Dict, Any, Union, Optional, Tuple, TYPE_CHECKING
 from pathlib import Path
 import yaml
