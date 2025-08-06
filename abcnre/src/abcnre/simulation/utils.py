@@ -164,3 +164,21 @@ def get_epsilon_quantile(
     epsilon_quantile = float(jnp.quantile(epsilons, alpha))
 
     return epsilon_quantile, epsilons
+
+
+
+# Create data generator that matches the expected interface for neural networks.
+def get_io_generator(sample_theta_x_multiple: Callable):
+    def io_generator(key: random.PRNGKey, batch_size: int):
+        """Adapter for the unified training interface."""
+        phi, x = sample_theta_x_multiple(key, batch_size)
+        return {"input": x, "output": phi, "n_simulations": batch_size}
+    return io_generator
+
+
+
+__all__ = [
+    "get_io_generator",
+    "get_epsilon_quantile",
+    "create_summary_stats_fn"
+]
