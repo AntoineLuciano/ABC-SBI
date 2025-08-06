@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..inference.estimator import NeuralRatioEstimator
-    from ..simulation.simulator import ABCSimulator
+    from ..simulation.samplers import ABCSimulator
 
 # Configure logging
 logger = logging.getLogger(__name__)

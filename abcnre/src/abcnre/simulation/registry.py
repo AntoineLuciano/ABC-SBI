@@ -15,7 +15,7 @@ from typing import Dict, Any, List, Union, Optional, TYPE_CHECKING
 import logging
 
 if TYPE_CHECKING:
-    from .simulator import ABCSimulator
+    from .samplers import ABCSimulator
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -43,7 +43,8 @@ def create_simulator_from_dict(
         }
         simulator = create_simulator_from_dict(config, observed_data)
     """
-    from .simulator import ABCSimulator
+    # RG: better not to do inline imports I think
+    from .samplers import ABCSimulator
 
     # Validate required fields
     if "model" not in config:

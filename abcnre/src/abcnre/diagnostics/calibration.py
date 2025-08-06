@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..inference.estimator import NeuralRatioEstimator
-from ..simulation.simulator import ABCSimulator
+from ..simulation.samplers import ABCSimulator
 
 from .posterior import (
     get_unnormalized_nre_pdf,

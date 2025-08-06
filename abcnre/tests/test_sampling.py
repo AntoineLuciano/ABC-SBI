@@ -1,8 +1,8 @@
 import unittest
 from numpy.testing import assert_array_almost_equal
 from abcnre.simulation.models import GaussGaussMultiDimModel
-from abcnre.simulation.models.base import SummarizedStatisticalModel
-from abcnre.simulation.sampler import RejectionSampler, get_epsilon_quantile
+from abcnre.simulation.samplers import RejectionSampler, SummarizedStatisticalModel
+from abcnre.simulation.utils import get_epsilon_quantile
 import jax
 import jax.numpy as jnp
 

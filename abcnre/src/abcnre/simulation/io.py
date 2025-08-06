@@ -23,7 +23,7 @@ import json
 import hashlib
 
 if TYPE_CHECKING:
-    from .simulator import ABCSimulator
+    from .samplers import ABCSimulator
     from ..training.config import NNConfig
 
 # Configure logging
@@ -302,7 +302,7 @@ def _load_observed_data_from_config(config: Dict[str, Any], yaml_dir: Path):
 
 def _create_simulator_instance(config: Dict[str, Any], model, observed_data):
     """Create ABCSimulator instance from configuration."""
-    from .simulator import ABCSimulator
+    from .samplers import ABCSimulator
 
     return ABCSimulator(
         model=model,
@@ -353,7 +353,7 @@ def _apply_summary_statistics(
         logger.info(f"Loaded summary network weights from: {summary_params_path}")
 
         # Apply to simulator
-        from .simulator import create_summary_stats_fn
+        from .utils import create_summary_stats_fn
 
         simulator._summary_config = summary_config
         simulator._summary_params = summary_params
@@ -361,9 +361,7 @@ def _apply_summary_statistics(
         summary_network = create_network_from_nn_config(summary_config)
         summary_fn = create_summary_stats_fn(
             network=summary_network,
-            params=summary_params,
-            network_type=summary_config.network.network_type,
-        )
+            params=summary_params)
 
         simulator.model.summary_stat_fn = summary_fn
         simulator.summary_stat_fn = summary_fn

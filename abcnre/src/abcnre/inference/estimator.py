@@ -24,8 +24,8 @@ from ..training import (
     TrainingResult,
     create_network_from_nn_config,
 )
-from ..simulation.base import ABCTrainingResult
-from ..simulation.simulator import ABCSimulator
+# from ..simulation.base import ABCTrainingResult
+from ..simulation.samplers import ABCSimulator
 from ..utils.comparison import are_estimators_equivalent
 import logging
 

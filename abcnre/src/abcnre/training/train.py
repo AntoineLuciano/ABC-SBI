@@ -368,69 +368,69 @@ def train_nn(
     return TrainingResult(**result_kwargs)
 
 
-# # Convenience wrappers for backward compatibility
-# def train_classifier(
-#     key: jax.random.PRNGKey,
-#     config: NNConfig,
-#     io_generator: Callable,
-#     network: Optional[Any] = None,
-#     val_io_generator: Optional[Callable] = None,
-# ) -> TrainingResult:
-#     """
-#     Train a classifier network using the new modular architecture.
+# Convenience wrappers for backward compatibility
+def train_classifier(
+    key: jax.random.PRNGKey,
+    config: NNConfig,
+    io_generator: Callable,
+    network: Optional[Any] = None,
+    val_io_generator: Optional[Callable] = None,
+) -> TrainingResult:
+    """
+    Train a classifier network using the new modular architecture.
 
-#     Args:
-#         key: JAX random key for initialization
-#         config: NNConfig with task_type="classifier"
-#         io_generator: Function that generates training data
-#         network: Optional pre-initialized network
-#         val_io_generator: Optional validation data generator
+    Args:
+        key: JAX random key for initialization
+        config: NNConfig with task_type="classifier"
+        io_generator: Function that generates training data
+        network: Optional pre-initialized network
+        val_io_generator: Optional validation data generator
 
-#     Returns:
-#         TrainingResult with trained parameters and classifier function
-#     """
+    Returns:
+        TrainingResult with trained parameters and classifier function
+    """
 
-#     # RG: Is the only purpose of this function to check the type?
-#     if config.task_type != "classifier":
-#         raise ValueError(
-#             "config.task_type must be 'classifier' for train_classifier_v2"
-#         )
+    # RG: Is the only purpose of this function to check the type?
+    if config.task_type != "classifier":
+        raise ValueError(
+            "config.task_type must be 'classifier' for train_classifier_v2"
+        )
 
-#     return train_nn(key, config, io_generator, network, val_io_generator)
+    return train_nn(key, config, io_generator, network, val_io_generator)
 
 
-# def train_regressor(
-#     key: jax.random.PRNGKey,
-#     config: NNConfig,
-#     io_generator: Callable,
-#     network: Optional[Any] = None,
-#     val_io_generator: Optional[Callable] = None,
-# ) -> TrainingResult:
-#     """
-#     Train a regressor network using the new modular architecture.
+def train_regressor(
+    key: jax.random.PRNGKey,
+    config: NNConfig,
+    io_generator: Callable,
+    network: Optional[Any] = None,
+    val_io_generator: Optional[Callable] = None,
+) -> TrainingResult:
+    """
+    Train a regressor network using the new modular architecture.
 
-#     Args:
-#         key: JAX random key for initialization
-#         config: NNConfig with task_type="regressor"
-#         io_generator: Function that generates training data
-#         network: Optional pre-initialized network
-#         val_io_generator: Optional validation data generator
+    Args:
+        key: JAX random key for initialization
+        config: NNConfig with task_type="regressor"
+        io_generator: Function that generates training data
+        network: Optional pre-initialized network
+        val_io_generator: Optional validation data generator
 
-#     Returns:
-#         TrainingResult with trained parameters and summary function
-#     """
+    Returns:
+        TrainingResult with trained parameters and summary function
+    """
 
-#     # RG: Is the only purpose of this function to check the type?
-#     if config.task_type != "regressor":
-#         raise ValueError("config.task_type must be 'regressor' for train_regressor")
+    # RG: Is the only purpose of this function to check the type?
+    if config.task_type != "regressor":
+        raise ValueError("config.task_type must be 'regressor' for train_regressor")
 
-#     return train_nn(key, config, io_generator, network, val_io_generator)
+    return train_nn(key, config, io_generator, network, val_io_generator)
 
 
 
 # Export functions
 __all__ = [
     "train_nn",
-    # "train_regressor",
-    # "train_classifier",
+    "train_regressor",
+    "train_classifier",
 ]

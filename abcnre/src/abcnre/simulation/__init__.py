@@ -6,13 +6,13 @@ and generating training data for neural ratio estimation.
 """
 
 # Main simulator class
-from .simulator import ABCSimulator
+#from .utils import ABCSimulator
 
 # Sampling utilities
-from .sampler import RejectionSampler #, BaseSampler
+from .samplers import RejectionSampler #, BaseSampler
 
 # Result structures
-from .base import ABCSampleResult, ABCTrainingResult, ABCSingleResult
+#from .base import ABCSampleResult, ABCTrainingResult, ABCSingleResult
 
 # Utility functions - now only from io.py (utils.py is minimal)
 # Legacy imports redirected to io.py for backward compatibility
@@ -37,20 +37,21 @@ from .registry import (
 )
 
 # Model imports
-from .models.base import StatisticalModel, SummarizedStatisticalModel
+from .models.base import StatisticalModel
+from .samplers import SummarizedStatisticalModel, RejectionSampler, ABCSimulator
 from .models.gauss_gauss_1D import GaussGaussModel
 from .models.g_and_k import GAndKModel
 
 __all__ = [
     # Main classes
-    "ABCSimulator",
+    "ABCSimulator", # TODO: deprecate
     "RejectionSampler",
     #"BaseSampler",
     "SummarizedStatisticalModel",
     # Result structures
-    "ABCSampleResult",
-    "ABCTrainingResult",
-    "ABCSingleResult",
+    # "ABCSampleResult",
+    # "ABCTrainingResult",
+    # "ABCSingleResult",
     # Legacy utilities
     "save_simulator",
     "load_simulator",
