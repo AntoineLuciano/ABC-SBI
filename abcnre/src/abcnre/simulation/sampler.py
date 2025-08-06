@@ -11,6 +11,7 @@ from typing import Callable, Tuple, Optional
 from functools import partial
 from dataclasses import dataclass
 
+from typing import NamedTuple, Optional, List, Dict
 from .base import ABCSampleResult, ABCTrainingResult, ABCSingleResult
 from .models.base import StatisticalModel
 
@@ -187,6 +188,14 @@ def get_abc_sample(
     )
 
 
+class RejectionSamplerMetadata(NamedTuple):
+    """Result structure for rejection sampling operations."""
+    distances: jnp.ndarray
+    summary_stats: jnp.ndarray
+    rejection_count: jnp.ndarray
+    key: random.PRNGKey
+    n_samples: int
+
 # Inherit StatisticalModel instaed
 class RejectionSampler(StatisticalModel):
     """
@@ -217,6 +226,9 @@ class RejectionSampler(StatisticalModel):
         self.model = model
         self.discrepancy_fn = discrepancy_fn
         self.set_epsilon(epsilon)
+
+        self.clear_cache()
+
         # self.observed_data = observed_data
         # self.observed_summary_stats = observed_summary_stats
 
@@ -224,6 +236,28 @@ class RejectionSampler(StatisticalModel):
         # if self.summary_stat_fn is not None and self.observed_data is not None:
         #     if self.observed_summary_stats is None:
         #         self.observed_summary_stats = self.summary_stat_fn(self.observed_data)
+
+    def clear_cache(self):
+        self._cache = RejectionSamplerMetadata(
+            distances=jnp.array([]),
+            summary_stats=jnp.array([]),
+            rejection_count=jnp.array([]),
+            key=None,
+            n_samples=None)
+
+    def get_cache(self, key=None, n_samples=None):
+        """
+        Query a cached value from a call to sample_theta_x_multiple.
+        Optionally pass in the key and n_samples with with sample_theta_x_multiple
+        was called to ensure that you are getting the cache for the call you expect.
+        """
+        if (key is not None) and (not jnp.array_equal(key, self._cache.key)):
+            raise ValueError('Called get_cache with a non-matching key')
+
+        if (n_samples is not None) and (n_samples != self._cache.n_samples):
+            raise ValueError('Called get_cache with a non-matching n_samples')
+
+        return self._cache
 
     def get_model_args(self):
         # TODO: fill this out for serialization
@@ -248,14 +282,13 @@ class RejectionSampler(StatisticalModel):
             self.discrepancy_fn,
             # self.summary_stat_fn,
             # self.transform_fn,
-            self.epsilon,
+            self._epsilon,
             # self.observed_data,
             # self.observed_summary_stats,
         )
         return theta, data
 
-
-    def sample_theta_x_multiple(self, key: random.PRNGKey, n_samples: int):
+    def sample_theta_x_multiple(self, key: random.PRNGKey, n_samples: int, cache=False):
         """
         Generate multiple ABC samples using vectorized sampling.
 
@@ -266,37 +299,41 @@ class RejectionSampler(StatisticalModel):
         keys = random.split(key, n_samples + 1)
 
         # Vectorize the single sample function
-        vectorized_sampler = vmap(
-            get_abc_sample,
-            in_axes=(0, None, None, None, None)
-        )
+        vectorized_sampler = vmap(get_abc_sample, in_axes=(0, None, None, None))
 
-        (
-            data,
-            theta_samples,
-            distances,
-            summary_stats,
-            rejection_count,
-        ) = vectorized_sampler(
-            keys[1:],
-            self.model.sample_theta_x,
-            self.discrepancy_fn,
-            self.summary_stat_fn,
-            self.epsilon)
+        (data,
+         theta_samples,
+         distances,
+         summary_stats,
+         rejection_count) = \
+            vectorized_sampler(
+                keys[1:],
+                self.model.sample_theta_x,
+                self.discrepancy_fn,
+                self._epsilon)
 
-        # Ensure phi_samples is 2D for consistency
-        if phi_samples is not None and phi_samples.ndim == 1:
-            phi_samples = phi_samples[:, None]
+        # # Ensure phi_samples is 2D for consistency
+        # if phi_samples is not None and phi_samples.ndim == 1:
+        #     phi_samples = phi_samples[:, None]
 
-        return ABCSampleResult(
-            data=data,
-            theta=theta_samples,
-            distances=distances,
-            summary_stats=summary_stats,
-            key=keys[0],
-            simulation_count=rejection_count,
-            phi=phi_samples,
-        )
+        if cache:
+            self._cache = RejectionSamplerMetadata(
+                distances=distances,
+                summary_stats=summary_stats,
+                rejection_count=rejection_count,
+                key=key,
+                n_samples=n_samples)
+
+        return theta_samples, data
+        # return ABCSampleResult(
+        #     data=data,
+        #     theta=theta_samples,
+        #     distances=distances,
+        #     summary_stats=summary_stats,
+        #     key=keys[0],
+        #     simulation_count=rejection_count,
+        #     phi=phi_samples,
+        # )
 
     # def sample_single(self, key: random.PRNGKey) -> ABCSingleResult:
     #     """

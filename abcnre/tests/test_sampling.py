@@ -106,13 +106,40 @@ class TestSampler(unittest.TestCase):
         means, dists = vmap(d_fn)(x_draws)
 
         # Check that the summary statistics are being computed correctly
-        assert_array_almost_equal(jnp.mean(x_draws, axis=[1, 2]), x_draws)
+        assert_array_almost_equal(jnp.mean(x_draws, axis=[1, 2]), means)
 
         key, key_eps = jax.random.split(key)
         epsilon, _ = get_epsilon_quantile(
             key_eps, model.sample_theta_x_multiple, d_fn, alpha=0.1)
 
         rej_sampler = RejectionSampler(model, d_fn, epsilon)
+
+        theta_draws_reg, x_draws_reg = rej_sampler.sample_theta_x_multiple(key, n_samples)
+        self.assertEqual(theta_draws_reg.shape, (n_samples, 2))
+        self.assertEqual(x_draws_reg.shape, (n_samples, 5, 2))
+
+        means_reg, dists_reg = vmap(d_fn)(x_draws_reg)
+        self.assertTrue(jnp.all(dists_reg <= epsilon))
+
+        # Test cacheing
+        theta_draws_reg, x_draws_reg = \
+            rej_sampler.sample_theta_x_multiple(key, n_samples, cache=True)
+        metadata = rej_sampler.get_cache(key=key, n_samples=n_samples)
+
+        means_reg, dists_reg = vmap(d_fn)(x_draws_reg)
+        assert_array_almost_equal(dists_reg, metadata.distances)
+        assert_array_almost_equal(means_reg, metadata.summary_stats)
+        self.assertEqual(len(metadata.rejection_count), n_samples)
+
+        # Check that cacheing fails if you call it with the wrong key or number of samples
+        new_key, _ = jax.random.split(key)
+        with self.assertRaises(ValueError) as msg:
+            metadata = rej_sampler.get_cache(key=new_key)
+
+        new_key, _ = jax.random.split(key)
+        with self.assertRaises(ValueError) as msg:
+            metadata = rej_sampler.get_cache(n_samples=n_samples + 1)
+
 
 
     ####################
