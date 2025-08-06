@@ -115,6 +115,153 @@ def create_log_ratio_function(
     return log_ratio_fn
 
 
+
+
+    # RG: Why is this done here, and not when you define the NN config?
+def _clean_nn_config(nn_config, n_samples_max, n_sim_max):
+    if n_sim_max is not None:
+        if hasattr(nn_config.training, "stopping_rules"):
+            # Check if stopping_rules is a dict or StoppingRulesConfig object
+            if isinstance(nn_config.training.stopping_rules, dict):
+                if (
+                    "simulation_stopping"
+                    not in nn_config.training.stopping_rules
+                ):
+                    nn_config.training.stopping_rules[
+                        "simulation_stopping"
+                    ] = {}
+
+                nn_config.training.stopping_rules["simulation_stopping"][
+                    "enabled"
+                ] = True
+                nn_config.training.stopping_rules["simulation_stopping"][
+                    "max_simulations"
+                ] = n_sim_max
+
+            elif hasattr(
+                nn_config.training.stopping_rules, "simulation_stopping"
+            ):
+                nn_config.training.stopping_rules.simulation_stopping.enabled = (
+                    True
+                )
+                nn_config.training.stopping_rules.simulation_stopping.max_simulations = (
+                    n_sim_max
+                )
+        else:
+            # Create stopping rules if they don't exist
+            nn_config.training.stopping_rules = {
+                "simulation_stopping": {
+                    "enabled": True,
+                    "max_simulations": n_sim_max,
+                }
+            }
+    if n_samples_max is not None:
+        if hasattr(nn_config.training, "stopping_rules"):
+            # Check if stopping_rules is a dict or StoppingRulesConfig object
+            if isinstance(nn_config.training.stopping_rules, dict):
+                if "sample_stopping" not in nn_config.training.stopping_rules:
+                    nn_config.training.stopping_rules["sample_stopping"] = {}
+
+                nn_config.training.stopping_rules["sample_stopping"][
+                    "enabled"
+                ] = True
+                nn_config.training.stopping_rules["sample_stopping"][
+                    "max_samples"
+                ] = n_samples_max
+
+            elif hasattr(nn_config.training.stopping_rules, "sample_stopping"):
+                nn_config.training.stopping_rules.sample_stopping.enabled = (
+                    True
+                )
+                nn_config.training.stopping_rules.sample_stopping.max_samples = (
+                    n_samples_max
+                )
+        else:
+            # Create stopping rules if they don't exist
+            nn_config.training.stopping_rules = {
+                "sample_stopping": {
+                    "enabled": True,
+                    "max_samples": n_samples_max,
+                }
+            }
+    return nn_config
+
+
+
+
+# RG: TODO, modify create_io_generator to work with the new data structure.
+def create_io_generator(sample_joint: Callable, network_type: str, use_summary: bool):
+    """Create IO generator based on network type and summary usage."""
+
+    def io_generator(key: random.PRNGKey, batch_size: int):
+        """Unified IO generator for all network types."""
+        training_result = self.simulator.generate_training_samples(
+            key, batch_size
+        )
+        if network_type == "ConditionedDeepSet":
+            # ConditionedDeepSet: dict input format
+            theta = training_result.phi
+            if use_summary:
+                theta = jnp.concatenate(
+                    [theta, training_result.summary_stats], axis=1
+                )
+
+            training_input = {"x": training_result.data, "theta": theta}
+        elif network_type == "DeepSet":
+            # DeepSet: concatenated input theta and data
+            n_obs = training_result.data.shape[1]
+            inputs = jnp.concatenate(
+                [
+                    training_result.data,
+                    jnp.repeat(
+                        training_result.phi.reshape(-1, 1, 1),
+                        repeats=n_obs,
+                        axis=1,
+                    ),
+                ],
+                axis=2,
+            )
+            if use_summary:
+                inputs = jnp.concatenate(
+                    [
+                        inputs,
+                        jnp.repeat(
+                            training_result.summary_stats.reshape(-1, 1, 1),
+                            repeats=n_obs,
+                            axis=1,
+                        ),
+                    ],
+                    axis=2,
+                )
+            training_input = inputs
+        elif network_type == "MLP":
+            # MLP: flattened concatenated input
+            inputs = jnp.concatenate(
+                [
+                    training_result.data.reshape(batch_size, -1),
+                    training_result.phi,
+                ],
+                axis=1,
+            )
+            if use_summary:
+                inputs = jnp.concatenate(
+                    [inputs, training_result.summary_stats], axis=1
+                )
+
+            training_input = inputs
+        else:
+            raise ValueError(f"Unknown network type: {network_type}")
+
+        return {
+            "input": training_input,
+            "output": training_result.labels,
+            "n_simulations": training_result.total_sim_count,
+        }
+
+    return io_generator
+
+
+
 class NeuralRatioEstimator:
     """
     Neural Ratio Estimator for ABC posterior inference.
@@ -146,9 +293,11 @@ class NeuralRatioEstimator:
         posterior_weights = jnp.exp(log_ratios)
     """
 
+    # RG: Just need to replace ABCSimulator with a sampling function
     def __init__(
         self,
-        simulator: ABCSimulator,
+        #simulator: ABCSimulator,
+        sample_joint: Callable,
         nn_config: Optional[Union[NNConfig, Dict[str, Any]]] = None,
         summary_as_input: bool = False,
     ):
@@ -157,17 +306,17 @@ class NeuralRatioEstimator:
         # Handle configuration input
         if nn_config is None:
             # Create default classifier configuration
-            self.nn_config = get_nn_config(network_name="MLP", task_type="classifier")
+            nn_config = get_nn_config(network_name="MLP", task_type="classifier")
         elif isinstance(nn_config, dict):
-            self.nn_config = NNConfig.from_dict(nn_config)
+            nn_config = NNConfig.from_dict(nn_config)
         else:
-            self.nn_config = nn_config
+            nn_config = nn_config
 
         # Ensure task_type is classifier
-        if self.nn_config.task_type != "classifier":
+        if nn_config.task_type != "classifier":
             raise ValueError("nn_config.task_type must be 'classifier'")
 
-        self.simulator = simulator
+        self.sample_joint = sample_joint
         self.is_trained = False
         self.summary_as_input = summary_as_input
 
@@ -216,157 +365,12 @@ class NeuralRatioEstimator:
             ClassifierResult containing trained network and training history
         """
 
-        if n_sim_max is not None:
-            if hasattr(self.nn_config.training, "stopping_rules"):
-                # Check if stopping_rules is a dict or StoppingRulesConfig object
-                if isinstance(self.nn_config.training.stopping_rules, dict):
-                    if (
-                        "simulation_stopping"
-                        not in self.nn_config.training.stopping_rules
-                    ):
-                        self.nn_config.training.stopping_rules[
-                            "simulation_stopping"
-                        ] = {}
-
-                    self.nn_config.training.stopping_rules["simulation_stopping"][
-                        "enabled"
-                    ] = True
-                    self.nn_config.training.stopping_rules["simulation_stopping"][
-                        "max_simulations"
-                    ] = n_sim_max
-
-                elif hasattr(
-                    self.nn_config.training.stopping_rules, "simulation_stopping"
-                ):
-                    self.nn_config.training.stopping_rules.simulation_stopping.enabled = (
-                        True
-                    )
-                    self.nn_config.training.stopping_rules.simulation_stopping.max_simulations = (
-                        n_sim_max
-                    )
-            else:
-                # Create stopping rules if they don't exist
-                self.nn_config.training.stopping_rules = {
-                    "simulation_stopping": {
-                        "enabled": True,
-                        "max_simulations": n_sim_max,
-                    }
-                }
-        if n_samples_max is not None:
-            if hasattr(self.nn_config.training, "stopping_rules"):
-                # Check if stopping_rules is a dict or StoppingRulesConfig object
-                if isinstance(self.nn_config.training.stopping_rules, dict):
-                    if "sample_stopping" not in self.nn_config.training.stopping_rules:
-                        self.nn_config.training.stopping_rules["sample_stopping"] = {}
-
-                    self.nn_config.training.stopping_rules["sample_stopping"][
-                        "enabled"
-                    ] = True
-                    self.nn_config.training.stopping_rules["sample_stopping"][
-                        "max_samples"
-                    ] = n_samples_max
-
-                elif hasattr(self.nn_config.training.stopping_rules, "sample_stopping"):
-                    self.nn_config.training.stopping_rules.sample_stopping.enabled = (
-                        True
-                    )
-                    self.nn_config.training.stopping_rules.sample_stopping.max_samples = (
-                        n_samples_max
-                    )
-            else:
-                # Create stopping rules if they don't exist
-                self.nn_config.training.stopping_rules = {
-                    "sample_stopping": {
-                        "enabled": True,
-                        "max_samples": n_samples_max,
-                    }
-                }
-
-        def create_io_generator(network_type: str, use_summary: bool):
-            """Create IO generator based on network type and summary usage."""
-
-            def io_generator(key: random.PRNGKey, batch_size: int):
-                """Unified IO generator for all network types."""
-                training_result = self.simulator.generate_training_samples(
-                    key, batch_size
-                )
-                if network_type == "ConditionedDeepSet":
-                    # ConditionedDeepSet: dict input format
-                    theta = training_result.phi
-                    if use_summary:
-                        theta = jnp.concatenate(
-                            [theta, training_result.summary_stats], axis=1
-                        )
-
-                    training_input = {"x": training_result.data, "theta": theta}
-                elif network_type == "DeepSet":
-                    # DeepSet: concatenated input theta and data
-                    n_obs = training_result.data.shape[1]
-                    inputs = jnp.concatenate(
-                        [
-                            training_result.data,
-                            jnp.repeat(
-                                training_result.phi.reshape(-1, 1, 1),
-                                repeats=n_obs,
-                                axis=1,
-                            ),
-                        ],
-                        axis=2,
-                    )
-                    if use_summary:
-                        inputs = jnp.concatenate(
-                            [
-                                inputs,
-                                jnp.repeat(
-                                    training_result.summary_stats.reshape(-1, 1, 1),
-                                    repeats=n_obs,
-                                    axis=1,
-                                ),
-                            ],
-                            axis=2,
-                        )
-                    training_input = inputs
-                elif network_type == "MLP":
-                    # MLP: flattened concatenated input
-                    inputs = jnp.concatenate(
-                        [
-                            training_result.data.reshape(batch_size, -1),
-                            training_result.phi,
-                        ],
-                        axis=1,
-                    )
-                    if use_summary:
-                        inputs = jnp.concatenate(
-                            [inputs, training_result.summary_stats], axis=1
-                        )
-
-                    training_input = inputs
-                else:
-                    raise ValueError(f"Unknown network type: {network_type}")
-
-                return {
-                    "input": training_input,
-                    "output": training_result.labels,
-                    "n_simulations": training_result.total_sim_count,
-                }
-
-            return io_generator
+        self.nn_config = _clean_nn_config(self.nn_config, n_samples_max=n_samples_max, n_sim_max=n_sim_max)
 
         network_type = self.nn_config.network.network_type
         io_generator = create_io_generator(network_type, self.summary_as_input)
 
-        # key, key_test = jax.random.split(key)
-        # io = io_generator(key_test, 10000)
-        # labels = io["output"]
-        # mean_x = io["input"][:,:-1].mean(axis = 1)
-        # phi = io["input"][:,-1]
-        # import matplotlib.pyplot as plt
-        # plt.scatter(mean_x, phi, c=labels, cmap='coolwarm', alpha=0.5)
-        # plt.xlabel("Mean of x")
-        # plt.ylabel("Parameter phi")
-        # plt.title(f"Scatter plot of mean x vs phi for {network_type} network")
-        # plt.colorbar(label="Labels")
-        # plt.show()
+
 
         logger.info(
             f"Using {network_type} {'with' if self.summary_as_input else 'without'} summary statistics"
