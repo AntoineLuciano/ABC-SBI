@@ -176,9 +176,21 @@ def get_io_generator(sample_theta_x_multiple: Callable):
     return io_generator
 
 
+"""
+Given an observed x and a summary function, get a discrepancy
+function suitable for use with RejectionSampler
+"""
+def get_discrepancy_fun(x_obs, summary_fn):
+    f_obs = summary_fn(x_obs)
+    def d_fn(x):
+        f_x = summary_fn(x)
+        return f_x, jnp.sum(jnp.abs(f_obs - f_x))
+    return d_fn
+
 
 __all__ = [
     "get_io_generator",
     "get_epsilon_quantile",
-    "create_summary_stats_fn"
+    "create_summary_stats_fn",
+    "get_discrepancy_fun"
 ]

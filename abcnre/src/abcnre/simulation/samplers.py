@@ -193,6 +193,7 @@ class RejectionSamplerMetadata(NamedTuple):
     rejection_count: jnp.ndarray
     key: random.PRNGKey
     n_samples: int
+    empty: bool
 
 class RejectionSampler(StatisticalModel):
     """
@@ -230,7 +231,8 @@ class RejectionSampler(StatisticalModel):
             summary_stats=jnp.array([]),
             rejection_count=jnp.array([]),
             key=None,
-            n_samples=None)
+            n_samples=None,
+            empty=True)
 
     def get_cache(self, key=None, n_samples=None):
         """
@@ -238,6 +240,9 @@ class RejectionSampler(StatisticalModel):
         Optionally pass in the key and n_samples with with sample_theta_x_multiple
         was called to ensure that you are getting the cache for the call you expect.
         """
+        if self._cache.empty:
+            raise ValueError('The cache is empty.  Did you set cache=True in the sampler?')
+
         if (key is not None) and (not jnp.array_equal(key, self._cache.key)):
             raise ValueError('Called get_cache with a non-matching key')
 
@@ -304,7 +309,8 @@ class RejectionSampler(StatisticalModel):
                 summary_stats=summary_stats,
                 rejection_count=rejection_count,
                 key=key,
-                n_samples=n_samples)
+                n_samples=n_samples,
+                empty=False)
 
         return theta_samples, data
 
