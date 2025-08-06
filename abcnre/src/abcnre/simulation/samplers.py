@@ -416,86 +416,89 @@ class RejectionSampler(StatisticalModel):
     #         phi=phi_samples,
     #     )
 
-    def generate_training_samples(
-        self, key: random.PRNGKey, n_samples: int
-    ) -> ABCTrainingResult:
-        """
-        Generates a training dataset for Neural Ratio Estimation.
 
-        Uses the sampler's built-in transform_fn (from the model) for theta to phi transformation.
 
-        Args:
-            key: A JAX random key for reproducibility.
-            n_samples: The total number of samples to generate for the training
-                set. This will be split equally between class 0 and class 1.
+def generate_nre_training_samples(
+        sample_theta_x_multiple: Callable,
+        key: random.PRNGKey, n_samples: int):
+    """
+    Generates a training dataset for Neural Ratio Estimation.
 
-        Returns:
-            An ABCTrainingResult named tuple with training features, labels, and metadata.
-        """
-        half_samples = n_samples // 2
+    Uses the sampler's built-in transform_fn (from the model) for theta to phi transformation.
 
-        # Generate base ABC samples from the approximate posterior
-        abc_result = self.sample(key, half_samples)
-        key = abc_result.key  # Use the updated key from the result
+    Args:
+        key: A JAX random key for reproducibility.
+        n_samples: The total number of samples to generate for the training
+            set. This will be split equally between class 0 and class 1.
 
-        key, perm_key = random.split(key)
-        data = abc_result.data
-        permutation_indices = random.permutation(perm_key, jnp.arange(half_samples))
+    Returns:
+        An ABCTrainingResult named tuple with training features, labels, and metadata.
+    """
 
-        phi = abc_result.phi
-        theta = abc_result.theta
-        phi_permuted = (
-            abc_result.phi[permutation_indices] if abc_result.phi is not None else None
-        )
-        theta_permuted = abc_result.theta[permutation_indices]
+    # RG: TODO: change this so it's not a method of the rejection sampler
+    half_samples = n_samples // 2
 
-        summary_stats = (
-            abc_result.summary_stats if abc_result.summary_stats is not None else None
-        )
+    # Generate base ABC samples from the approximate posterior
+    abc_result = self.sample(key, half_samples)
+    key = abc_result.key  # Use the updated key from the result
 
-        distances = abc_result.distances
+    key, perm_key = random.split(key)
+    data = abc_result.data
+    permutation_indices = random.permutation(perm_key, jnp.arange(half_samples))
 
-        training_data = jnp.concatenate([data, data], axis=0)
-        training_summary_stats = (
-            jnp.concatenate([summary_stats, summary_stats], axis=0)
-            if summary_stats is not None
-            else None
-        )
+    phi = abc_result.phi
+    theta = abc_result.theta
+    phi_permuted = (
+        abc_result.phi[permutation_indices] if abc_result.phi is not None else None
+    )
+    theta_permuted = abc_result.theta[permutation_indices]
 
-        training_phi = (
-            jnp.concatenate([phi_permuted, phi], axis=0)
-            if phi_permuted is not None
-            else None
-        )
-        training_theta = jnp.concatenate([theta_permuted, theta], axis=0)
-        training_distances = jnp.concatenate([distances, distances], axis=0)
+    summary_stats = (
+        abc_result.summary_stats if abc_result.summary_stats is not None else None
+    )
 
-        training_labels = jnp.concatenate(
-            [jnp.zeros(half_samples, dtype=int), jnp.ones(half_samples, dtype=int)]
-        )
+    distances = abc_result.distances
 
-        return ABCTrainingResult(
-            labels=training_labels,
-            data=training_data,
-            distances=training_distances,
-            summary_stats=training_summary_stats,
-            key=key,
-            theta=training_theta,
-            phi=training_phi,
-            total_sim_count=int(abc_result.simulation_count.sum()),
-        )
+    training_data = jnp.concatenate([data, data], axis=0)
+    training_summary_stats = (
+        jnp.concatenate([summary_stats, summary_stats], axis=0)
+        if summary_stats is not None
+        else None
+    )
 
-    # def update_epsilon(self, new_epsilon: float):
-    #     """Update epsilon value."""
-    #     self.epsilon = new_epsilon
+    training_phi = (
+        jnp.concatenate([phi_permuted, phi], axis=0)
+        if phi_permuted is not None
+        else None
+    )
+    training_theta = jnp.concatenate([theta_permuted, theta], axis=0)
+    training_distances = jnp.concatenate([distances, distances], axis=0)
 
-    # def update_observed_data(self, new_observed_data: jnp.ndarray):
-    #     """Update observed data and recompute summary statistics if needed."""
-    #     self.observed_data = new_observed_data
+    training_labels = jnp.concatenate(
+        [jnp.zeros(half_samples, dtype=int), jnp.ones(half_samples, dtype=int)]
+    )
 
-    #     if self.summary_stat_fn is not None:
-    #         self.observed_summary_stats = self.summary_stat_fn(new_observed_data)
+    return ABCTrainingResult(
+        labels=training_labels,
+        data=training_data,
+        distances=training_distances,
+        summary_stats=training_summary_stats,
+        key=key,
+        theta=training_theta,
+        phi=training_phi,
+        total_sim_count=int(abc_result.simulation_count.sum()),
+    )
 
+# def update_epsilon(self, new_epsilon: float):
+#     """Update epsilon value."""
+#     self.epsilon = new_epsilon
+
+# def update_observed_data(self, new_observed_data: jnp.ndarray):
+#     """Update observed data and recompute summary statistics if needed."""
+#     self.observed_data = new_observed_data
+
+#     if self.summary_stat_fn is not None:
+#         self.observed_summary_stats = self.summary_stat_fn(new_observed_data)
 
 
 # Export all functions

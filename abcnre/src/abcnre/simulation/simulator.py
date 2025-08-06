@@ -69,6 +69,8 @@ def create_summary_stats_fn(
 # What is the difference between a simulator and a sampler?
 
 
+# RG: I am pretty sure this class is unnecessary, or at least
+# overly complicated.
 class ABCSimulator:
     """
     Main class for ABC simulation and data generation.
@@ -328,93 +330,93 @@ class ABCSimulator:
         if self.sampler is not None:
             self.sampler.update_epsilon(epsilon)
 
-    def compute_epsilon_from_quantile(
-        self,
-        quantile_distance: float,
-        n_samples: int = 10000,
-        key: Optional[random.PRNGKey] = None,
-    ) -> float:
-        """
-        Compute epsilon value for a given quantile of the distance distribution.
+    # def compute_epsilon_from_quantile(
+    #     self,
+    #     quantile_distance: float,
+    #     n_samples: int = 10000,
+    #     key: Optional[random.PRNGKey] = None,
+    # ) -> float:
+    #     """
+    #     Compute epsilon value for a given quantile of the distance distribution.
 
-        Args:
-            quantile_distance: Quantile level (0 < quantile_distance <= 1)
-            n_samples: Number of samples for quantile estimation
-            key: JAX random key (if None, uses a fixed seed)
+    #     Args:
+    #         quantile_distance: Quantile level (0 < quantile_distance <= 1)
+    #         n_samples: Number of samples for quantile estimation
+    #         key: JAX random key (if None, uses a fixed seed)
 
-        Returns:
-            Computed epsilon value
+    #     Returns:
+    #         Computed epsilon value
 
-        Example:
-            # Compute epsilon for 95% quantile
-            new_epsilon = simulator.compute_epsilon_from_quantile(0.95)
-            simulator.update_epsilon(new_epsilon)
-        """
-        # RG: This is mostly wrapping a sampler method
+    #     Example:
+    #         # Compute epsilon for 95% quantile
+    #         new_epsilon = simulator.compute_epsilon_from_quantile(0.95)
+    #         simulator.update_epsilon(new_epsilon)
+    #     """
+    #     # RG: This is mostly wrapping a sampler method
 
-        if not (0 < quantile_distance <= 1):
-            raise ValueError("quantile_distance must be between 0 and 1")
+    #     if not (0 < quantile_distance <= 1):
+    #         raise ValueError("quantile_distance must be between 0 and 1")
 
-        if key is None:
-            key = random.PRNGKey(0)  # Fixed seed for reproducibility
+    #     if key is None:
+    #         key = random.PRNGKey(0)  # Fixed seed for reproducibility
 
-        if quantile_distance == 1.0:
-            return float("inf")
+    #     if quantile_distance == 1.0:
+    #         return float("inf")
 
-        computed_epsilon, _, _ = self.get_epsilon_quantile(
-            key, quantile_distance, n_samples
-        )
+    #     computed_epsilon, _, _ = self.get_epsilon_quantile(
+    #         key, quantile_distance, n_samples
+    #     )
 
-        if self.config.get("verbose", False):
-            print(
-                f"📊 Computed epsilon = {computed_epsilon:.6f} for {quantile_distance:.1%} quantile"
-            )
+    #     if self.config.get("verbose", False):
+    #         print(
+    #             f"📊 Computed epsilon = {computed_epsilon:.6f} for {quantile_distance:.1%} quantile"
+    #         )
 
-        return float(computed_epsilon)
+    #     return float(computed_epsilon)
 
-    def set_epsilon_from_quantile(
-        self,
-        quantile_distance: float,
-        n_samples: int = 10000,
-        key: Optional[random.PRNGKey] = None,
-    ):
-        """
-        Set epsilon based on a quantile of the distance distribution.
+    # def set_epsilon_from_quantile(
+    #     self,
+    #     quantile_distance: float,
+    #     n_samples: int = 10000,
+    #     key: Optional[random.PRNGKey] = None,
+    # ):
+    #     """
+    #     Set epsilon based on a quantile of the distance distribution.
 
-        Combines compute_epsilon_from_quantile() and update_epsilon() for convenience.
+    #     Combines compute_epsilon_from_quantile() and update_epsilon() for convenience.
 
-        Args:
-            quantile_distance: Quantile level (0 < quantile_distance <= 1)
-            n_samples: Number of samples for quantile estimation
-            key: JAX random key (if None, uses a fixed seed)
+    #     Args:
+    #         quantile_distance: Quantile level (0 < quantile_distance <= 1)
+    #         n_samples: Number of samples for quantile estimation
+    #         key: JAX random key (if None, uses a fixed seed)
 
-        Example:
-            # Set epsilon to 90% quantile
-            simulator.set_epsilon_from_quantile(0.90)
-        """
+    #     Example:
+    #         # Set epsilon to 90% quantile
+    #         simulator.set_epsilon_from_quantile(0.90)
+    #     """
 
-        # RG: This is mostly wrapping a sampler method
-        computed_epsilon = self.compute_epsilon_from_quantile(
-            quantile_distance, n_samples, key
-        )
-        self.quantile_distance = quantile_distance  # Update for consistency
-        self.update_epsilon(computed_epsilon)
+    #     # RG: This is mostly wrapping a sampler method
+    #     computed_epsilon = self.compute_epsilon_from_quantile(
+    #         quantile_distance, n_samples, key
+    #     )
+    #     self.quantile_distance = quantile_distance  # Update for consistency
+    #     self.update_epsilon(computed_epsilon)
 
-    def generate_samples(self, key: random.PRNGKey, n_samples: int) -> ABCSampleResult:
-        """
-        Generates multiple ABC samples using vectorized sampling.
+    # def generate_samples(self, key: random.PRNGKey, n_samples: int) -> ABCSampleResult:
+    #     """
+    #     Generates multiple ABC samples using vectorized sampling.
 
-        Args:
-            key: A JAX random key.
-            n_samples: The number of samples to generate.
+    #     Args:
+    #         key: A JAX random key.
+    #         n_samples: The number of samples to generate.
 
-        Returns:
-            An ABCSampleResult named tuple with all sampling results.
-        """
-        # RG: This is mostly wrapping a sampler method
-        if self.sampler is None:
-            self._initialize_sampler()
-        return self.sampler.sample(key, n_samples)
+    #     Returns:
+    #         An ABCSampleResult named tuple with all sampling results.
+    #     """
+    #     # RG: This is mostly wrapping a sampler method
+    #     if self.sampler is None:
+    #         self._initialize_sampler()
+    #     return self.sampler.sample(key, n_samples)
 
     def generate_training_samples(
         self, key: random.PRNGKey, n_samples: int
@@ -479,54 +481,54 @@ class ABCSimulator:
         """
         # RG: This should be a standalone function taking a NN and sampler as input.
 
-        # Validation
-        if self.model is None:
-            raise ValueError("Model must be set before learning summary statistics.")
+        # # Validation
+        # if self.model is None:
+        #     raise ValueError("Model must be set before learning summary statistics.")
 
-        if self.sampler is None:
-            self._initialize_sampler()
+        # if self.sampler is None:
+        #     self._initialize_sampler()
 
-        # Create or validate configuration
-        # RG: Require the user to intialize the nn outside this function
-        if nn_config is None:
-            # Create default configuration based on model properties
-            learner_type = "DeepSet" if self.model.sample_is_iid else "MLP"
-            # Create default NNConfig for summary learning
-            nn_config = get_nn_config(network_name=learner_type, task_type="regressor")
+        # # Create or validate configuration
+        # # RG: Require the user to intialize the nn outside this function
+        # if nn_config is None:
+        #     # Create default configuration based on model properties
+        #     learner_type = "DeepSet" if self.model.sample_is_iid else "MLP"
+        #     # Create default NNConfig for summary learning
+        #     nn_config = get_nn_config(network_name=learner_type, task_type="regressor")
 
-        elif isinstance(nn_config, dict):
-            # Convert dictionary to NNConfig
-            nn_config = NNConfig.from_dict(nn_config)
+        # elif isinstance(nn_config, dict):
+        #     # Convert dictionary to NNConfig
+        #     nn_config = NNConfig.from_dict(nn_config)
 
-        # Ensure task_type is correct
-        if nn_config.task_type != "regressor":
-            raise ValueError("nn_config.task_type must be 'regressor'")
+        # # Ensure task_type is correct
+        # if nn_config.task_type != "regressor":
+        #     raise ValueError("nn_config.task_type must be 'regressor'")
 
-        # Configure sample stopping rule based on n_samples_max
-        if hasattr(nn_config.training, "stopping_rules"):
-            # Check if stopping_rules is a dict or StoppingRulesConfig object
-            # RG: Why is it possible for it to be both StoppingRulesConfig or Dict?
-            if isinstance(nn_config.training.stopping_rules, dict):
-                # Working with dictionary format - need to modify it
-                if "sample_stopping" not in nn_config.training.stopping_rules:
-                    nn_config.training.stopping_rules["sample_stopping"] = {}
+        # # Configure sample stopping rule based on n_samples_max
+        # if hasattr(nn_config.training, "stopping_rules"):
+        #     # Check if stopping_rules is a dict or StoppingRulesConfig object
+        #     # RG: Why is it possible for it to be both StoppingRulesConfig or Dict?
+        #     if isinstance(nn_config.training.stopping_rules, dict):
+        #         # Working with dictionary format - need to modify it
+        #         if "sample_stopping" not in nn_config.training.stopping_rules:
+        #             nn_config.training.stopping_rules["sample_stopping"] = {}
 
-                nn_config.training.stopping_rules["sample_stopping"]["enabled"] = True
-                nn_config.training.stopping_rules["sample_stopping"][
-                    "max_samples"
-                ] = n_samples_max
+        #         nn_config.training.stopping_rules["sample_stopping"]["enabled"] = True
+        #         nn_config.training.stopping_rules["sample_stopping"][
+        #             "max_samples"
+        #         ] = n_samples_max
 
-            elif hasattr(nn_config.training.stopping_rules, "sample_stopping"):
-                # Working with StoppingRulesConfig object
-                nn_config.training.stopping_rules.sample_stopping.enabled = True
-                nn_config.training.stopping_rules.sample_stopping.max_samples = (
-                    n_samples_max
-                )
-        else:
-            # Create stopping rules if they don't exist
-            nn_config.training.stopping_rules = {
-                "sample_stopping": {"enabled": True, "max_samples": n_samples_max}
-            }
+        #     elif hasattr(nn_config.training.stopping_rules, "sample_stopping"):
+        #         # Working with StoppingRulesConfig object
+        #         nn_config.training.stopping_rules.sample_stopping.enabled = True
+        #         nn_config.training.stopping_rules.sample_stopping.max_samples = (
+        #             n_samples_max
+        #         )
+        # else:
+        #     # Create stopping rules if they don't exist
+        #     nn_config.training.stopping_rules = {
+        #         "sample_stopping": {"enabled": True, "max_samples": n_samples_max}
+        #     }
 
         # Create data generator that matches the expected interface
         def io_generator(key: random.PRNGKey, batch_size: int):
