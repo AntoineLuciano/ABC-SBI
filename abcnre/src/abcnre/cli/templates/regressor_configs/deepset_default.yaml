@@ -9,8 +9,12 @@ experiment_name: "summary_learner_deepset"
 
 # Training overrides
 overrides:
-  num_epochs: 100
-  batch_size: 256
-  learning_rate: 0.0003
-  optimizer: "adam"
-  weight_decay: 0.0
+  training:
+      num_epochs: 200
+      batch_size: 1024
+      learning_rate: 0.001
+      weight_decay: 0.001
+      optimizer: "adamw"
+  network:
+    network_args: 
+      activation: "elu"

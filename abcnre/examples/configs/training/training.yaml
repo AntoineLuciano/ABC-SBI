@@ -2,8 +2,8 @@
 
 # Base configuration shared by all variants
 base:
-  optimizer: "adam"
-  weight_decay: 0.0
+  optimizer: "adamw"
+  weight_decay: 0.001
   validation_split: 0.2
   early_stopping_patience: 10
   store_thetas: true
@@ -25,7 +25,7 @@ variants:
     
   # Default balanced training
   default:
-    learning_rate: 0.0003
+    learning_rate: 0.0005
     num_epochs: 100
     batch_size: 256
     n_samples_per_epoch: 10240
@@ -44,7 +44,7 @@ variants:
     
   # Heavy training with plateau scheduler
   heavy:
-    learning_rate: 0.001
+    learning_rate: 0.0005
     num_epochs: 500
     batch_size: 512
     n_samples_per_epoch: 51200

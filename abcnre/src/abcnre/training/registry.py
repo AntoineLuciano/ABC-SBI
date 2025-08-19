@@ -40,17 +40,19 @@ def register_networks():
 def normalize_name(name: str) -> str:
     """
     Normalize name to lowercase without underscores/hyphens for comparison.
-    
+
     Args:
         name: Raw name string
-        
+
     Returns:
         Normalized string (lowercase, no separators)
     """
     return name.lower().replace("_", "").replace("-", "")
 
 
-def create_network_from_config(network_config: NetworkConfig, task_type: str) -> Any:
+def create_network_from_config(
+    network_config: NetworkConfig, task_type: str, output_dim: Optional[int] = 1
+) -> Any:
     """
     Create a network instance from NetworkConfig with flexible network type matching.
 
@@ -64,21 +66,21 @@ def create_network_from_config(network_config: NetworkConfig, task_type: str) ->
     Raises:
         ValueError: If network_type is unknown or required args are missing
     """
-    
+
     register_networks()
     registry = NETWORK_REGISTRY
     input_type = network_config.network_type
-    
+
     # Normalize input type
     normalized_input = normalize_name(input_type)
-    
+
     # Find matching registry key by normalizing all registry keys
     matched_key = None
     for registry_key in registry.keys():
         if normalize_name(registry_key) == normalized_input:
             matched_key = registry_key
             break
-    
+
     if matched_key is None:
         available = list(registry.keys())
         raise ValueError(
@@ -88,20 +90,24 @@ def create_network_from_config(network_config: NetworkConfig, task_type: str) ->
 
     network_class = registry[matched_key]
 
-    # Get network arguments and ensure output_dim is set
+    # Get network arguments - output_dim should already be set by get_nn_config
     network_args = network_config.network_args.copy()
 
-    # Always ensure output_dim=1 for all networks (classifier and summary_learner)
+    # Validate that output_dim is set
     if "output_dim" not in network_args:
+        logger.warning(
+            f"output_dim not found in network_args for {matched_key}, defaulting to 1"
+        )
         network_args["output_dim"] = 1
-        logger.info(f"Set output_dim=1 for {matched_key} network")
 
     try:
         # Create network instance
         network = network_class(**network_args)
 
         if logger.isEnabledFor(logging.INFO):
-            logger.info(f"Created {matched_key} network (from '{input_type}') for {task_type}")
+            logger.info(
+                f"Created {matched_key} network (from '{input_type}') for {task_type}"
+            )
             logger.info(f"Network args: {network_args}")
 
         return network
@@ -119,6 +125,7 @@ def create_network_from_config(network_config: NetworkConfig, task_type: str) ->
             f"Expected parameters: {params}. "
             f"Provided: {list(network_args.keys())}"
         ) from e
+
 
 def create_network_from_nn_config(nn_config: NNConfig) -> Any:
     """

@@ -1,0 +1,8 @@
+
+model_type: GAndKModel
+model_class: GAndKModel
+
+model_args:
+  prior_bounds: [0.0, 5.0]  # Uniform prior bounds on [0, 10]^4
+  n_obs: 100
+  marginal_of_interest: -1

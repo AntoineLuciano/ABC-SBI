@@ -100,7 +100,6 @@ def save_model_to_yaml(model: StatisticalModel, yaml_path: Union[str, Path]) -> 
         yaml_path: Output YAML file path
     """
     yaml_path = Path(yaml_path)
-
     # Get model configuration
     config = model.get_model_args()
 

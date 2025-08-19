@@ -1,5 +1,5 @@
-epsilon: 5292.90576171875
-quantile_distance: 0.1
+epsilon: 1238.689697265625
+quantile_distance: 0.01
 simulator_config:
   quantile_n_samples: 10000
   verbose: true
@@ -10,7 +10,7 @@ paths:
   summary_network_config: null
   summary_network_weights: null
 metadata:
-  created_date: '2025-08-05T22:43:46.729978'
+  created_date: '2025-08-05T22:49:29.733902'
   abcnre_version: 0.1.0
   simulator_type: ABCSimulator
 observed_data_shape:

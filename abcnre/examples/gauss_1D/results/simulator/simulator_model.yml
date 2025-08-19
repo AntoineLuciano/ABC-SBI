@@ -1,12 +1,11 @@
 metadata:
-  analytical_posterior: true
-  module: abcnre.simulation.models.gauss_gauss_1D
-  parameter_space_dim: 1
-  saved_at: '2025-08-01T14:12:04.413273'
+  saved_at: '2025-08-15T22:58:21.233231'
 model_args:
+  dim: 1
+  marginal_of_interest: 0
   mu0: 0.0
   n_obs: 10
   sigma: 1.0
-  sigma0: 5.0
-model_class: GaussGaussModel
-model_type: GaussGaussModel
+  sigma0: 10.0
+model_class: GaussGaussMultiDimModel
+model_type: GaussGaussMultiDimModel

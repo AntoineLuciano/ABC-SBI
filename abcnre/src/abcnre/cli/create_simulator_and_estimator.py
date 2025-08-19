@@ -12,6 +12,7 @@ import logging
 # Import modular functions from other CLI commands
 from .create_simulator import create_simulator_command
 from .create_estimator import create_estimator_command
+from .utils import add_boolean_flag, get_default_filename
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -49,16 +50,24 @@ def create_simulator_and_estimator_command(args):
     simulator_args.model_name = getattr(args, "model_name", "gauss_gauss")
 
     # Summary statistics configuration
-    simulator_args.learn_stats = getattr(args, "with_summary_stats", False)
-    simulator_args.regressor_config = getattr(args, "regressor_config", None)
+    simulator_args.learn_summary_stats = getattr(args, "learn_summary_stats", False)
+    simulator_args.regressor_config_template = getattr(
+        args, "regressor_config_template", None
+    )
+    simulator_args.regressor_config_path = getattr(args, "regressor_config_path", None)
 
     # Observed data configuration
-    simulator_args.observed_data = None  # Always generate new data
-    simulator_args.true_theta = getattr(args, "true_theta", [0.0, 1.0])
+    simulator_args.observed_data_path = args.observed_data_path
+    simulator_args.true_theta = args.true_theta
+
+    # Model configuration override
+    simulator_args.marginal_of_interest = getattr(args, "marginal_of_interest", None)
 
     # Epsilon configuration
     simulator_args.epsilon = getattr(args, "epsilon", None)
     simulator_args.quantile_distance = getattr(args, "quantile_distance", 0.1)
+
+    simulator_args.save = True
 
     # Call create_simulator_command
     try:
@@ -74,18 +83,14 @@ def create_simulator_and_estimator_command(args):
     # Prepare arguments for create_estimator_command
     estimator_args = argparse.Namespace()
     estimator_args.output_dir = str(output_dir)
-    estimator_args.simulator = str(output_dir / "simulator.yaml")
-
-    # Classifier configuration - map from old argument names to new ones
-    if hasattr(args, "network_config") and args.network_config:
-        estimator_args.classifier_config = args.network_config
-    else:
-        # Use default classifier config based on network name
-        from pathlib import Path
-
-        templates_dir = Path(__file__).parent / "templates" / "classifier_configs"
-        network_name = getattr(args, "network_name", "mlp_default")
-        estimator_args.classifier_config = str(templates_dir / f"{network_name}.yaml")
+    estimator_args.simulator = str(output_dir / get_default_filename("simulator"))
+    estimator_args.seed = args.seed
+    estimator_args.classifier_config_path = getattr(
+        args, "classifier_config_path", None
+    )
+    estimator_args.classifier_config_template_name = getattr(
+        args, "classifier_config_template_name", None
+    )
 
     # Optional epsilon overrides
     estimator_args.epsilon = None  # Use simulator's epsilon
@@ -99,6 +104,15 @@ def create_simulator_and_estimator_command(args):
         logger.error(f"Failed to create estimator: {e}")
         raise
 
+    # Delete simulator output files if requested
+    if getattr(args, "delete_simulator_outputs", False):
+        for file in output_dir.iterdir():
+            if file.name.startswith("simulator"):
+                try:
+                    file.unlink()
+                    logger.info(f"Deleted simulator output file: {file}")
+                except Exception as e:
+                    logger.error(f"Failed to delete {file}: {e}")
     # === Step 3: Generate Combined Report ===
     logger.info("--- Step 3: Generating Combined Report ---")
 
@@ -139,25 +153,25 @@ def setup_create_simulator_and_estimator_parser(subparsers):
         "create_simulator_and_estimator",
         help="Create and train both simulator and estimator in one step",
         description="""
-        Create an ABC simulator and neural ratio estimator in a single command.
+        Create an ABC simulator and Neural Ratio estimator in a single command.
         This combines the create_simulator and create_estimator workflows for convenience.
         
         Examples:
           # Basic usage with model name
-          abcnre create_simulator_and_estimator --model-name gauss_gauss ./output
+          abcnre create_simulator_and_estimator --model_name gauss_gauss_1D ./output
           
           # With custom model and epsilon
-          abcnre create_simulator_and_estimator --model-path model.yaml \\
+          abcnre create_simulator_and_estimator --model_path model.yaml \\
               --epsilon 0.1 ./output
           
           # With summary statistics learning
-          abcnre create_simulator_and_estimator --model-name gauss_gauss_100d \\
-              --with-summary-stats --regressor-config templates/regressor_configs/deepset_fast.yaml \\
+          abcnre create_simulator_and_estimator --model_name gauss_gauss_100d \\
+              --learn_summary_stats --regressor_config_template_name templates/regressor_configs/deepset_fast.yaml \\
               ./output
           
           # With custom network
-          abcnre create_simulator_and_estimator --model-name gauss_gauss \\
-              --network-name mlp_fast ./output
+          abcnre create_simulator_and_estimator --model_name gauss_gauss \\
+              --classifier_config_path ./mlp_custom ./output
         """,
         formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(
             prog, max_help_position=40
@@ -165,29 +179,47 @@ def setup_create_simulator_and_estimator_parser(subparsers):
     )
 
     # === Required Arguments ===
-    parser.add_argument("output_dir", help="Output directory for generated files")
+    parser.add_argument(
+        "--output_dir", default=None, help="Output directory for generated files"
+    )
 
     # === Model Configuration ===
     model_group = parser.add_argument_group("Model Configuration")
     model_group.add_argument(
-        "--model-name",
+        "--model_name",
         default="gauss_gauss",
         help="Name of the example model configuration (default: gauss_gauss)",
     )
     model_group.add_argument(
-        "--model-path",
-        help="Path to custom model configuration YAML file (overrides model_name)",
+        "--model_path",
+        help="Path to custom model configuration YAML file (overrides model_name, default: None)",
+        default=None,
     )
 
-    # === Simulator Configuration ===
     sim_group = parser.add_argument_group("Simulator Configuration")
+
+    sim_group.add_argument(
+        "--observed_data_path",
+        type=str,
+        default=None,
+        help="Path to observed data file (default: None)",
+    )
+
+    sim_group.add_argument(
+        "--true_theta",
+        type=float,
+        nargs="+",
+        default=None,
+        help="True parameter values (default: None)",
+    )
+
     sim_group.add_argument(
         "--epsilon",
         type=float,
         help="ABC tolerance threshold (required if --quantile-distance not provided)",
     )
     sim_group.add_argument(
-        "--quantile-distance",
+        "--quantile_distance",
         type=float,
         default=0.1,
         help="Quantile for automatic epsilon calculation (default: 0.1)",
@@ -196,24 +228,35 @@ def setup_create_simulator_and_estimator_parser(subparsers):
     # === Summary Statistics ===
     stats_group = parser.add_argument_group("Summary Statistics")
     stats_group.add_argument(
-        "--with-summary-stats",
+        "--learn_summary_stats",
         action="store_true",
         help="Enable summary statistics learning",
     )
     stats_group.add_argument(
-        "--regressor-config",
+        "--regressor_config_path",
+        default=None,
         help="Path to regressor configuration YAML file for summary stats",
     )
 
-    # === Network Configuration ===
-    network_group = parser.add_argument_group("Network Configuration")
-    network_group.add_argument(
-        "--network-name",
+    stats_group.add_argument(
+        "--regressor_config_template_name",
         default="mlp_default",
-        help="Name of the neural network configuration (default: mlp_default)",
+        help="Path to regressor configuration template YAML file for summary stats",
     )
-    network_group.add_argument(
-        "--network-config", help="Path to custom classifier configuration YAML file"
+
+    estimator_group = parser.add_argument_group("Estimator Configuration")
+    estimator_group.add_argument(
+        "--classifier_config_template_name",
+        type=str,
+        default="mlp_default",
+        help="Path to classifier template file (default: mlp_default)",
+    )
+
+    estimator_group.add_argument(
+        "--classifier_config_path",
+        type=str,
+        default=None,
+        help="Path to classifier configuration file (default: mlp_default)",
     )
 
     # === General Options ===
@@ -222,6 +265,22 @@ def setup_create_simulator_and_estimator_parser(subparsers):
         type=int,
         default=42,
         help="Random seed for reproducibility (default: 42)",
+    )
+
+    parser.add_argument(
+        "--marginal_of_interest",
+        type=int,
+        default=None,
+        help="Index of marginal parameter for inference (-1 for all parameters, 0+ for specific parameter index). "
+        "For G&K: 0=A, 1=B, 2=g, 3=k, -1=all. For GaussGauss: 0=mu_1, 1=mu_2, etc., -1=all.",
+    )
+
+    # Add standardized boolean flags
+    add_boolean_flag(
+        parser,
+        "delete_simulator_outputs",
+        default=False,
+        help_text="Delete the simulator outputs after use",
     )
 
     # === Validation ===
@@ -238,7 +297,7 @@ def setup_create_simulator_and_estimator_parser(subparsers):
 
         if args.quantile_distance is not None:
             if not (0 < args.quantile_distance < 1):
-                parser.error("--quantile-distance must be between 0 and 1")
+                parser.error("--quantile_>distance must be between 0 and 1")
 
     parser.set_defaults(
         func=create_simulator_and_estimator_command, validate=validate_args

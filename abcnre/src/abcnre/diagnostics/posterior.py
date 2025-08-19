@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import numpy as np
 from scipy.integrate import trapz
 from typing import Callable, Tuple, Optional
-from scipy.stats import gaussian_kde
+from jax.scipy.stats import gaussian_kde
 from scipy.integrate import cumulative_trapezoid
 import logging
 import jax
@@ -117,13 +117,11 @@ def get_unnormalized_nre_pdf(
 
         if s_x_batch.ndim == 1:
             s_x_batch = s_x_batch[:, jnp.newaxis]
-
-        if estimator.summary_as_input:
-            log_ratios = estimator.log_ratio_fn(
-                phi=phi_values, x=x_batch, s_x=s_x_batch
+            
+        log_ratios = estimator.log_ratio_fn(
+                phi=phi_values, x=x_batch, s_x=s_x_batch if estimator.summary_as_input else None
             )
-        else:
-            log_ratios = estimator.log_ratio_fn(phi=phi_values, x=x_batch)
+      
         # Note: This assumes model.prior_logpdf exists. Add it to your models.
         prior_log_pdf = model.prior_phi_logpdf(phi_values)
 
@@ -133,6 +131,137 @@ def get_unnormalized_nre_pdf(
         return jnp.exp(unnormalized_log_pdf)
 
     return unnormalized_pdf
+
+
+def get_unnormalized_nre_logpdf(
+    estimator: "NeuralRatioEstimator", x: Optional[jnp.ndarray] = None
+) -> Callable[[jnp.ndarray], jnp.ndarray]:
+    """
+    Creates a function for the unnormalized NRE posterior log-PDF.
+
+    The returned function computes: log p(phi|x_obs) = log_r(phi, x_obs) + log p(phi)
+
+    Args:
+        estimator: The trained NeuralRatioEstimator.
+        x: Optional observed data. If None, uses simulator.observed_data.
+
+    Returns:
+        A callable function that evaluates the unnormalized log-posterior at given phi values.
+    """
+    simulator = estimator.simulator
+    model = simulator.model
+
+    if x is None:
+        x = simulator.observed_data
+        s_x = simulator.observed_summary_stats
+    else:
+        s_x = simulator.summary_stat_fn(x)
+
+    def unnormalized_logpdf(phi_values: jnp.ndarray) -> jnp.ndarray:
+        if phi_values.ndim == 1:
+            phi_values = phi_values[None, :]  # Add batch dimension
+            
+        n_batch = phi_values.shape[0]
+        x_batch = jnp.repeat(x[None, :], n_batch, axis=0)
+        
+        s_x_batch = jnp.repeat(s_x.reshape(1,-1), n_batch, axis=0)
+        
+        log_ratios = estimator.log_ratio_fn(
+            phi=phi_values, x=x_batch, s_x=s_x_batch if estimator.summary_as_input else None
+            )
+
+        # Prior log probability
+        prior_log_pdf = model.prior_phi_logpdf(phi_values)
+        # Unnormalized log-posterior: log p(phi|x) = log_r + log p(phi)
+        unnormalized_log_pdf = log_ratios + prior_log_pdf
+
+        # Return scalar for 1D input, array for batch input
+                # if squeeze_output:
+                #     return unnormalized_log_pdf[0]  # Extract scalar directly
+                # else:
+                #     return unnormalized_log_pdf
+        return unnormalized_log_pdf
+    return unnormalized_logpdf
+
+
+def get_unnormalized_corrected_nre_logpdf(
+    estimator: "NeuralRatioEstimator",
+    x: Optional[jnp.ndarray] = None,
+    s_x: Optional[jnp.ndarray] = None,
+    phi_samples: Optional[jnp.ndarray] = None,
+    kde_approximation: Optional[Callable] = None,
+    num_samples_for_kde: Optional[int] = 1000,
+) -> Callable[[jnp.ndarray], jnp.ndarray]:
+    """
+    Creates a function for the unnormalized corrected NRE posterior log-PDF.
+
+    The returned function computes: log p(phi|x_obs) = log_r(phi, x_obs) + log(kde(phi))
+
+    Args:
+        estimator: The trained NeuralRatioEstimator.
+        x: Optional observed data. If None, uses simulator.observed_data.
+        s_x: Optional summary statistics. If None, computed from x.
+        phi_samples: Optional parameter samples for KDE. If None, uses estimator.stored_phis.
+        kde_approximation: Optional pre-computed KDE function.
+        num_samples_for_kde: Number of samples to generate if no phi_samples provided.
+
+    Returns:
+        A callable function that evaluates the unnormalized corrected log-posterior.
+    """
+    simulator = estimator.simulator
+
+    # Setup KDE approximation
+    if kde_approximation is not None:
+        kde_func = kde_approximation
+    elif phi_samples is not None:
+        kde_func = gaussian_kde(phi_samples)
+    elif estimator.stored_phis is not None:
+        kde_func = gaussian_kde(estimator.stored_phis)
+    else:
+        phi_samples = simulator.get_phi_samples(num_samples_for_kde)
+        kde_func = gaussian_kde(phi_samples)
+
+    if x is None:
+        x = simulator.observed_data
+        s_x = simulator.observed_summary_stats
+    else:
+        s_x = simulator.summary_stat_fn(x)
+
+    def unnormalized_logpdf(phi_values: jnp.ndarray) -> jnp.ndarray:
+        if phi_values.ndim == 1:
+            phi_values = phi_values[None, :]  # Add batch dimension
+            
+        n_batch = phi_values.shape[0]
+        x_batch = jnp.repeat(x[None, :], n_batch, axis=0)
+        
+        s_x_batch = jnp.repeat(s_x.reshape(1,-1), n_batch, axis=0)
+
+        log_ratios = estimator.log_ratio_fn(
+                phi=phi_values, x=x_batch, s_x=s_x_batch if estimator.summary_as_input else None
+            )
+
+        # Pseudo-posterior log probability from KDE
+        # if squeeze_output:
+        #     # For 1D input, phi_values is now (1, 4), so flatten it for KDE
+        #     # KDE returns scalar for single point, make it same shape as log_ratios
+        #     pseudo_posterior_logpdf = kde_func.logpdf(phi_values)
+        # else:
+        #     # For batch input, evaluate KDE for each row
+        #     pseudo_posterior_logpdf = jnp.array(
+        #         [kde_func.logpdf(phi_values[i]) for i in range(phi_values.shape[0])]
+        #     )
+        pseudo_posterior_logpdf = kde_func.logpdf(phi_values)
+        # Unnormalized corrected log-posterior
+        unnormalized_logpdf = log_ratios + pseudo_posterior_logpdf
+
+        # Return scalar for 1D input, array for batch input
+        # if squeeze_output:
+        #     return unnormalized_logpdf[0]  # Extract scalar directly
+        # else:
+        #     return unnormalized_logpdf
+        return unnormalized_logpdf
+
+    return unnormalized_logpdf
 
 
 def get_unnormalized_corrected_nre_pdf(
@@ -181,10 +310,10 @@ def get_unnormalized_corrected_nre_pdf(
 
         x_batch = jnp.repeat(x[None, :], n_batch, axis=0)
         s_x_batch = jnp.repeat(s_x[None, :], n_batch, axis=0)
-        
+
         if s_x_batch.ndim == 1:
             s_x_batch = s_x_batch[:, jnp.newaxis]
-            
+
         if estimator.summary_as_input:
             log_ratios = estimator.log_ratio_fn(
                 phi=phi_values, x=x_batch, s_x=s_x_batch

@@ -4,7 +4,7 @@
 base:
   schedule_name: "reduce_on_plateau"
   schedule_args:
-    patience: 10
+    patience: 7
     factor: 0.5
     min_lr: 1.0e-6
     threshold: 1.0e-4
@@ -13,7 +13,7 @@ base:
 variants:
   default:
     schedule_args:
-      patience: 10
+      patience: 7
       factor: 0.5
       min_lr: 1.0e-6
       threshold: 1.0e-4

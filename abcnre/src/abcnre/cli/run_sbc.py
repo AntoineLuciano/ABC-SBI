@@ -14,6 +14,7 @@ import jax
 from abcnre.inference import load_estimator_from_yaml
 from abcnre.diagnostics.calibration import run_abc_sbc
 from abcnre.diagnostics.viz import plot_sbc_ranks
+from abcnre.cli.utils import add_boolean_flag
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -238,23 +239,24 @@ def setup_run_sbc_parser(subparsers):
         help="Filename for SBC results (default: sbc_results.json)",
     )
 
-    parser.add_argument(
-        "--save-samples",
-        action="store_true",
-        help="Save all generated samples in results file",
+    # Add standardized boolean flags
+    add_boolean_flag(
+        parser,
+        "save_samples",
+        default=False,
+        help_text="Save all generated samples in results file",
     )
-
-    parser.add_argument(
-        "--save-ranks",
-        action="store_true",
+    add_boolean_flag(
+        parser,
+        "save_ranks",
         default=True,
-        help="Save rank statistics in results file (default: True)",
+        help_text="Save rank statistics in results file",
     )
-
-    parser.add_argument(
-        "--save-posterior-samples",
-        action="store_true",
-        help="Save posterior samples in results file",
+    add_boolean_flag(
+        parser,
+        "save_posterior_samples",
+        default=False,
+        help_text="Save posterior samples in results file",
     )
 
     parser.set_defaults(func=run_sbc_command)

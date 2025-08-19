@@ -1,0 +1,12 @@
+is_trained: true
+metadata:
+  abcnre_version: 0.1.0
+  created_date: '2025-08-19T11:06:17.436771'
+  estimator_type: NeuralRatioEstimator
+  sampler_id: 6597e323f2f2
+paths:
+  classifier_config: estimator_classif_config.yaml
+  classifier_params: estimator_classif_params.npz
+  simulator_config: estimator_simulator.yaml
+  stored_phis: estimator_stored_phis.npy
+summary_as_input: false

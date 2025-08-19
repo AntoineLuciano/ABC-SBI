@@ -1,29 +1,34 @@
-experiment_name: classifier_mlp_default_default
+experiment_name: classifier_mlp_xl_heavy
 output_dir: ./experiments
 task_type: classifier
 network:
   network_type: MLP
   network_args:
-    activation: relu
+    activation: elu
     use_layer_norm: false
-    dropout_rate: 0.0
+    dropout_rate: 0.1
     hidden_dims:
-    - 64
-    - 64
-    - 64
+    - 256
+    - 256
+    - 256
+    - 256
+    - 256
+    output_dim: 1
 training:
-  learning_rate: 0.01
-  n_samples_per_epoch: 10240
-  batch_size: 1024
+  learning_rate: 0.0005
+  n_samples_per_epoch: 51200
+  batch_size: 512
   num_epochs: 500
   validation_split: 0.2
-  early_stopping_patience: 10
+  early_stopping_patience: 50
   optimizer: adamw
   weight_decay: 0.001
+  loss_function: default
+  loss_args: {}
   lr_scheduler:
     schedule_name: reduce_on_plateau
     schedule_args:
-      patience: 10
+      patience: 7
       factor: 0.5
       min_lr: 1.0e-06
       threshold: 0.0001
@@ -58,3 +63,7 @@ training:
       enabled: false
       max_simulations: null
   verbose: true
+  use_presimulated_data: false
+  training_set_size: 50000
+  validation_set_size: 10000
+  n_phi_to_store: 10000

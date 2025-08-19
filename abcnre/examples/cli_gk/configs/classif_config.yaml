@@ -1,0 +1,70 @@
+experiment_name: nre_conditioned_deepset_training
+output_dir: ./experiments
+task_type: classifier
+network:
+  network_type: ConditionedDeepSet
+  network_args:
+    activation: elu
+    use_layer_norm: true
+    dropout_rate: 0.1
+    pooling_type: mean
+    conditioning_mode: concat
+    phi_hidden_dims:
+    - 128
+    - 128
+    rho_hidden_dims:
+    - 128
+    - 128
+    output_dim: 1
+training:
+  learning_rate: 0.001
+  n_samples_per_epoch: 20480
+  batch_size: 1024
+  num_epochs: 200
+  validation_split: 0.2
+  early_stopping_patience: 20
+  optimizer: adamw
+  weight_decay: 0.001
+  loss_function: default
+  loss_args: {}
+  lr_scheduler:
+    schedule_name: reduce_on_plateau
+    schedule_args:
+      patience: 7
+      factor: 0.5
+      min_lr: 1.0e-06
+      threshold: 0.0001
+  store_thetas: true
+  num_thetas_to_store: 10000
+  stopping_rules:
+    max_epochs: 200
+    early_stopping:
+      enabled: true
+      monitor: validation_loss
+      patience: 15
+      min_delta: 0.0001
+      restore_best_weights: true
+    lr_stopping:
+      enabled: true
+      min_lr: 1.0e-07
+    convergence_stopping:
+      enabled: false
+      tolerance: 1.0e-06
+      patience: 5
+    plateau_stopping:
+      enabled: false
+      patience: 20
+      threshold: 1.0e-05
+    time_stopping:
+      enabled: false
+      max_time_hours: null
+    sample_stopping:
+      enabled: false
+      max_samples: null
+    simulation_stopping:
+      enabled: false
+      max_simulations: null
+  verbose: true
+  use_presimulated_data: false
+  validation_set_size: 10000
+  n_phi_to_store: 10000

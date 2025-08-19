@@ -1,0 +1,37 @@
+=== Neural Ratio Estimator Training Report ===
+
+Created on: /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk
+Command args: {'command': 'create_estimator', 'simulator_path': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk/results/simulators/simulator_marginal_1/simulator.yaml', 'output_dir': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk/results/estimators/estimator_marginal_1_quantile_0.1', 'classifier_config_template_name': 'mlp_default', 'classifier_config_path': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk/configs/classif_config.yaml', 'epsilon': None, 'quantile_distance': 0.1, 'func': <function create_estimator_command at 0x174ad8e50>}
+
+Simulator Information:
+  Source: /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk/results/simulators/simulator_marginal_1/simulator.yaml
+  Model: GAndKModel
+  Epsilon: 0.2970617413520813
+  Summary stats enabled: True
+
+Network Configuration:
+  Experiment: nre_conditioned_deepset_training
+  Network type: ConditionedDeepSet
+  Task type: classifier
+
+Training Configuration:
+  Epochs: 200
+  Batch size: 1024
+  Learning rate: 0.001
+  Optimizer: adamw
+  LR scheduler: reduce_on_plateau
+
+Training Results:
+  Status: Completed
+
+Files created:
+  - estimator.yaml (main configuration)
+  - estimator_report.txt (this file)
+  - estimator_simulator_summary_network_weights.npz
+  - estimator_simulator.yaml
+  - estimator_simulator_observed_data.npy
+  - estimator_stored_phis.npy
+  - estimator_simulator_model.yml
+  - estimator_simulator_summary_network_config.yml
+  - estimator_classif_config.yaml
+  - estimator_classif_params.npz

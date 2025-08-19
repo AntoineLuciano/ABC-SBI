@@ -1,0 +1,28 @@
+# Configuration template for Multidimensional Gaussian-Gaussian Model
+#
+# Model: X | theta ~ N(theta, Sigma)  
+# Prior: theta ~ N(mu0, Sigma0)
+#
+# Multidimensional extension where theta is a vector parameter.
+
+model_type: GaussGaussMultiDimModel
+model_class: GaussGaussMultiDimModel
+
+model_args:
+  # Prior mean value
+  mu0: 0
+  
+  # Prior std value
+  sigma0: 10.0
+  
+  # Model noise std value 
+  sigma: 1.0
+  
+  # Dimension is inferred from mu0
+  dim: 10
+  
+  # Number of observations per sample
+  n_obs: 10
+  
+  # Index of marginal parameter of interest for phi transformation (0 = first component)
+  marginal_of_interest: 0

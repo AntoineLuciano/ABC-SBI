@@ -85,13 +85,12 @@ def train_nn(
     """
     training_config = config.training
     task_type = config.task_type
-
     # Comprehensive validation using proper config structure
     validate_training_config(config)
+
     validate_scheduler_config(
         training_config.lr_scheduler, training_config.learning_rate
     )
-
     # Log configuration summary
     log_config_summary(config, training_config.verbose)
 
@@ -100,11 +99,11 @@ def train_nn(
         key, config, io_generator, network, val_io_generator
     )
 
+
     # 2. Initialize managers using proper config structures
     stopping_manager = StoppingRulesManager(training_config)
     metrics_manager = TrainingMetrics(task_type)
     training_logger = TrainingLogger(training_config.verbose, task_type)
-
     # 3. Initialize LR scheduling using proper LRSchedulerConfig
     plateau_manager, scheduling_state = initialize_lr_scheduling(
         training_config.lr_scheduler, training_config.learning_rate
@@ -136,6 +135,24 @@ def train_nn(
     # 7. Main training loop
     start_time = time.time()
 
+    # Initialize pre-simulated training data if enabled
+    if training_config.use_presimulated_data:
+        training_set_size = training_config.training_set_size
+        key, key_io = jax.random.split(key)
+        training_set = io_generator(key_io, training_set_size)
+        training_set["training_set_size"] = training_set_size
+        total_samples = training_set_size
+        total_simulations = training_set["n_simulations"]
+        sim_time = time.time() - start_time
+        if training_config.verbose:
+            logger.info(
+                f"Pre-simulated training set created: {training_set_size} samples in {sim_time:.2f} seconds"
+            )
+        # print("Training set phi minimum:", jnp.min(training_set["input"]["theta"]))
+        # print("Training set phi maximum:", jnp.max(training_set["input"]["theta"]))
+    else:
+        training_set = None
+
     for epoch in range(training_config.num_epochs):
         epoch_start_time = time.time()
 
@@ -146,7 +163,6 @@ def train_nn(
         if should_stop:
             training_logger.log_early_stopping(epoch, reason)
             break
-
         # Run training epoch
         try:
             (
@@ -161,14 +177,17 @@ def train_nn(
                 io_generator,
                 training_config,
                 stored_phi,
+                training_set,
             )
         except Exception as e:
             logger.error(f"Training epoch {epoch} failed: {e}")
             raise
 
         # Update counters
-        total_samples += batch_count * training_config.batch_size
-        total_simulations += simulations_this_epoch
+        if not training_config.use_presimulated_data:
+            total_samples += batch_count * training_config.batch_size
+            total_simulations += simulations_this_epoch
+
         step_counter += batch_count
 
         epoch_time = time.time() - epoch_start_time
@@ -287,12 +306,25 @@ def train_nn(
                     total_samples,
                 )
 
-                # Log timing breakdown (minimal)
+                # Enhanced timing breakdown
                 latest_timing = epoch_timing_data[-1]
+                
+                data_mode = (
+                    "Pre-sim" if training_config.use_presimulated_data else "On-the-fly"
+                )
+                
+                sim_times = [t["simulation_time"] for t in epoch_timing_data]
+                train_times = [t["training_time"] for t in epoch_timing_data]
+                total_sim_time = sum(sim_times)
+                total_train_time = sum(train_times)
+                overhead_times = [t["overhead_time"] for t in epoch_timing_data]
+                total_overhead = sum(overhead_times)
+
                 logger.info(
-                    f"Timing: Sim={latest_timing['simulation_time']:.2f}s "
-                    f"Train={latest_timing['training_time']:.2f}s "
-                    f"(Ratio: {latest_timing['sim_to_train_ratio']:.1f}x)"
+                    f"Timing [{data_mode}]: Sim={total_sim_time:.2f}s "
+                    f"Train={total_train_time:.2f}s "
+                    f"Overhead={total_overhead:.2f}s "
+                    f"(Sim/Train: {total_sim_time/total_train_time:.1f}x)"
                 )
 
                 if time_estimate["eta_minutes"] > 1 and epoch >= 10:
@@ -314,6 +346,50 @@ def train_nn(
     if training_config.verbose:
         stopping_info = stopping_manager.get_stopping_info()
         logger.info(f"Final stopping rules status: {stopping_info}")
+
+        # Enhanced timing summary with simulation/training breakdown
+        if epoch_timing_data:
+            import numpy as np
+
+            sim_times = [t["simulation_time"] for t in epoch_timing_data]
+            train_times = [t["training_time"] for t in epoch_timing_data]
+            total_sim_time = sum(sim_times)
+            total_train_time = sum(train_times)
+            overhead_times = [t["overhead_time"] for t in epoch_timing_data]
+            total_overhead = sum(overhead_times)
+
+            logger.info("=" * 60)
+            logger.info("DETAILED TIMING BREAKDOWN")
+            logger.info("=" * 60)
+            logger.info(
+                f"Total training time: {total_time:.2f}s ({total_time/60:.1f}m)"
+            )
+            logger.info(
+                f"  - Pure simulation time: {total_sim_time:.2f}s ({total_sim_time/total_time*100:.1f}%)"
+            )
+            logger.info(
+                f"  - Pure training time: {total_train_time:.2f}s ({total_train_time/total_time*100:.1f}%)"
+            )
+            logger.info(
+                f"  - Overhead time: {total_overhead:.2f}s ({total_overhead/total_time*100:.1f}%)"
+            )
+
+            # Performance metrics
+            avg_sim_ratio = np.mean(
+                [t["sim_to_train_ratio"] for t in epoch_timing_data]
+            )
+            logger.info(f"Average sim/train ratio: {avg_sim_ratio:.2f}x")
+
+            if training_config.use_presimulated_data:
+                logger.info(
+                    "Note: Using pre-simulated data - simulation time includes data sampling"
+                )
+            else:
+                logger.info(
+                    "Note: Using on-the-fly simulation - simulation time includes full model execution"
+                )
+
+            logger.info("=" * 60)
 
         # Final metrics summary
         training_logger.log_metrics_summary(metrics_manager)
@@ -393,7 +469,6 @@ def train_classifier(
         raise ValueError(
             "config.task_type must be 'classifier' for train_classifier_v2"
         )
-
     return train_nn(key, config, io_generator, network, val_io_generator)
 
 

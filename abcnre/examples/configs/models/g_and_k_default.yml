@@ -13,8 +13,8 @@ model_type: GAndKModel
 model_class: GAndKModel
 
 model_args:
-  prior_bounds: [0.0, 10.0]  # Uniform prior bounds on [0, 10]^4
+  prior_bounds: [0.0, 5.0]  # Uniform prior bounds on [0, 10]^4
   n_obs: 100
 
-  parameter_of_interest: "A" # "A", "B", "g", "k", "all' to specify which parameter to focus on
+  parameter_of_interest: "all" # "A", "B", "g", "k", "all' to specify which parameter to focus on
 

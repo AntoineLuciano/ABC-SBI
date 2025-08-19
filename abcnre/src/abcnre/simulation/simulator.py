@@ -230,9 +230,9 @@ class ABCSimulator:
         if self.observed_data is None and self.epsilon == jnp.inf:
             # Generate temporary observed data with the same shape as model output
             temp_key = random.PRNGKey(42)  # Fixed seed for reproducibility
-            temp_theta = self.model.get_prior_sample(temp_key)
+            temp_theta = self.model.sample_theta(temp_key)
             temp_key, sim_key = random.split(temp_key)
-            observed_data_for_sampler = self.model.simulate_data(sim_key, temp_theta)
+            observed_data_for_sampler = self.model.sample_x(sim_key, temp_theta)
             if self.summary_stat_fn is not None:
                 observed_summary_stats_for_sampler = self.summary_stat_fn(
                     observed_data_for_sampler
@@ -250,8 +250,8 @@ class ABCSimulator:
         
 
         self.sampler = RejectionSampler(
-            prior_simulator=self.model.get_prior_sample,
-            data_simulator=self.model.simulate_data,
+            prior_simulator=self.model.sample_theta,
+            data_simulator=self.model.sample_x,
             discrepancy_fn=self.model.discrepancy_fn,
             summary_stat_fn=self.summary_stat_fn,
             transform_fn=transform_fn,
@@ -484,11 +484,12 @@ class ABCSimulator:
         # Create data generator that matches the expected interface
         def io_generator(key: random.PRNGKey, batch_size: int):
             """Adapter for the unified training interface."""
-            results = self.model.sample_phi_x_multiple(key, batch_size)
+            results = self.model.sample_phis_xs(key, batch_size)
             phi, x = results
             return {"input": x, "output": phi, "n_simulations": batch_size}
 
-        # Train using the unified system
+        nn_config.network.network_args["output_dim"] = self.model.phi_dim
+
         key, train_key = random.split(key)
         summary_results = train_regressor(
             key=train_key, config=nn_config, io_generator=io_generator
@@ -526,14 +527,14 @@ class ABCSimulator:
             
         # key, subkey_theta, subkey_x = random.split(key, 3)
         # theta = self.model.get_prior_sample(subkey_theta)   
-        # x = self.model.simulate_data(subkey_x, theta)
+        # x = self.model.sample_x(subkey_x, theta)
         # s_x = self.summary_stat_fn(x)
         # print(f"FOR ONE DATASET:Sampled theta: {theta.shape}, x: {x.shape}, summary stats: {s_x.shape}")
 
         # n_sample = 50
         # key, key_x, key_theta = random.split(key, 3)
-        # thetas = self.model.get_prior_samples(key_theta, n_samples=n_sample)
-        # xs = self.model.simulate_datas(key_x, thetas)
+        # thetas = self.model.sample_thetas(key_theta, n_samples=n_sample)
+        # xs = self.model.sample_xs(key_x, thetas)
         # summary_stats = self.summary_stat_fn(xs)
         # print(f"FOR {n_sample} DATASETS: Sampled thetas: {thetas.shape}, xs: {xs.shape}, summary stats: {summary_stats.shape}")
         
@@ -559,22 +560,25 @@ class ABCSimulator:
 
         # Generate samples from the model
         key, subkey = random.split(key)
-        phi_samples, x_samples = self.model.sample_phi_x_multiple(
+        phi_samples, x_samples = self.model.sample_phis_xs(
             subkey, n_samples=n_samples
         )
         # Compute summary statistics for the generated samples
         summary_stats = self.summary_stat_fn(x_samples)
+
+
+        correlations = jnp.zeros(summary_stats.shape[1])
+
         
+        for i in range(summary_stats.shape[1]):
 
-        # Compute correlation
-        correlation_matrix = jnp.corrcoef(
-            summary_stats.flatten(), phi_samples.flatten()
-        )
-        phi_summary_correlation = correlation_matrix[0, 1]
+            correlations = correlations.at[i].set(jnp.corrcoef(
+                    summary_stats[:, i], phi_samples[:, i]
+                )[0, 1])
+            if self.config.get("verbose", False):
+                logger.info(f"Correlation between summary statistic {i} and model parameter {i}: {correlations[i]}")
 
-        if self.config["verbose"]:
-            logger.info(f"Correlation between summary statistics and model parameters: {phi_summary_correlation:.4f}")
-        return phi_summary_correlation
+        return correlations
 
     def get_true_posterior_samples(
         self, key: "jax.random.PRNGKey", n_samples: int

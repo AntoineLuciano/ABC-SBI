@@ -269,6 +269,14 @@ class TrainingConfig:
     stopping_rules: Optional[Dict[str, Any]] = None
     verbose: bool = True
 
+    # Pre-simulated data configuration
+    use_presimulated_data: bool = False
+    training_set_size: int = 50000
+    validation_set_size: int = 10000
+
+    # Phi storage configuration
+    n_phi_to_store: int = 0  # Number of phi values to store during training
+
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
         d["lr_scheduler"] = self.lr_scheduler.to_dict()
@@ -637,6 +645,104 @@ class NNConfig:
             raise ValueError(f"Unknown task_type: {self.task_type}")
 
 
+def _validate_and_convert_numeric_overrides(
+    overrides: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Validate and convert string representations of numbers to proper numeric types.
+
+    Args:
+        overrides: Dictionary containing override values
+
+    Returns:
+        Dictionary with numeric values properly converted
+    """
+    # Numeric fields that should be converted from strings if needed
+    numeric_fields = {
+        "learning_rate": float,
+        "weight_decay": float,
+        "num_epochs": int,
+        "batch_size": int,
+        "patience": int,
+        "min_lr": float,
+        "dropout_rate": float,
+        "momentum": float,
+        "beta1": float,
+        "beta2": float,
+        "eps": float,
+    }
+
+    def convert_numeric_values(data: Any) -> Any:
+        if isinstance(data, dict):
+            result = {}
+            for key, value in data.items():
+                if key in numeric_fields and isinstance(value, str):
+                    try:
+                        # Try to convert string numbers (including scientific notation)
+                        converted_value = numeric_fields[key](float(value))
+                        logger.info(
+                            f"Converted override '{key}': '{value}' -> {converted_value} ({type(converted_value)})"
+                        )
+                        result[key] = converted_value
+                    except (ValueError, TypeError):
+                        logger.warning(
+                            f"Could not convert '{key}': '{value}' to {numeric_fields[key].__name__}"
+                        )
+                        result[key] = value
+                else:
+                    result[key] = convert_numeric_values(value)
+            return result
+        elif isinstance(data, list):
+            return [convert_numeric_values(item) for item in data]
+        else:
+            return data
+
+    return convert_numeric_values(overrides)
+
+
+def _apply_overrides_to_nn_config(
+    nn_config: NNConfig, overrides: Dict[str, Any]
+) -> NNConfig:
+    """
+    Apply configuration overrides to an NNConfig object.
+
+    Args:
+        nn_config: The base NNConfig object
+        overrides: Dictionary containing override values
+
+    Returns:
+        Updated NNConfig object with overrides applied
+    """
+    # Validate and convert numeric values
+    validated_overrides = _validate_and_convert_numeric_overrides(overrides)
+
+    # Convert to dict for easier manipulation
+    config_dict = asdict(nn_config)
+
+    # Apply overrides using deep merge
+    updated_dict = _deep_merge_configs(config_dict, validated_overrides)
+
+    # Reconstruct the NNConfig object
+    # Handle nested configs
+    if "network" in updated_dict:
+        network_config = NetworkConfig.from_dict(updated_dict["network"])
+    else:
+        network_config = nn_config.network
+
+    if "training" in updated_dict:
+        training_config = TrainingConfig.from_dict(updated_dict["training"])
+    else:
+        training_config = nn_config.training
+
+    # Create new NNConfig with updated components
+    return NNConfig(
+        network=network_config,
+        training=training_config,
+        task_type=updated_dict.get("task_type", nn_config.task_type),
+        experiment_name=updated_dict.get("experiment_name", nn_config.experiment_name),
+    )
+
+
 def get_nn_config(
     network_name: str = "mlp",
     network_size: str = "default",
@@ -649,6 +755,10 @@ def get_nn_config(
     loss_function: Optional[str] = None,
     loss_args: Optional[Dict[str, Any]] = None,
     loss_variant: Optional[str] = None,
+    training_set_size: Optional[int] = None,
+    validation_set_size: Optional[int] = None,
+    output_dim: Optional[int] = None,
+    overrides: Optional[Dict[str, Any]] = None,
 ) -> NNConfig:
     """Get a complete NN configuration based on predefined templates.
 
@@ -664,6 +774,10 @@ def get_nn_config(
         loss_function: Optional override for loss function (e.g., "focal", "pinball", "huber")
         loss_args: Optional arguments for the loss function (e.g., {"tau": 0.5} for pinball)
         loss_variant: Optional predefined loss variant (e.g., "pinball_median", "focal", "huber")
+        training_set_size: Optional size for pre-simulated training set. If > 0, enables pre-simulated data
+        validation_set_size: Optional size for pre-simulated validation set
+        output_dim: Optional output dimension. If not specified, defaults to 1 for classifiers and is required for regressors
+        overrides: Optional dictionary of configuration overrides
 
     Returns:
         A fully configured NNConfig object.
@@ -672,11 +786,35 @@ def get_nn_config(
         - If loss_variant is provided, it takes precedence over loss_function/loss_args
         - loss_variant loads complete configurations from loss.yaml
         - loss_function/loss_args provide direct parameter override
+        - If training_set_size > 0, automatically enables use_presimulated_data = True
+        - For classifiers: output_dim defaults to 1 if not specified
+        - For regressors: output_dim must be specified or will default to 1
     """
     try:
         # Load network configuration
         network_config_dict = get_predefined_network_config(network_name, network_size)
         network_config = NetworkConfig.from_dict(network_config_dict)
+
+        # Set output_dim based on task_type and provided parameter
+        if task_type == "classifier":
+            # For classifiers, output_dim should always be 1
+            network_config.network_args["output_dim"] = 1
+            if output_dim is not None and output_dim != 1:
+                logger.warning(
+                    f"For classifiers, output_dim must be 1. Ignoring provided value: {output_dim}"
+                )
+        elif task_type == "regressor":
+            # For regressors, use provided output_dim or default to 1
+            if output_dim is not None:
+                network_config.network_args["output_dim"] = output_dim
+                logger.info(f"Set output_dim={output_dim} for regressor")
+            elif "output_dim" not in network_config.network_args:
+                network_config.network_args["output_dim"] = 1
+                logger.info("No output_dim specified for regressor, defaulting to 1")
+        else:
+            raise ValueError(
+                f"Unknown task_type: {task_type}. Must be 'classifier' or 'regressor'"
+            )
 
         # Load training configuration
         training_config_dict = get_predefined_training_config(training_size)
@@ -720,6 +858,31 @@ def get_nn_config(
             logger.info("Using default stopping rules")
 
         training_config = TrainingConfig.from_dict(training_config_dict)
+
+        # Handle pre-simulated data configuration
+        if training_set_size is not None and training_set_size > 0:
+            training_config.use_presimulated_data = True
+            training_config.training_set_size = training_set_size
+            logger.info(
+                f"Enabled pre-simulated data with training_set_size: {training_set_size}"
+            )
+
+            # Set validation_set_size if provided
+            if validation_set_size is not None and validation_set_size > 0:
+                training_config.validation_set_size = validation_set_size
+                logger.info(f"Set validation_set_size: {validation_set_size}")
+            else:
+                # Default to 20% of training set size if not specified
+                training_config.validation_set_size = max(1000, training_set_size // 5)
+                logger.info(
+                    f"Auto-set validation_set_size to {training_config.validation_set_size} (20% of training set)"
+                )
+        elif validation_set_size is not None and validation_set_size > 0:
+            # Only validation_set_size specified without training_set_size
+            training_config.validation_set_size = validation_set_size
+            logger.info(
+                f"Set validation_set_size: {validation_set_size} (pre-simulated data not enabled)"
+            )
 
         # Apply loss configuration (loss_variant takes precedence over direct parameters)
         if loss_variant is not None:
@@ -765,6 +928,11 @@ def get_nn_config(
             or f"{task_type}_{network_name}_{network_size}_{training_size}",
         )
 
+        # Apply overrides if provided
+        if overrides:
+            nn_config = _apply_overrides_to_nn_config(nn_config, overrides)
+            logger.info(f"Applied overrides to configuration: {list(overrides.keys())}")
+
         logger.info(
             f"Created NN config: {nn_config.experiment_name} (task: {task_type})"
         )
@@ -778,26 +946,122 @@ def get_nn_config(
         raise
 
 
-# Default configurations for quick start
-def get_quick_nn_config(
-    network_type: str = "mlp",
-    learning_rate: float = 1e-3,
-    num_epochs: int = 100,
-    batch_size: int = 256,
-) -> NNConfig:
-    """Create a quick configuration without loading from files."""
+@dataclass
+class TemplateConfig:
+    """Configuration template with support for overrides."""
 
-    network_config = NetworkConfig(
-        network_type=network_type,
-        network_args={"hidden_dims": [64, 64, 64]} if network_type == "mlp" else {},
+    network_name: str
+    network_size: str
+    training_size: str
+    task_type: str = "classifier"  # Default to classifier if not specified
+    experiment_name: str = ""
+    lr_scheduler_name: Optional[str] = None
+    lr_scheduler_variant: str = "default"
+    stopping_rules_variant: str = "balanced"
+    overrides: Optional[Dict[str, Any]] = field(default_factory=dict)
+
+    @classmethod
+    def load(cls, file_path: str) -> "TemplateConfig":
+        """Load template configuration from YAML file."""
+        with open(file_path, "r") as f:
+            config = yaml.safe_load(f)
+
+        # Handle task_type inference from file path if not specified
+        if "task_type" not in config:
+            if "classifier" in str(file_path).lower():
+                config["task_type"] = "classifier"
+            elif "regressor" in str(file_path).lower():
+                config["task_type"] = "regressor"
+            else:
+                config["task_type"] = "classifier"  # Default
+
+        return cls.from_dict(config)
+
+    def save(self, file_path: str) -> None:
+        """Save template configuration to YAML file."""
+        with open(file_path, "w") as f:
+            yaml.safe_dump(self.to_dict(), f)
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary representation."""
+        result = {
+            "network_name": self.network_name,
+            "network_size": self.network_size,
+            "training_size": self.training_size,
+            "task_type": self.task_type,
+            "experiment_name": self.experiment_name,
+        }
+
+        # Add optional fields if they exist
+        if self.lr_scheduler_name:
+            result["lr_scheduler_name"] = self.lr_scheduler_name
+        if self.lr_scheduler_variant != "default":
+            result["lr_scheduler_variant"] = self.lr_scheduler_variant
+        if self.stopping_rules_variant != "balanced":
+            result["stopping_rules_variant"] = self.stopping_rules_variant
+        if self.overrides:
+            result["overrides"] = self.overrides
+
+        return result
+
+    @classmethod
+    def from_dict(cls, config: dict) -> "TemplateConfig":
+        """Create from dictionary representation."""
+        return cls(
+            network_name=config["network_name"],
+            network_size=config["network_size"],
+            training_size=config["training_size"],
+            task_type=config.get("task_type", "classifier"),
+            experiment_name=config.get("experiment_name", ""),
+            lr_scheduler_name=config.get("lr_scheduler_name"),
+            lr_scheduler_variant=config.get("lr_scheduler_variant", "default"),
+            stopping_rules_variant=config.get("stopping_rules_variant", "balanced"),
+            overrides=config.get("overrides", {}),
+        )
+
+
+def get_nn_config_from_template(template: TemplateConfig) -> NNConfig:
+    """Get a complete NN configuration from a template configuration.
+
+    Args:
+        template: TemplateConfig object containing base configuration and overrides
+
+    Returns:
+        A fully configured NNConfig object with template overrides applied
+    """
+    return get_nn_config(
+        network_name=template.network_name,
+        network_size=template.network_size,
+        training_size=template.training_size,
+        task_type=template.task_type,
+        lr_scheduler_name=template.lr_scheduler_name,
+        lr_scheduler_variant=template.lr_scheduler_variant,
+        stopping_rules_variant=template.stopping_rules_variant,
+        experiment_name=template.experiment_name,
+        overrides=template.overrides,
     )
 
-    training_config = TrainingConfig(
-        learning_rate=learning_rate, num_epochs=num_epochs, batch_size=batch_size
-    )
 
-    return NNConfig(
-        network=network_config,
-        training=training_config,
-        experiment_name=f"quick_{network_type}_config",
-    )
+# # Default configurations for quick start
+# def get_quick_nn_config(
+#     network_type: str = "mlp",
+#     learning_rate: float = 1e-3,
+#     num_epochs: int = 100,
+#     batch_size: int = 256,
+# ) -> NNConfig:
+#     """Create a quick configuration without loading from files."""
+
+#     network_config = NetworkConfig(
+#         network_type=network_type,
+#         network_args={"hidden_dims": [64, 64, 64]} if network_type == "mlp" else {},
+#     )
+
+#     training_config = TrainingConfig(
+#         learning_rate=learning_rate, num_epochs=num_epochs, batch_size=batch_size
+#     )
+
+#     return NNConfig(
+#         network=network_config,
+#         training=training_config,
+#         experiment_name=f"quick_{network_type}_config",
+#     )

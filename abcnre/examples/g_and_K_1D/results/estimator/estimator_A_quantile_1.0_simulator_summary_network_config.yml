@@ -1,0 +1,71 @@
+experiment_name: regressor_deepset_large_extended
+output_dir: ./experiments
+task_type: regressor
+network:
+  network_type: DeepSet
+  network_args:
+    activation: relu
+    use_layer_norm: true
+    dropout_rate: 0.0
+    pooling_type: mean
+    phi_hidden_dims:
+    - 64
+    - 64
+    - 32
+    rho_hidden_dims:
+    - 64
+    - 64
+    - 32
+training:
+  learning_rate: 0.0001
+  n_samples_per_epoch: 20480
+  batch_size: 512
+  num_epochs: 200
+  validation_split: 0.2
+  early_stopping_patience: 20
+  optimizer: adam
+  weight_decay: 0.0
+  loss_function: default
+  loss_args: {}
+  lr_scheduler:
+    schedule_name: reduce_on_plateau
+    schedule_args:
+      patience: 10
+      factor: 0.5
+      min_lr: 1.0e-06
+      threshold: 0.0001
+  store_thetas: true
+  num_thetas_to_store: 10000
+  stopping_rules:
+    max_epochs: 500
+    early_stopping:
+      enabled: true
+      monitor: validation_loss
+      patience: 15
+      min_delta: 0.0001
+      restore_best_weights: true
+    lr_stopping:
+      enabled: true
+      min_lr: 1.0e-07
+    convergence_stopping:
+      enabled: false
+      tolerance: 1.0e-06
+      patience: 5
+    plateau_stopping:
+      enabled: false
+      patience: 20
+      threshold: 1.0e-05
+    time_stopping:
+      enabled: false
+      max_time_hours: null
+    sample_stopping:
+      enabled: true
+      max_samples: .inf
+    simulation_stopping:
+      enabled: false
+      max_simulations: null
+  verbose: true
+  use_presimulated_data: false
+  training_set_size: 50000
+  validation_set_size: 10000
+  n_phi_to_store: 0

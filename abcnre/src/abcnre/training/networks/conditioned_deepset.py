@@ -19,7 +19,7 @@ class ConditionedDeepSet(nn.Module):
     - "film": Uses FiLM layers to modulate the network based on theta
     """
 
-    output_dim: int = 1
+    output_dim: int 
     phi_hidden_dims: Optional[List[int]] = None
     rho_hidden_dims: Optional[List[int]] = None
     pooling_type: str = "mean"

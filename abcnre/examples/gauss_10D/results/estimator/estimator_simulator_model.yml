@@ -1,0 +1,11 @@
+metadata:
+  saved_at: '2025-08-07T18:49:54.321643'
+model_args:
+  dim: 10
+  marginal_of_interest: 0
+  mu0: 0
+  n_obs: 25
+  sigma: 1.0
+  sigma0: 10.0
+model_class: GaussGaussMultiDimModel
+model_type: GaussGaussMultiDimModel

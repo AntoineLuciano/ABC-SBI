@@ -4,6 +4,7 @@ Create Simulator Command - Reproduces Steps 1-2 of gauss_gauss_train.ipynb
 
 import yaml
 import jax
+import jax.numpy as jnp
 import numpy as np
 from pathlib import Path
 from typing import Optional
@@ -11,7 +12,15 @@ from typing import Optional
 from abcnre.simulation import ABCSimulator
 from abcnre.simulation.models import create_model_from_dict, get_example_model_configs
 from abcnre.simulation import save_simulator_to_yaml
-from abcnre.training import get_nn_config
+from abcnre.cli.utils import add_boolean_flag, get_default_filename
+from logging import getLogger
+
+logger = getLogger(__name__)
+
+
+template_config_path = (
+    Path(__file__).parent.parent / "cli" / "templates" / "regressor_configs"
+)
 
 
 def create_simulator_command(args):
@@ -30,80 +39,127 @@ def create_simulator_command(args):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     key = jax.random.PRNGKey(args.seed)
-    print(f"Using random seed: {args.seed}")
+    logger.info(f"Using random seed: {args.seed}")
 
     # === Step 1: Load model and create simulator ===
-    print("--- Step 1: Load model and create simulator ---")
+    logger.info("--- Step 1: Load model and create simulator ---")
 
     if args.model_path:
         # Load custom model from path
         with open(args.model_path, "r") as f:
             model_config = yaml.safe_load(f)
-        print(f"Loaded custom model from: {args.model_path}")
+        logger.info(f"Loaded custom model from: {args.model_path}")
     else:
         # Load example model by name
         model_config = get_example_model_configs(args.model_name)
-        print(f"Loaded example model: {args.model_name}")
+        logger.info(f"Loaded example model: {args.model_name}")
 
     model = create_model_from_dict(model_config)
+
+    # Override marginal_of_interest if specified
+    if args.marginal_of_interest is not None:
+        logger.info(f"Overriding marginal_of_interest to: {args.marginal_of_interest}")
+
+        if hasattr(model, "marginal_of_interest"):
+            if args.marginal_of_interest == -1:
+                # Set to "all parameters" mode
+                if hasattr(model, "parameter_of_interest"):
+                    model.parameter_of_interest = "all"
+                model.marginal_of_interest = -1
+                model.phi_dim = model.parameter_dim
+                logger.info("Set inference mode to 'all parameters' (phi = theta)")
+            else:
+                # Set to specific parameter
+                model.marginal_of_interest = args.marginal_of_interest
+                model.phi_dim = 1
+
+                # Update parameter_of_interest for better logging
+                if hasattr(model, "param_names") and args.marginal_of_interest < len(
+                    model.param_names
+                ):
+                    param_name = model.param_names[args.marginal_of_interest]
+                    model.parameter_of_interest = param_name
+                    logger.info(
+                        f"Set inference mode to parameter '{param_name}' (index {args.marginal_of_interest})"
+                    )
+                else:
+                    logger.info(
+                        f"Set inference mode to parameter index {args.marginal_of_interest}"
+                    )
+                    
+        else:
+            logger.warning(
+                f"Model {type(model).__name__} does not support marginal_of_interest override"
+            )
     simulator = ABCSimulator(model=model)
-    print(f"Model loaded: {model}")
 
     # === Step 1.5: Learn summary stats (optional) ===
-    if args.learn_stats:
-        if not args.regressor_config:
-            raise ValueError(
-                "--regressor-config is required when --learn-stats is enabled"
+    if args.learn_summary_stats:
+        logger.info("--- Step 1.5: Learn Summary Stats ---")
+
+        if args.regressor_config_path is not None:
+            from abcnre.training import NNConfig
+
+            regressor_config = NNConfig.load(args.regressor_config_path)
+        elif args.regressor_config_template_name is not None:
+            from abcnre.training import TemplateConfig, get_nn_config_from_template
+
+            template_path = (
+                Path(template_config_path)
+                / f"{args.regressor_config_template_name}.yaml"
             )
-
-        print("--- Step 1.5: Learn Summary Stats ---")
-
-        # Load regressor configuration
-        regressor_config = load_regressor_config(args.regressor_config)
-
+            print(template_path.resolve())
+            template_config = TemplateConfig.load(template_path)
+            regressor_config = get_nn_config_from_template(template_config)
+        else:
+            raise ValueError("No valid regressor configuration provided.")
+      
+        
         key, subkey_learn = jax.random.split(key)
         simulator.train_summary_network(subkey_learn, regressor_config)
+        
 
         # Check correlation
         key, subkey_check = jax.random.split(key)
+        n_samples_check_summary = 10000
         correlation = simulator.check_summary_stats_correlation(
-            subkey_check, n_samples=10000
+            subkey_check, n_samples=n_samples_check_summary
         )
-        print(f"Summary stats correlation: {correlation}")
+        logger.info(f"Summary stats correlation: {correlation}")
 
     # === Step 2.1: Handle observed data ===
-    print("--- Step 2.1: Set observed data ---")
+    logger.info("--- Step 2.1: Set observed data ---")
 
-    if args.observed_data:
+    if args.observed_data_path is not None:
         # Load pre-computed observed data
-        x_obs = np.load(args.observed_data)
-        print(f"Loaded observed data from: {args.observed_data}")
-    else:
-        # Sample new observed data from true_theta
-        if args.true_theta is None:
-            key, subkey_sample = jax.random.split(key)
-            true_theta = simulator.model.get_prior_sample(subkey_sample)
-        else:
-            if isinstance(args.true_theta, list):
-                import jax.numpy as jnp
-                true_theta = jnp.array(args.true_theta)
-            else:
-                true_theta = args.true_theta
+        x_obs = np.load(args.observed_data_path)
+        logger.info(f"Loaded observed data from: {args.observed_data_path}")
+    elif args.true_theta is not None:
+        # Use true_theta to generate observed data
         key, subkey_sample = jax.random.split(key)
-        x_obs = simulator.model.simulate_data(subkey_sample, true_theta)
-        print(f"Sampled new observed data with true_theta={true_theta}")
+        x_obs = simulator.model.sample_x(subkey_sample, jnp.array(args.true_theta))
+        logger.info(f"Generated observed data from true_theta: {args.true_theta}")
+
+    else:
+        key, subkey_sample = jax.random.split(key)
+        true_theta = simulator.model.sample_theta(subkey_sample)
+        key, subkey_sample = jax.random.split(key)
+        logger.info(f"Sampling x_obs : theta.shape: {true_theta.shape}")
+        x_obs = simulator.model.sample_x(subkey_sample, true_theta)
+        logger.info(f"Sampled new observed data with true_theta={true_theta}")
 
     simulator.update_observed_data(x_obs)
-    print(f"Observation x_obs shape: {x_obs.shape}")
+    logger.info(f"Observation x_obs shape: {x_obs.shape}")
+    logger.info(f'Summary stats s(x_obs) shape: {simulator.observed_summary_stats.shape}')
 
     # === Step 2.2: Set epsilon ===
-    print("--- Step 2.2: Set epsilon (ABC tolerance) ---")
+    logger.info("--- Step 2.2: Set epsilon (ABC tolerance) ---")
 
     if args.epsilon is not None:
         # Manual epsilon
         simulator.epsilon = args.epsilon
-        print(f"Set manual epsilon: {args.epsilon}")
-    else:
+        logger.info(f"Set manual epsilon: {args.epsilon}")
+    elif args.quantile_distance is not None:
         # Automatic epsilon from quantile
         key, subkey_epsilon = jax.random.split(key)
         simulator.set_epsilon_from_quantile(
@@ -111,58 +167,26 @@ def create_simulator_command(args):
             quantile_distance=args.quantile_distance,
             n_samples=10000,
         )
-        print(
+        logger.info(
             f"Set epsilon from {args.quantile_distance} quantile: {simulator.epsilon}"
         )
+    else:
+        # Default epsilon = inf
+        logger.info(f"Set default epsilon: {simulator.epsilon}")
 
-    # === Step 2.3: Save simulator ===
-    print("--- Step 2.3: Save simulator ---")
+    if args.save:
+        # === Step 2.3: Save simulator ===
+        logger.info("--- Step 2.3: Save simulator ---")
 
-    simulator_path = output_dir / "simulator.yaml"
-    save_simulator_to_yaml(simulator, simulator_path, overwrite=True)
+        simulator_path = output_dir / get_default_filename("simulator")
+        save_simulator_to_yaml(simulator, simulator_path, overwrite=True)
 
-    print(f"Simulator saved to: {simulator_path}")
+        logger.info(f"Simulator saved to: {simulator_path}")
 
     # Save summary report
     save_simulator_report(simulator, output_dir, args)
 
     return simulator
-
-
-def load_regressor_config(config_path: str):
-    """Load regressor configuration for summary statistics learning."""
-    config_path = Path(config_path)
-
-    if not config_path.exists():
-        raise FileNotFoundError(f"Regressor config not found: {config_path}")
-
-    with open(config_path, "r") as f:
-        config_dict = yaml.safe_load(f)
-
-    # Convert to NNConfig if it's a raw config dict
-    if "network_name" in config_dict:
-        # It's a simplified config, use get_nn_config
-        nn_config = get_nn_config(
-            network_name=config_dict["network_name"],
-            network_size=config_dict.get("network_size", "default"),
-            training_size=config_dict.get("training_size", "default"),
-            task_type="summary_learner",
-            lr_scheduler_name=config_dict.get("lr_scheduler_name", "cosine"),
-            experiment_name=config_dict.get("experiment_name", "summary_learner"),
-        )
-
-        # Apply any overrides
-        if "overrides" in config_dict:
-            for key, value in config_dict["overrides"].items():
-                if hasattr(nn_config.training, key):
-                    setattr(nn_config.training, key, value)
-
-        return nn_config
-    else:
-        # Assume it's a full NNConfig YAML
-        from abcnre.training import NNConfig
-
-        return NNConfig.load(config_path)
 
 
 def save_simulator_report(simulator, output_dir: Path, args):
@@ -197,7 +221,7 @@ def save_simulator_report(simulator, output_dir: Path, args):
         f.write(f"  - simulator.yaml (main configuration)\n")
         f.write(f"  - simulator_report.txt (this file)\n")
 
-    print(f"Report saved to: {report_path}")
+    logger.info(f"Report saved to: {report_path}")
 
 
 def setup_create_simulator_parser(subparsers):
@@ -223,6 +247,11 @@ def setup_create_simulator_parser(subparsers):
     )
 
     parser.add_argument(
+        "--model_path",
+        help="Path to custom model configuration YAML file (overrides model_name)",
+    )
+
+    parser.add_argument(
         "output_dir",
         type=str,
         help="Output directory for saving simulator configuration",
@@ -230,16 +259,23 @@ def setup_create_simulator_parser(subparsers):
 
     # Optional arguments
     parser.add_argument(
-        "--with-summary-stats",
+        "--learn_summary_stats",
         action="store_true",
         help="Learn summary statistics using a regressor network",
     )
 
     parser.add_argument(
-        "--regressor-template",
+        "--regressor_config_template_name",
         type=str,
         default="deepset_default",
         help="Regressor template name (default: deepset_default)",
+    )
+
+    parser.add_argument(
+        "--regressor_config_path",
+        type=str,
+        default=None,
+        help="Path to regressor configuration file (default: deepset_default.yaml)",
     )
 
     parser.add_argument(
@@ -250,10 +286,26 @@ def setup_create_simulator_parser(subparsers):
     )
 
     parser.add_argument(
-        "--true-theta",
+        "--marginal_of_interest",
+        type=int,
+        default=None,
+        help="Index of marginal parameter for inference (-1 for all parameters, 0+ for specific parameter index). "
+        "For G&K: 0=A, 1=B, 2=g, 3=k, -1=all. For GaussGauss: 0=mu_1, 1=mu_2, etc., -1=all.",
+    )
+
+    parser.add_argument(
+        "--true_theta",
         type=float,
-        default=2.5,
-        help="True parameter value for generating observed data (default: 2.5)",
+        nargs="+",
+        default=None,
+        help="True parameter values for generating observed data (space-separated list of floats)",
+    )
+
+    parser.add_argument(
+        "--observed_data_path",
+        type=str,
+        default=None,
+        help="Path to observed data file (default: None)",
     )
 
     parser.add_argument(
@@ -261,10 +313,15 @@ def setup_create_simulator_parser(subparsers):
     )
 
     parser.add_argument(
-        "--quantile-distance",
+        "--quantile_distance",
         type=float,
         default=1.0,
         help="Quantile for automatic epsilon determination (default: 1.0)",
+    )
+
+    # Add standardized boolean flags
+    add_boolean_flag(
+        parser, "save", default=True, help_text="Save simulator configuration files"
     )
 
     parser.set_defaults(func=create_simulator_command)

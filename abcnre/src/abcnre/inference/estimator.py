@@ -33,6 +33,48 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+def reshape_input(network_type : str, x: jnp.ndarray, phi: jnp.ndarray, s_x: Optional[jnp.ndarray] = None) -> Union[jnp.ndarray, Dict[str, jnp.ndarray]]:
+    
+    if phi.ndim == 1:
+        phi = phi[:, jnp.newaxis]
+    if s_x is not None and s_x.ndim == 1:
+        s_x = s_x[:, jnp.newaxis]
+        
+    if network_type == "ConditionedDeepSet":
+        # ConditionedDeepSet expects dict input: {'theta': ..., 'x': ...}
+        if s_x is not None:
+            # Concatenate summary stats to theta
+            theta = jnp.concatenate([phi, s_x], axis=-1)
+        else:
+            theta = phi
+
+        return {"theta": theta, "x": x}
+    
+    elif network_type == "DeepSet":
+        # DeepSet: concatenated input theta and data
+        n_obs = x.shape[1]
+        inputs = jnp.concatenate(
+            [x, jnp.repeat(phi[:, None, :], repeats=n_obs, axis=1)], axis=2
+        )
+        if s_x is not None:
+            inputs = jnp.concatenate(
+                [inputs, jnp.repeat(s_x[:, None, :], repeats=n_obs, axis=1)], axis=2
+            )
+        return inputs
+    
+    elif network_type == "MLP":
+        # MLP: flattened concatenated input
+        inputs = jnp.concatenate([x.reshape(x.shape[0], -1), phi], axis=1)
+        if s_x is not None:
+            inputs = jnp.concatenate([inputs, s_x], axis=1)
+        return inputs
+    
+    else:
+        raise ValueError(f"Unknown network type: {network_type}")
+    
+    
+
+
 def create_log_ratio_function(
     network, params, network_type: str, summary_as_input: bool = False
 ):
@@ -66,49 +108,12 @@ def create_log_ratio_function(
             Log-ratio estimates, shape (batch,)
         """
 
-        if s_x is not None:
-            if s_x.ndim == 1:
-                s_x = s_x[:, jnp.newaxis]
-        if phi.ndim == 1:
-            phi = phi[:, jnp.newaxis]
-
-        # Prepare inputs based on network type
-        if network_type == "ConditionedDeepSet":
-            # ConditionedDeepSet expects dict input: {'theta': ..., 'x': ...}
-            theta = phi
-            if summary_as_input and s_x is not None:
-                # Concatenate summary stats to theta
-                theta = jnp.concatenate([phi, s_x], axis=-1)
-
-            network_input = {
-                "theta": theta,  # (batch, k) or (batch, k + s)
-                "x": x,  # (batch, n, d) - preserves structure for deep set
-            }
-
-        else:
-            # DeepSet or MLP expect flattened concatenated input
-            # Flatten observations if multi-dimensional
-            if x.ndim > 2:
-                batch_size = x.shape[0]
-                x_flat = x.reshape(batch_size, -1)  # (batch, n*d)
-            else:
-                x_flat = x  # Already (batch, d)
-
-            # Build input components
-            input_components = [x_flat, phi]  # [observations, parameters]
-
-            if summary_as_input and s_x is not None:
-                input_components.append(s_x)  # Add summary stats
-
-            # Concatenate all components
-            network_input = jnp.concatenate(input_components, axis=-1)
-            # Shape: (batch, n*d + k) or (batch, n*d + k + s)
-
+        network_input = reshape_input(network_type, x, phi, s_x if summary_as_input else None)
         # Forward pass through network
         logits = network.apply(params, network_input, training=False)
 
         # Return log-ratio (squeeze to remove last dimension if output_dim=1)
-        log_ratio = logits.squeeze(-1)  # (batch,)
+        log_ratio = logits.reshape(-1)
 
         return log_ratio
 
@@ -215,7 +220,6 @@ class NeuralRatioEstimator:
         Returns:
             ClassifierResult containing trained network and training history
         """
-
         if n_sim_max is not None:
             if hasattr(self.nn_config.training, "stopping_rules"):
                 # Check if stopping_rules is a dict or StoppingRulesConfig object
@@ -290,62 +294,15 @@ class NeuralRatioEstimator:
                 training_result = self.simulator.generate_training_samples(
                     key, batch_size
                 )
-                if network_type == "ConditionedDeepSet":
-                    # ConditionedDeepSet: dict input format
-                    theta = training_result.phi
-                    if use_summary:
-                        theta = jnp.concatenate(
-                            [theta, training_result.summary_stats], axis=1
-                        )
-
-                    training_input = {"x": training_result.data, "theta": theta}
-                elif network_type == "DeepSet":
-                    # DeepSet: concatenated input theta and data
-                    n_obs = training_result.data.shape[1]
-                    inputs = jnp.concatenate(
-                        [
-                            training_result.data,
-                            jnp.repeat(
-                                training_result.phi.reshape(-1, 1, 1),
-                                repeats=n_obs,
-                                axis=1,
-                            ),
-                        ],
-                        axis=2,
-                    )
-                    if use_summary:
-                        inputs = jnp.concatenate(
-                            [
-                                inputs,
-                                jnp.repeat(
-                                    training_result.summary_stats.reshape(-1, 1, 1),
-                                    repeats=n_obs,
-                                    axis=1,
-                                ),
-                            ],
-                            axis=2,
-                        )
-                    training_input = inputs
-                elif network_type == "MLP":
-                    # MLP: flattened concatenated input
-                    inputs = jnp.concatenate(
-                        [
-                            training_result.data.reshape(batch_size, -1),
-                            training_result.phi,
-                        ],
-                        axis=1,
-                    )
-                    if use_summary:
-                        inputs = jnp.concatenate(
-                            [inputs, training_result.summary_stats], axis=1
-                        )
-
-                    training_input = inputs
-                else:
-                    raise ValueError(f"Unknown network type: {network_type}")
+                
+         
+                training_inputs = reshape_input(network_type=network_type,
+                                                   x=training_result.data,
+                                                   phi=training_result.phi,
+                                                   s_x=training_result.summary_stats if use_summary else None)
 
                 return {
-                    "input": training_input,
+                    "input": training_inputs,
                     "output": training_result.labels,
                     "n_simulations": training_result.total_sim_count,
                 }
@@ -355,18 +312,8 @@ class NeuralRatioEstimator:
         network_type = self.nn_config.network.network_type
         io_generator = create_io_generator(network_type, self.summary_as_input)
 
-        # key, key_test = jax.random.split(key)
-        # io = io_generator(key_test, 10000)
-        # labels = io["output"]
-        # mean_x = io["input"][:,:-1].mean(axis = 1)
-        # phi = io["input"][:,-1]
-        # import matplotlib.pyplot as plt
-        # plt.scatter(mean_x, phi, c=labels, cmap='coolwarm', alpha=0.5)
-        # plt.xlabel("Mean of x")
-        # plt.ylabel("Parameter phi")
-        # plt.title(f"Scatter plot of mean x vs phi for {network_type} network")
-        # plt.colorbar(label="Labels")
-        # plt.show()
+        key, key_test = jax.random.split(key)
+        io = io_generator(key_test, 10000)
 
         logger.info(
             f"Using {network_type} {'with' if self.summary_as_input else 'without'} summary statistics"
@@ -376,6 +323,7 @@ class NeuralRatioEstimator:
             logger.info(f"Storing {n_phi_to_store} phi during training")
             self.nn_config.training.n_phi_to_store = n_phi_to_store
         # Train using the unified system
+        
         key, train_key = random.split(key)
         self.classifier_result = train_classifier(
             key=train_key, config=self.nn_config, io_generator=io_generator

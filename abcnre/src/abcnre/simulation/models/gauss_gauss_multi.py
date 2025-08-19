@@ -8,6 +8,7 @@ from the original ABCDataGenerator implementations.
 
 from jax import random
 import jax.numpy as jnp
+import jax.scipy.stats as jax_stats
 import numpy as np
 from typing import Dict, Optional, Any
 import scipy.stats as scstats
@@ -43,7 +44,7 @@ class GaussGaussMultiDimModel(StatisticalModel):
         sigma: Optional[jnp.ndarray] = None,
         dim: Optional[int] = None,
         n_obs: int = 100,
-        marginal_of_interest: int = 0,
+        marginal_of_interest: int = None,
     ):
         """Initialize multidimensional Gaussian-Gaussian model."""
 
@@ -75,9 +76,21 @@ class GaussGaussMultiDimModel(StatisticalModel):
         self.mu0 = mu0
 
         # Validate marginal_of_interest
-        if marginal_of_interest < 0 or marginal_of_interest >= self.dim:
-            raise ValueError(f"marginal_of_interest must be between 0 and {self.dim-1}")
-        self.marginal_of_interest = marginal_of_interest
+        if marginal_of_interest is not None and (
+            marginal_of_interest < -1 or marginal_of_interest >= self.dim
+        ):
+            raise ValueError(
+                f"marginal_of_interest must be -1 (all parameters) or between 0 and {self.dim-1}"
+            )
+
+        if marginal_of_interest == -1 or marginal_of_interest is None:
+            self.parameter_of_interest = "all"
+            self.phi_dim = self.dim
+            self.marginal_of_interest = None
+        else:
+            self.marginal_of_interest = marginal_of_interest
+            self.phi_dim = 1
+            self.parameter_of_interest = f"mu_{marginal_of_interest + 1}"
 
         # Set default parameters
         if sigma0 is None:
@@ -116,13 +129,14 @@ class GaussGaussMultiDimModel(StatisticalModel):
         # Precompute Cholesky decompositions for efficiency
         self.chol_sigma0 = jnp.linalg.cholesky(self.sigma0_matrix)
         self.chol_sigma = jnp.linalg.cholesky(self.sigma_matrix)
+        self.name = f"GaussGauss_{self.dim}D_marginal_{self.marginal_of_interest}"
 
-    def get_prior_sample(self, key: random.PRNGKey) -> jnp.ndarray:
+    def sample_theta(self, key: random.PRNGKey) -> jnp.ndarray:
         """Sample from multivariate Gaussian prior."""
         z = random.normal(key, shape=(self.dim,))
         return self.mu0_vect + self.chol_sigma0 @ z
 
-    def get_prior_samples(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
+    def sample_thetas(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
         """
         Draw multiple samples from the prior distribution efficiently.
 
@@ -143,7 +157,7 @@ class GaussGaussMultiDimModel(StatisticalModel):
         Returns:
             Scipy multivariate normal distribution object representing the prior
         """
-        return scstats.multivariate_normal(mean=self.mu0_vect, cov=self.sigma0_matrix)
+        return jax_stats.multivariate_normal(mean=self.mu0_vect, cov=self.sigma0_matrix)
 
     def prior_logpdf(self, theta: jnp.ndarray) -> float:
         """
@@ -155,7 +169,7 @@ class GaussGaussMultiDimModel(StatisticalModel):
         Returns:
             Log-probability under the prior
         """
-        return scstats.multivariate_normal.logpdf(
+        return jax_stats.multivariate_normal.logpdf(
             theta, mean=self.mu0_vect, cov=self.sigma0_matrix
         )
 
@@ -169,11 +183,11 @@ class GaussGaussMultiDimModel(StatisticalModel):
         Returns:
             Probability density under the prior
         """
-        return scstats.multivariate_normal.pdf(
+        return jax_stats.multivariate_normal.pdf(
             theta, mean=self.mu0_vect, cov=self.sigma0_matrix
         )
 
-    def simulate_data(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
+    def sample_x(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
         """
         Sample from multivariate Gaussian likelihood: X | theta ~ N(theta, Sigma).
 
@@ -200,7 +214,7 @@ class GaussGaussMultiDimModel(StatisticalModel):
         Returns:
             Log-probability under the prior for phi
         """
-        return scstats.norm.logpdf(
+        return jax_stats.norm.logpdf(
             phi,
             loc=self.mu0_vect[self.marginal_of_interest],
             scale=jnp.sqrt(
@@ -218,7 +232,7 @@ class GaussGaussMultiDimModel(StatisticalModel):
         Returns:
             Probability density under the prior for phi
         """
-        return scstats.norm.pdf(
+        return jax_stats.norm.pdf(
             phi,
             loc=self.mu0_vect[self.marginal_of_interest],
             scale=jnp.sqrt(
@@ -238,8 +252,6 @@ class GaussGaussMultiDimModel(StatisticalModel):
         else:
             return jnp.linalg.norm(diff, ord="fro")
 
-
-
     def transform_phi(self, theta: jnp.ndarray) -> jnp.ndarray:
         """
         Extract marginal of interest from theta vector.
@@ -248,12 +260,16 @@ class GaussGaussMultiDimModel(StatisticalModel):
             theta: Parameter vector
 
         Returns:
-            Scalar value of the marginal of interest
+            Scalar value of the marginal of interest (or full vector if all parameters)
         """
         if jnp.isscalar(theta):
             return jnp.array([theta])
         else:
-            return jnp.array([theta[self.marginal_of_interest]])
+            return (
+                jnp.array([theta[self.marginal_of_interest]])
+                if self.marginal_of_interest is not None
+                else theta
+            )
 
     def predefined_summary_stat_fn(self, data: jnp.ndarray) -> jnp.ndarray:
         """
@@ -274,7 +290,11 @@ class GaussGaussMultiDimModel(StatisticalModel):
             # Multiple observations: (n_obs, dim)
             if data.shape[1] == self.dim:
                 means = jnp.mean(data, axis=0)
-                return jnp.array([means[self.marginal_of_interest]])  
+                return (
+                    jnp.array([means[self.marginal_of_interest]])
+                    if self.marginal_of_interest is not None
+                    else means
+                )
             else:
                 raise ValueError(
                     f"Expected data shape (n_obs, {self.dim}), got {data.shape}"
@@ -282,7 +302,14 @@ class GaussGaussMultiDimModel(StatisticalModel):
         elif data.ndim == 3:
             # Batch of datasets: (n_datasets, n_obs, dim)
             if data.shape[1] == self.n_obs and data.shape[2] == self.dim:
-                return jnp.array([jnp.mean(data, axis=1)[:, self.marginal_of_interest]])  # Return (n_datasets, dim)
+                batch_means = jnp.mean(data, axis=1)  # (n_datasets, dim)
+                return (
+                    batch_means[
+                        :, self.marginal_of_interest : self.marginal_of_interest + 1
+                    ]
+                    if self.marginal_of_interest is not None
+                    else batch_means
+                )
             else:
                 raise ValueError(
                     f"Expected data shape (n_datasets, {self.n_obs}, {self.dim}), got {data.shape}"
@@ -342,7 +369,7 @@ class GaussGaussMultiDimModel(StatisticalModel):
             Scipy multivariate normal distribution object
         """
         stats = self.get_posterior_stats(observed_data)
-        return scstats.multivariate_normal(
+        return jax_stats.multivariate_normal(
             mean=stats["posterior_mean"], cov=stats["posterior_cov"]
         )
 
@@ -437,8 +464,31 @@ class GaussGaussMultiDimModel(StatisticalModel):
         cov_post_marginal = stats["posterior_cov"][
             self.marginal_of_interest, self.marginal_of_interest
         ]
+      
 
-        return scstats.norm(loc=mu_post_marginal, scale=jnp.sqrt(cov_post_marginal))
+        return jax_stats.norm(loc=mu_post_marginal, scale=jnp.sqrt(cov_post_marginal))
+
+    def get_posterior_phi_logpdf(self, observed_data: jnp.ndarray):
+        """
+        Get log probability density function (PDF) for the posterior distribution.
+
+        Args:
+            observed_data: Observed dataset
+
+        Returns:
+            Log PDF function for the posterior distribution
+        """
+        stats = self.get_posterior_stats(observed_data)
+        # Extract marginal of interest from posterior mean and covariance
+        mu_post_marginal = stats["posterior_mean"][self.marginal_of_interest]
+
+        cov_post_marginal = stats["posterior_cov"][
+            self.marginal_of_interest, self.marginal_of_interest
+        ]
+
+        return lambda phi: jax_stats.norm.logpdf(
+            phi, loc=mu_post_marginal, scale=jnp.sqrt(cov_post_marginal)
+        )
 
     def get_model_args(self) -> Dict[str, Any]:
         """Get model parameters for serialization."""

@@ -16,10 +16,13 @@ from .create_estimator import setup_create_estimator_parser
 from .create_simulator_and_estimator import setup_create_simulator_and_estimator_parser
 from .train_summary_stats import setup_train_summary_stats_parser
 from .train_nre import setup_train_nre_parser
-from .train_full_pipeline import setup_train_full_pipeline_parser
-from .plot_posterior_comparison import setup_plot_posterior_comparison_parser
+
+from .plot_grid_posterior_comparison import setup_plot_posterior_comparison_parser
+from .plot_mcmc_posterior_comparison import setup_plot_mcmc_posterior_comparison_parser
+from .plot_mcmc_output import setup_plot_mcmc_output_parser
 from .compute_metrics import setup_compute_metrics_parser
 from .run_sbc import setup_run_sbc_parser
+from .run_mcmc import setup_run_mcmc_parser
 from .interactive import setup_interactive_parsers
 
 
@@ -55,9 +58,12 @@ def main():
         Evaluation workflow:
         abcnre plot_posterior_comparison ./output/estimator.yaml
         abcnre compute_metrics ./output/estimator.yaml
+        abcnre run_mcmc ./output/estimator.yaml ./output/mcmc_results
         abcnre run_sbc ./output/estimator.yaml --n_samples 100
-        abcnre compute_metrics ./est/estimator.yaml --include-corrected --include-abc
-        abcnre run_sbc ./est/estimator.yaml --num-sbc-rounds 1000
+        
+        MCMC sampling examples:
+        abcnre run_mcmc ./estimator.yaml ./mcmc_results --n-samples-chain 50000
+        abcnre run_mcmc ./estimator.yaml ./mcmc_results --no-true --output-format npy
         
         For detailed help on any command: abcnre <command> --help
         """,
@@ -78,10 +84,13 @@ def main():
     setup_create_simulator_and_estimator_parser(subparsers)
     setup_train_summary_stats_parser(subparsers)
     setup_train_nre_parser(subparsers)
-    setup_train_full_pipeline_parser(subparsers)
+
     setup_plot_posterior_comparison_parser(subparsers)
+    setup_plot_mcmc_posterior_comparison_parser(subparsers)
+    setup_plot_mcmc_output_parser(subparsers)
     setup_compute_metrics_parser(subparsers)
     setup_run_sbc_parser(subparsers)
+    setup_run_mcmc_parser(subparsers)
     setup_interactive_parsers(subparsers)
 
     # Parse arguments

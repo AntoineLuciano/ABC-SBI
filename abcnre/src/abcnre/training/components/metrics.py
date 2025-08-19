@@ -285,9 +285,6 @@ class TrainingLogger:
         learning_rate = metrics.get_latest("learning_rate")
         total_simulations = metrics.get_latest("total_simulations")
 
-        # Progress percentage
-        progress = (epoch + 1) / num_epochs * 100
-
         log_msg = (
             f"Epoch {epoch + 1:3d}/{num_epochs} | "
             f"Loss: train = {train_loss:.6f} val = {val_loss:.6f} | "

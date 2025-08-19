@@ -1,0 +1,35 @@
+=== Neural Ratio Estimator Training Report ===
+
+Created on: /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss
+Command args: {'output_dir': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results', 'simulator': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results/simulator.yaml', 'seed': 42, 'classifier_config_path': None, 'classifier_config_template_name': 'conditioned_deepset_default', 'epsilon': None, 'quantile_distance': None}
+
+Simulator Information:
+  Source: /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results/simulator.yaml
+  Model: GaussGaussMultiDimModel
+  Epsilon: inf
+  Summary stats enabled: True
+
+Network Configuration:
+  Experiment: nre_conditioned_deepset_training
+  Network type: ConditionedDeepSet
+  Task type: classifier
+
+Training Configuration:
+  Epochs: 200
+  Batch size: 1024
+  Learning rate: 0.001
+  Optimizer: adamw
+  LR scheduler: reduce_on_plateau
+
+Training Results:
+  Status: Completed
+
+Files created:
+  - estimator.yaml (main configuration)
+  - estimator_report.txt (this file)
+  - estimator_simulator.yaml
+  - estimator_simulator_observed_data.npy
+  - estimator_stored_phis.npy
+  - estimator_simulator_model.yml
+  - estimator_classif_config.yaml
+  - estimator_classif_params.npz

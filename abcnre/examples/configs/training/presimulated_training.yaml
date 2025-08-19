@@ -1,0 +1,79 @@
+# Configuration for training with pre-simulated datasets
+
+# Base configuration for pre-simulated training
+base:
+  optimizer: "adam"
+  weight_decay: 0.0
+  validation_split: 0.2
+  early_stopping_patience: 15
+  store_thetas: true
+  num_thetas_to_store: 10000
+  
+  # Pre-simulated data settings
+  use_presimulated_data: true
+  training_set_size: 100000
+  validation_set_size: 20000
+  
+  # Phi storage for analysis
+  n_phi_to_store: 5000
+  
+  # LR scheduler will be loaded separately
+  lr_scheduler_name: "cosine"
+  lr_scheduler_variant: "default"
+
+# Variants with different pre-simulated dataset sizes
+variants:
+  # Small pre-simulated dataset for quick testing
+  small:
+    learning_rate: 0.001
+    num_epochs: 50
+    batch_size: 256
+    n_samples_per_epoch: 5120
+    training_set_size: 25000
+    validation_set_size: 5000
+    lr_scheduler_name: "constant"
+    
+  # Medium dataset for standard training
+  medium:
+    learning_rate: 0.0003
+    num_epochs: 100
+    batch_size: 512
+    n_samples_per_epoch: 10240
+    training_set_size: 100000
+    validation_set_size: 20000
+    lr_scheduler_name: "cosine"
+    
+  # Large dataset for comprehensive training
+  large:
+    learning_rate: 0.0001
+    num_epochs: 200
+    batch_size: 512
+    n_samples_per_epoch: 20480
+    training_set_size: 500000
+    validation_set_size: 100000
+    early_stopping_patience: 25
+    lr_scheduler_name: "cosine"
+    lr_scheduler_variant: "with_warmup"
+    
+  # Massive dataset for production training
+  massive:
+    learning_rate: 0.0001
+    num_epochs: 300
+    batch_size: 1024
+    n_samples_per_epoch: 51200
+    training_set_size: 1000000
+    validation_set_size: 200000
+    early_stopping_patience: 30
+    lr_scheduler_name: "reduce_on_plateau"
+    n_phi_to_store: 10000
+
+# Notes:
+# - Pre-simulated datasets are created once at the beginning of training
+# - training_set_size: Total size of the pre-simulated training dataset
+# - validation_set_size: Total size of the pre-simulated validation dataset
+# - Batches are sampled randomly from these fixed datasets
+# - This approach provides:
+#   * Reproducible training (same data across runs)
+#   * Faster training (no simulation overhead per batch)
+#   * Better memory efficiency for large datasets
+#   * Consistent validation evaluation

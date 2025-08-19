@@ -30,7 +30,7 @@ class StatisticalModel(ABC):
     """
 
     @abstractmethod
-    def get_prior_sample(self, key: random.PRNGKey) -> jnp.ndarray:
+    def sample_theta(self, key: random.PRNGKey) -> jnp.ndarray:
         """
         Sample parameters from prior distribution.
 
@@ -42,7 +42,7 @@ class StatisticalModel(ABC):
         """
         pass
 
-    def get_prior_samples(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
+    def sample_thetas(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
         """
         Draws multiple samples from the prior distribution efficiently.
 
@@ -61,7 +61,7 @@ class StatisticalModel(ABC):
         return vmap(self.prior_sample)(keys)
 
     @abstractmethod
-    def simulate_data(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
+    def sample_x(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
         """
         Simulate data given parameters.
 
@@ -74,7 +74,7 @@ class StatisticalModel(ABC):
         """
         pass
 
-    def simulate_datas(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
+    def sample_xs(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
         """
         Simulate multiple datasets given parameters.
 
@@ -89,7 +89,7 @@ class StatisticalModel(ABC):
         n_samples = theta.shape[0] if theta.ndim > 1 else 1
         keys = random.split(key, n_samples)
         # Map over both keys and theta rows
-        return vmap(lambda k, t: self.simulate_data(k, t))(keys, theta)
+        return vmap(lambda k, t: self.sample_x(k, t))(keys, theta)
 
     def sample_theta_x(self, key: random.PRNGKey) -> jnp.ndarray:
         """
@@ -102,10 +102,10 @@ class StatisticalModel(ABC):
             Simulated dataset
         """
         key_theta, key_data = random.split(key)
-        theta = self.get_prior_sample(key_theta)
-        return theta, self.simulate_data(key_data, theta)
+        theta = self.sample_theta(key_theta)
+        return theta, self.sample_x(key_data, theta)
 
-    def sample_theta_x_multiple(
+    def sample_thetas_xs(
         self, key: random.PRNGKey, n_samples: int
     ) -> jnp.ndarray:
         """
@@ -134,11 +134,11 @@ class StatisticalModel(ABC):
             - data: Simulated dataset
         """
         key_theta, key_data = random.split(key)
-        theta = self.get_prior_sample(key_theta)
+        theta = self.sample_theta(key_theta)
         phi = self.transform_phi(theta)
-        return phi, self.simulate_data(key_data, theta)
+        return phi, self.sample_x(key_data, theta)
 
-    def sample_phi_x_multiple(
+    def sample_phis_xs(
         self, key: random.PRNGKey, n_samples: int
     ) -> Tuple[jnp.ndarray, jnp.ndarray]:
         """
@@ -156,6 +156,14 @@ class StatisticalModel(ABC):
 
         keys = random.split(key, n_samples)
         return vmap(lambda k: self.sample_phi_x(k))(keys)
+    
+    def sample_phi(self, key: random.PRNGKey):
+        theta = self.sample_theta(key)
+        return self.transform_phi(theta)
+    
+    def sample_phis(self, key: random.PRNGKey, n_samples: int):
+        keys = random.split(key, n_samples)
+        return vmap(lambda k: self.sample_phi(k))(keys)
 
     @abstractmethod
     def discrepancy_fn(self, data1: jnp.ndarray, data2: jnp.ndarray) -> float:

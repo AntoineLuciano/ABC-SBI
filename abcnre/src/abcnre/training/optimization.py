@@ -297,10 +297,10 @@ def create_optimizer(
 
     if optimizer_type == "adam":
         if weight_decay > 0.0:
-            logger.info(
-                f"Adam optimizer with weight_decay={weight_decay} detected. "
-                f"Automatically switching to AdamW for proper weight decay support."
-            )
+            # logger.info(
+            #     f"Adam optimizer with weight_decay={weight_decay} detected. "
+            #     f"Automatically switching to AdamW for proper weight decay support."
+            # )
             return optax.adamw(learning_rate, weight_decay=weight_decay, **kwargs)
         else:
             return optax.adam(learning_rate, **kwargs)
@@ -316,8 +316,8 @@ def create_optimizer(
         else:
             return optax.sgd(learning_rate, **kwargs)
     elif optimizer_type == "adamw":
-        if weight_decay > 0.0:
-            logger.info(f"Using AdamW with native weight_decay={weight_decay} support.")
+        # if weight_decay > 0.0:
+        #     logger.info(f"Using AdamW with native weight_decay={weight_decay} support.")
         return optax.adamw(learning_rate, weight_decay=weight_decay, **kwargs)
     else:
         raise ValueError(f"Unknown optimizer type: {optimizer_type}")

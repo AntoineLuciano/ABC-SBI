@@ -33,15 +33,15 @@ def validate_training_config(config: NNConfig):
         ValueError: If configuration is invalid
     """
     training_config = config.training
-
     # Basic parameter validation
     if training_config.n_samples_per_epoch is None:
         raise ValueError("n_samples_per_epoch must be specified in the config")
 
     if training_config.batch_size <= 0:
         raise ValueError("batch_size must be positive")
-
+    
     if training_config.num_epochs <= 0:
+        
         raise ValueError("num_epochs must be positive")
 
     if training_config.learning_rate <= 0:
@@ -52,6 +52,7 @@ def validate_training_config(config: NNConfig):
 
     # Check if n_samples_per_epoch is divisible by batch_size
     if training_config.n_samples_per_epoch % training_config.batch_size != 0:
+        
         logger.warning(
             f"n_samples_per_epoch ({training_config.n_samples_per_epoch}) "
             f"not divisible by batch_size ({training_config.batch_size}). "
@@ -73,6 +74,7 @@ def validate_training_config(config: NNConfig):
 
     # Validate weight decay
     if training_config.weight_decay < 0:
+        
         raise ValueError("weight_decay must be non-negative")
 
     # Validate loss function
@@ -88,7 +90,6 @@ def validate_training_config(config: NNConfig):
             raise ValueError(
                 f"Unknown regressor loss: {training_config.loss_function}. Must be one of {valid_regressor_losses}"
             )
-
     # Validate phi storage config if present
     n_phi_to_store = getattr(training_config, "n_phi_to_store", 0)
     if n_phi_to_store < 0:
@@ -179,7 +180,15 @@ def setup_training_components(
         if training_config.verbose:
             logger.info("Using same generator for validation data")
 
-    val_batch_size = min(batch_size * 10, 1024)  # Larger validation batches
+    # Use pre-simulated validation data if enabled
+
+    val_batch_size = getattr(training_config, "validation_set_size", min(batch_size * 10, 1024))
+    if training_config.verbose:
+        logger.info(
+            f"Creating pre-simulated validation set: {val_batch_size} samples"
+        )
+
+
     key, val_key = jax.random.split(key)
     val_data = val_io_generator(val_key, val_batch_size)
 

@@ -66,10 +66,7 @@ def generate_g_and_k_samples(
     z = random.normal(key, shape=(n_samples, 1))
     c = 0.8
 
-    # Stable skewness term
-    skew_term = c * jnp.tanh(g * z / 2)
-
-    samples = A + B * (1 + skew_term) * (1 + z**2) ** k * z
+    samples = A + B * (1 + c * jnp.tanh(g * z / 2)) * (1 + z**2) ** k * z
 
     # Check for numerical issues (optional)
     samples = jnp.nan_to_num(samples, nan=0.0, posinf=0.0, neginf=0.0)
@@ -105,7 +102,8 @@ class GAndKModel(StatisticalModel):
         self,
         prior_bounds: tuple = (0.0, 10.0),
         n_obs: int = 100,
-        parameter_of_interest: str = "A",
+        marginal_of_interest: int = -1,
+        parameter_of_interest: str = None,
         dim: int = 1,
     ):
         """
@@ -157,21 +155,25 @@ class GAndKModel(StatisticalModel):
             self.dim,
         )  # Shape of simulated data (1D like other models)
         self.n_obs = n_obs  # Number of observations per sample
-        self.parameter_of_interest = parameter_of_interest
-
-        if parameter_of_interest == "A":
-            self.marginal_of_interest = 0
-        elif parameter_of_interest == "B":
-            self.marginal_of_interest = 1
-        elif parameter_of_interest == "g":
-            self.marginal_of_interest = 2
-        elif parameter_of_interest == "k":
-            self.marginal_of_interest = 3
-        elif parameter_of_interest == "all":
-            self.marginal_of_interest = None
+        self.marginal_of_interest = marginal_of_interest
+        if self.marginal_of_interest == -1:
+            self.parameter_of_interest = "all"
+            self.phi_dim = 4
+        elif self.marginal_of_interest == 0:
+            self.parameter_of_interest = "A"
+            self.phi_dim = 1
+        elif self.marginal_of_interest == 1:
+            self.parameter_of_interest = "B"
+            self.phi_dim = 1
+        elif self.marginal_of_interest == 2:
+            self.parameter_of_interest = "g"
+            self.phi_dim = 1
+        elif self.marginal_of_interest == 3:
+            self.parameter_of_interest = "k"
+            self.phi_dim = 1
         else:
             raise ValueError(
-                "parameter_of_interest must be one of 'A', 'B', 'g', 'k', or 'all'"
+                "marginal_of_interest must be one of -1, 0, 1, 2, 3"
             )
 
         # Pre-compute bounds arrays for efficient sampling
@@ -183,8 +185,9 @@ class GAndKModel(StatisticalModel):
             [self.param_bounds[name][1] for name in self.param_names]
         )
         self.param_ranges = self.upper_bounds - self.lower_bounds
+        self.name = f"G_and_K_{self.dim}D_marginal_{self.parameter_of_interest}"
 
-    def get_prior_sample(self, key: random.PRNGKey) -> jnp.ndarray:
+    def sample_theta(self, key: random.PRNGKey) -> jnp.ndarray:
         """
         Sample from uniform prior over parameter bounds.
 
@@ -197,7 +200,7 @@ class GAndKModel(StatisticalModel):
         u = random.uniform(key, shape=(4,))
         return self.lower_bounds + self.param_ranges * u
 
-    def get_prior_samples(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
+    def sample_thetas(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
         """
         Draw multiple samples from the prior distribution efficiently.
 
@@ -240,9 +243,9 @@ class GAndKModel(StatisticalModel):
         Returns:
             Parameter vector [A, B, g, k]
         """
-        return self.get_prior_sample(key)
+        return self.sample_theta(key)
 
-    def simulate_data(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
+    def sample_x(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
         """
         Simulate data from G-and-K distribution.
 
@@ -265,7 +268,7 @@ class GAndKModel(StatisticalModel):
         Compute distance between data or summary statistics.
         Uses Frobenius norm for matrices (2D) and L2 norm for vectors (1D).
         """
-        print("DEBUG: Discrepancy function called with data1 =", data1.shape, "data2 =", data2.shape)
+        
         data1, data2 = jnp.asarray(data1).flatten(), jnp.asarray(data2).flatten()
         diff = data1 - data2
         if diff.ndim == 1:
@@ -291,7 +294,6 @@ class GAndKModel(StatisticalModel):
         Returns:
             Array of quantiles at levels [0.1, 0.25, 0.5, 0.75, 0.9]
         """
-        print("DEBUG: Summary statistics for data =", data.shape)
         quantile_levels = jnp.array([.1,.2,.3,.4,.5,.6,.7,.8,.9])
         if data.ndim == 1:
             return jnp.quantile(data, quantile_levels)
@@ -316,11 +318,11 @@ class GAndKModel(StatisticalModel):
         Returns:
             Location parameter A as scalar
         """
-        return (
-            theta[self.marginal_of_interest]
-            if self.marginal_of_interest is not None
-            else theta
-        )
+        if self.marginal_of_interest == -1:
+            return jnp.array(theta)
+        else:
+            return jnp.array([theta[self.marginal_of_interest]])
+
 
     def get_parameter_names(self) -> list:
         """Get parameter names in order."""
@@ -365,7 +367,8 @@ class GAndKModel(StatisticalModel):
                 },
                 "dim": int(self.dim),
                 "n_obs": int(self.n_obs),
-                "parameter_of_interest": self.parameter_of_interest,
+                "marginal_of_interest": int(self.marginal_of_interest),
+                "parameter_of_interest": (self.parameter_of_interest),
                 # Note: marginal_of_interest is computed automatically from parameter_of_interest
             },
         }
@@ -380,8 +383,7 @@ class GAndKModel(StatisticalModel):
 
             Log PDF of prior distribution
         """
-        if self.parameter_of_interest == "all":
-
+        if self.marginal_of_interest == -1:
             return self.get_prior_log_density(phi)
 
         return jnp.where(
@@ -402,7 +404,7 @@ class GAndKModel(StatisticalModel):
         Returns:
             PDF of prior distribution
         """
-        if self.parameter_of_interest == "all":
+        if self.marginal_of_interest == -1:
             return jnp.exp(self.get_prior_log_density(phi))
 
         return jnp.where(
@@ -413,19 +415,124 @@ class GAndKModel(StatisticalModel):
             1.0 / self.param_ranges[self.marginal_of_interest],
             0.0,
         )
+        
+    def get_posterior_logpdf(self, observed_data: jnp.ndarray) -> jnp.ndarray:
+        import jax.lax as lax
+        # Constantes
+        LOG2PI = jnp.log(2.0 * jnp.pi)
+
+        # Fonctions auxiliaires G&K optimisées
+        @jax.jit
+        def _A(z, g):
+            return 1.0 + 0.8 * jnp.tanh(0.5 * g * z)
+
+        @jax.jit
+        def _dA(z, g):
+            u = 0.5 * g * z
+            return 0.4 * g * (1.0 / jnp.cosh(u))**2
+
+        @jax.jit
+        def _H(z, k):
+            return (1.0 + z**2)**k
+
+        @jax.jit
+        def _dH(z, k):
+            return 2.0 * k * z * (1.0 + z**2)**(k - 1.0)
+
+        @jax.jit
+        def Q_of_z(z, theta):
+            a, b, g, k = theta
+            return a + b * _A(z, g) * _H(z, k) * z
+
+        @jax.jit
+        def dQdz(z, theta):
+            a, b, g, k = theta
+            A, H = _A(z, g), _H(z, k)
+            dA, dH = _dA(z, g), _dH(z, k)
+            return b * (A * H + A * z * dH + H * z * dA)
+
+        @jax.jit
+        def solve_z_for_x(x, theta, z_min=-8.0, z_max=8.0, newton_steps=25, bisect_steps=35):
+            x_scalar = jnp.squeeze(x)
+            
+            # Bornes de l'intervalle
+            q_lo = Q_of_z(z_min, theta)
+            q_hi = Q_of_z(z_max, theta)
+            
+            # Cas limites
+            def _return_low(_): return z_min
+            def _return_high(_): return z_max
+            
+            def _solve(_):
+                a, b, g, k = theta
+                # Initialisation intelligente
+                z0 = jnp.clip((x_scalar - a) / jnp.maximum(jnp.abs(b), 1e-8), z_min, z_max)
+                z_lo, z_hi, z = z_min, z_max, z0
+                
+                # Phase Newton-Raphson avec fallback bissection
+                def newton_body(carry, _):
+                    z_lo, z_hi, z = carry
+                    f = Q_of_z(z, theta) - x_scalar
+                    df = dQdz(z, theta)
+                    
+                    # Newton step protégé
+                    z_newton = z - f / jnp.where(jnp.abs(df) < 1e-12, jnp.sign(df) * 1e-12, df)
+                    z_bis = 0.5 * (z_lo + z_hi)
+                    
+                    # Choix du meilleur step
+                    in_bracket = (z_newton >= z_lo) & (z_newton <= z_hi)
+                    f_newton = Q_of_z(z_newton, theta) - x_scalar
+                    f_bis = Q_of_z(z_bis, theta) - x_scalar
+                    
+                    use_newton = in_bracket & (jnp.abs(f_newton) <= jnp.abs(f_bis))
+                    z_next = jnp.where(use_newton, z_newton, z_bis)
+                    f_next = jnp.where(use_newton, f_newton, f_bis)
+                    
+                    # Update brackets
+                    z_lo = jnp.where(f_next < 0.0, z_next, z_lo)
+                    z_hi = jnp.where(f_next >= 0.0, z_next, z_hi)
+                    
+                    return (z_lo, z_hi, z_next), None
+                
+                (z_lo, z_hi, z), _ = lax.scan(newton_body, (z_lo, z_hi, z), xs=None, length=newton_steps)
+                
+                # Raffinement final par bissection
+                def bisect_body(carry, _):
+                    z_lo, z_hi = carry
+                    z_mid = 0.5 * (z_lo + z_hi)
+                    f_mid = Q_of_z(z_mid, theta) - x_scalar
+                    z_lo = jnp.where(f_mid < 0.0, z_mid, z_lo)
+                    z_hi = jnp.where(f_mid >= 0.0, z_mid, z_hi)
+                    return (z_lo, z_hi), None
+                
+                (z_lo, z_hi), _ = lax.scan(bisect_body, (z_lo, z_hi), xs=None, length=bisect_steps)
+                return 0.5 * (z_lo + z_hi)
+            
+            return lax.cond(x_scalar <= q_lo, _return_low,
+                            lambda _: lax.cond(x_scalar >= q_hi, _return_high, _solve, operand=None),
+                            operand=None)
+
+        @jax.jit
+        def logpdf_gandk(x, theta, eps=1e-12):
+            z_star = solve_z_for_x(x, theta)
+            
+            # Log-PDF = log φ(z) - log |Q'(z)|
+            log_phi = -0.5 * z_star**2 - 0.5 * LOG2PI
+            qprime = jnp.maximum(jnp.abs(dQdz(z_star, theta)), eps)
+            
+            return log_phi - jnp.log(qprime)
+
+        logpdf_gandk_vectorized = jax.jit(jax.vmap(logpdf_gandk, in_axes=(0, None)))
+
+        return lambda theta: self.get_prior_log_density(theta) + jnp.sum(logpdf_gandk_vectorized(observed_data, theta))
 
 
-GAndKGenerator = GAndKModel
+
+
 
 
 # Export main components
 __all__ = [
     "GAndKModel",
     "generate_g_and_k_samples",
-    "create_synthetic_g_and_k_data",
-    "get_fearnhead_prangle_setup",
-    "create_order_statistics_subset",
-    "create_g_and_k_benchmark_study",
-    # Backward compatibility
-    "GAndKGenerator",
 ]

@@ -83,22 +83,16 @@ def save_simulator_to_yaml(
     # Check if we should skip saving
     if _should_skip_save(output_path, overwrite):
         return
-
     # Create output directory
     _ensure_output_directory(output_path)
-
     # Extract base simulator configuration
     simulator_config = _extract_simulator_config(simulator)
-
     # Save model configuration
     _save_model_configuration(simulator, simulator_config, output_path, overwrite)
-
     # Save observed data if present
     _save_observed_data(simulator, simulator_config, output_path, overwrite)
-
     # Save summary statistics if trained
     _save_summary_statistics(simulator, simulator_config, output_path, overwrite)
-
     # Save main simulator configuration file
     _save_main_config(simulator_config, output_path)
 
@@ -367,9 +361,9 @@ def _apply_summary_statistics(
 
         simulator.model.summary_stat_fn = summary_fn
         simulator.summary_stat_fn = summary_fn
-        simulator.config["summary_stats_enabled"] = True
+        simulator.trained_summary_stats = True
+        simulator._init_summary_stats()
         simulator._init_sampler()
-
         logger.info("Summary network loaded and integrated into simulator")
 
     except ImportError:

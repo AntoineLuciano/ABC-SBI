@@ -83,7 +83,7 @@ class GaussGaussModel(StatisticalModel):
         self.data_shape = (n_obs,)  # Shape of simulated data
         self.n_obs = n_obs  # Number of observations per sample
 
-    def get_prior_sample(self, key: random.PRNGKey) -> jnp.ndarray:
+    def sample_theta(self, key: random.PRNGKey) -> jnp.ndarray:
         """
         Sample from Gaussian prior: theta ~ N(mu0, sigma0^2).
 
@@ -95,7 +95,7 @@ class GaussGaussModel(StatisticalModel):
         """
         return self.mu0 + self.sigma0 * random.normal(key, shape=(1,))
 
-    def get_prior_samples(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
+    def sample_thetas(self, key: random.PRNGKey, n_samples: int) -> jnp.ndarray:
         """
         Draw multiple samples from the prior distribution efficiently.
 
@@ -168,7 +168,7 @@ class GaussGaussModel(StatisticalModel):
         """
         return scstats.norm.pdf(phi, loc=self.mu0, scale=self.sigma0)
 
-    def simulate_data(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
+    def sample_x(self, key: random.PRNGKey, theta: jnp.ndarray) -> jnp.ndarray:
         """
         Sample from Gaussian likelihood: X | theta ~ N(theta, sigma^2).
 

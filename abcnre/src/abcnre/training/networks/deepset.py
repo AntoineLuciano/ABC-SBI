@@ -109,7 +109,9 @@ class DeepSet(nn.Module):
             output: Summary statistics, shape (batch_size, output_dim)
         """
         if debug: print(f"DEBUG DeepSet.__call__: input x.shape={x.shape}")
-        
+        # if len(x.shape) == 2:
+        #     # If input is 2D, assume dim = 1
+        #     x = x[:,:, None]  # Reshape to (batch_size, n_samples, feature_dim=1)
         batch_size, n_samples, feature_dim = x.shape
         if debug: print(f"DEBUG DeepSet.__call__: batch_size={batch_size}, n_samples={n_samples}, feature_dim={feature_dim}")
 

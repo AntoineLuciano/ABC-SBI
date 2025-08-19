@@ -93,7 +93,7 @@ class ReduceOnPlateauManager:
                     self.current_lr = new_lr
                 
                 self.plateau_counter = 0
-                logger.info(f"Learning rate reduced: {old_lr:.2e} -> {self.current_lr:.2e}")
+                # logger.info(f"Learning rate reduced: {old_lr:.2e} -> {self.current_lr:.2e}")
                 return "reduce_lr", self.current_lr, False
             
             return "continue", self.current_lr, False

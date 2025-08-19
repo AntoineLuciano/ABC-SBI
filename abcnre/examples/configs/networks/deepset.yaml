@@ -4,7 +4,7 @@
 base:
   network_type: "DeepSet"
   network_args:
-    activation: "relu"
+    activation: "elu"
     use_layer_norm: true
     dropout_rate: 0.0
     pooling_type: "mean"

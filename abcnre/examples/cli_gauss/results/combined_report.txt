@@ -1,0 +1,23 @@
+=== ABC-NRE: Combined Simulator and Estimator Report ===
+
+Command: create_simulator_and_estimator
+Output directory: /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results
+Random seed: 42
+
+Configuration:
+  Model path: None
+  Model name: gauss_gauss_10d_default
+  Summary stats: False
+  Network name: mlp_default
+
+Files created:
+  - simulator.yaml
+  - simulator_report.txt
+  - estimator.yaml
+  - estimator_report.txt
+  - combined_report.txt (this file)
+
+Next steps:
+  abcnre plot_posterior_comparison /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results/estimator.yaml
+  abcnre compute_metrics /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results/estimator.yaml
+  abcnre run_sbc /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results/estimator.yaml --n_samples 100
