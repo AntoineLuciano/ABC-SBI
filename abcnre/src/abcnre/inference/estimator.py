@@ -305,6 +305,7 @@ class NeuralRatioEstimator:
                     "input": training_inputs,
                     "output": training_result.labels,
                     "n_simulations": training_result.total_sim_count,
+                    "phi": training_result.phi
                 }
 
             return io_generator

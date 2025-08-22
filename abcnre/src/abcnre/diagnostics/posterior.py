@@ -165,7 +165,6 @@ def get_unnormalized_nre_logpdf(
         x_batch = jnp.repeat(x[None, :], n_batch, axis=0)
         
         s_x_batch = jnp.repeat(s_x.reshape(1,-1), n_batch, axis=0)
-        
         log_ratios = estimator.log_ratio_fn(
             phi=phi_values, x=x_batch, s_x=s_x_batch if estimator.summary_as_input else None
             )
@@ -174,7 +173,6 @@ def get_unnormalized_nre_logpdf(
         prior_log_pdf = model.prior_phi_logpdf(phi_values)
         # Unnormalized log-posterior: log p(phi|x) = log_r + log p(phi)
         unnormalized_log_pdf = log_ratios + prior_log_pdf
-
         # Return scalar for 1D input, array for batch input
                 # if squeeze_output:
                 #     return unnormalized_log_pdf[0]  # Extract scalar directly
@@ -216,7 +214,7 @@ def get_unnormalized_corrected_nre_logpdf(
     elif phi_samples is not None:
         kde_func = gaussian_kde(phi_samples)
     elif estimator.stored_phis is not None:
-        kde_func = gaussian_kde(estimator.stored_phis)
+        kde_func = gaussian_kde(estimator.stored_phis.T)
     else:
         phi_samples = simulator.get_phi_samples(num_samples_for_kde)
         kde_func = gaussian_kde(phi_samples)
@@ -240,16 +238,6 @@ def get_unnormalized_corrected_nre_logpdf(
                 phi=phi_values, x=x_batch, s_x=s_x_batch if estimator.summary_as_input else None
             )
 
-        # Pseudo-posterior log probability from KDE
-        # if squeeze_output:
-        #     # For 1D input, phi_values is now (1, 4), so flatten it for KDE
-        #     # KDE returns scalar for single point, make it same shape as log_ratios
-        #     pseudo_posterior_logpdf = kde_func.logpdf(phi_values)
-        # else:
-        #     # For batch input, evaluate KDE for each row
-        #     pseudo_posterior_logpdf = jnp.array(
-        #         [kde_func.logpdf(phi_values[i]) for i in range(phi_values.shape[0])]
-        #     )
         pseudo_posterior_logpdf = kde_func.logpdf(phi_values)
         # Unnormalized corrected log-posterior
         unnormalized_logpdf = log_ratios + pseudo_posterior_logpdf

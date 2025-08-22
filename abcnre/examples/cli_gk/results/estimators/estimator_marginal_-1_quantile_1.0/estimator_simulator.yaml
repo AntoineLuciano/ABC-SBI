@@ -10,7 +10,7 @@ paths:
   summary_network_config: estimator_simulator_summary_network_config.yml
   summary_network_weights: estimator_simulator_summary_network_weights.npz
 metadata:
-  created_date: '2025-08-19T16:12:17.516763'
+  created_date: '2025-08-21T03:01:49.340960'
   abcnre_version: 0.1.0
   simulator_type: ABCSimulator
 observed_data_shape:

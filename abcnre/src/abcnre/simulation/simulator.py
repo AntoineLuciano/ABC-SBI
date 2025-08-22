@@ -486,7 +486,8 @@ class ABCSimulator:
             """Adapter for the unified training interface."""
             results = self.model.sample_phis_xs(key, batch_size)
             phi, x = results
-            return {"input": x, "output": phi, "n_simulations": batch_size}
+            
+            return {"input": x, "output": phi, "n_simulations": batch_size, "phi": phi}
 
         nn_config.network.network_args["output_dim"] = self.model.phi_dim
 

@@ -1,7 +1,7 @@
 is_trained: true
 metadata:
   abcnre_version: 0.1.0
-  created_date: '2025-08-19T03:10:41.682258'
+  created_date: '2025-08-21T03:14:52.700204'
   estimator_type: NeuralRatioEstimator
   sampler_id: e6099250e1d5
 paths:

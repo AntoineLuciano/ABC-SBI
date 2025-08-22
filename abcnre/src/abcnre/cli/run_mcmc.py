@@ -69,17 +69,12 @@ def run_mcmc_command(args):
     # Setup initial state (use zeros or model-specific initialization)
     key, key_init = jax.random.split(key)
     initial_state = model.sample_phi(key_init)
-    print(f"Initial state shape: {initial_state.shape}")
+    logger.info(f"DEBUG: Initial state for MCMC: {initial_state}")
     # Container for results
-    mcmc_results = {}
-    print("PHI DIM", model.phi_dim)
-    # Run NRE Standard MCMC
+    mcmc_results = {}    # Run NRE Standard MCMC
     if args.nre:
-        logger.info("Running MCMC for NRE Standard posterior...")
         key, subkey = jax.random.split(key)
-
         nre_logpdf = get_unnormalized_nre_logpdf(estimator)
-
         nre_results = adaptive_metropolis_sampler(
             key=subkey,
             logpdf_unnorm=nre_logpdf,
@@ -99,9 +94,7 @@ def run_mcmc_command(args):
     if args.corrected_nre:
         logger.info("Running MCMC for NRE Corrected posterior...")
         key, subkey = jax.random.split(key)
-
         corrected_nre_logpdf = get_unnormalized_corrected_nre_logpdf(estimator)
-
         corrected_results = adaptive_metropolis_sampler(
             key=subkey,
             logpdf_unnorm=corrected_nre_logpdf,
@@ -121,13 +114,11 @@ def run_mcmc_command(args):
     if args.true and (hasattr(model, "get_posterior_logpdf") or hasattr(model, "get_posterior_phi_logpdf")):
         logger.info("Running MCMC for True posterior...")
         key, subkey = jax.random.split(key)
-
         # Create JAX-compatible true logpdf
         if hasattr(model, "get_posterior_logpdf"):
             true_logpdf = model.get_posterior_logpdf(x_obs)
         elif hasattr(model, "get_posterior_phi_logpdf"):
             true_logpdf = model.get_posterior_phi_logpdf(x_obs)
-
         true_results = adaptive_metropolis_sampler(
             key=subkey,
             logpdf_unnorm=true_logpdf,

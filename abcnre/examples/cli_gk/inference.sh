@@ -15,16 +15,17 @@ eval "$(pyenv init -)"
 pyenv activate jax_env
 
 marginals=(-1)
-quantiles_epsilon=(1.0 0.5 0.1)
+quantiles_epsilon=(1.0 0.5 0.1 0.05)
 
 true_theta_A=3.0
 true_theta_B=1.0
 true_theta_g=2.0
 true_theta_k=0.5
 
+
 for marginal in "${marginals[@]}"; do
-    echo "=== Processing marginal: $marginal ==="
-    
+    echo -e "\n\n\n=== Processing simulator for marginal: $marginal ===\n\n\n"
+
     abcnre create_simulator \
         g_and_k_default \
         $SIMULATOR_PATH/simulator_marginal_$marginal \
@@ -37,13 +38,15 @@ for marginal in "${marginals[@]}"; do
         --learn_summary_stats \
 
     if [ ! -f "$SIMULATOR_PATH/simulator_marginal_$marginal/simulator.yaml" ]; then
-        echo "Erreur: Simulateur non créé pour marginal $marginal"
+        echo "Error: Simulator not created for marginal $marginal"
         continue
     fi
+done
 
-    for quantile in "${quantiles_epsilon[@]}"; do
-        echo "  --- Processing quantile: $quantile ---"
-        
+for quantile in "${quantiles_epsilon[@]}"; do
+    for marginal in "${marginals[@]}"; do
+        echo -e "\n\n\n--- Processing estimator for marginal $marginal, quantile $quantile ---\n\n\n"
+
         abcnre create_estimator \
             $SIMULATOR_PATH/simulator_marginal_$marginal/simulator.yaml \
             $ESTIMATOR_PATH/estimator_marginal_${marginal}_quantile_${quantile} \
@@ -54,28 +57,13 @@ for marginal in "${marginals[@]}"; do
             echo "  Erreur: Estimateur non créé pour marginal $marginal, quantile $quantile"
             continue
         fi
+        echo "  Estimator created successfully for marginal $marginal, quantile $quantile!"
+        echo -e "\n\n\n--- Processing MCMC for marginal $marginal, quantile $quantile ---\n\n\n"
 
-        abcnre run_mcmc \
-            $ESTIMATOR_PATH/estimator_marginal_${marginal}_quantile_${quantile}/estimator.yaml \
-            $MCMC_PATH/mcmc_marginal_${marginal}_quantile_${quantile}.npz \
-            --n-samples-chain 100000 \
-            --n-samples-tuning 50000 \
-            --burnin 5000 \
-            --no-true
+   
 
-        echo "Completed marginal $marginal, quantile $quantile"
+        echo "\n\n\n ----- MARGINAL $marginal, QUANTILE $quantile DONE! -----\n\n\n"
     done
-
 done
-
-abcnre run_mcmc \
-            $ESTIMATOR_PATH/estimator_marginal_-1_quantile_1.0/estimator.yaml \
-            $MCMC_PATH/mcmc_true.npz \
-            --n-samples-chain 100000 \
-            --n-samples-tuning 50000 \
-            --burnin 5000 \
-            --true \
-            --no-nre \
-            --no-corrected-nre \
 
 echo "=== Pipeline over ==="

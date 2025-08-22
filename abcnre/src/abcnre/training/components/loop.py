@@ -86,23 +86,6 @@ def get_train_batch_old(
     return batch_data
 
 
-def get_phi_from_batch(batch_data: Dict[str, jnp.ndarray]) -> jnp.ndarray:
-    """
-    Extract phi from the batch data.
-
-    Args:
-        batch_data: Dictionary containing batch data with keys 'input' and 'output'
-
-    Returns:
-        Extracted phi values as a jnp.ndarray
-    """
-    inputs = batch_data["input"]
-    if type(inputs) is dict:
-        return np.unique(inputs["theta"][:, 0])
-
-    return np.unique(inputs[:, -1])
-
-
 def run_training_epoch(
     epoch: int,
     training_components: Dict[str, Any],
@@ -167,7 +150,7 @@ def run_training_epoch(
         # Store phi values if requested and not yet full
         if phi_storage_enabled and stored_phi.shape[0] < n_phi_to_store:
             try:
-                phis = get_phi_from_batch(batch_data)
+                phis = batch_data["phi"]
                 if phis is not None and len(phis) > 0:
                     # Determine how many more phi values we need
                     remaining_capacity = n_phi_to_store - stored_phi.shape[0]
@@ -240,7 +223,13 @@ def initialize_phi_storage(training_config) -> Optional[np.ndarray]:
 
     if n_phi_to_store > 0:
         logger.info(f"Initialized phi storage for {n_phi_to_store} values")
-        return np.array([])
+        # Initialize an empty array with shape (0, k) to store phi values
+        # You need to know k (the feature dimension) in advance.
+        # For example, if phi vectors have shape (k,), set k accordingly.
+        k = getattr(training_config, "phi_dim", None)
+        if k is None:
+            raise ValueError("training_config must have attribute 'phi_dim' specifying phi vector dimension")
+        return np.empty((0, k), dtype=np.float32)
 
     return None
 

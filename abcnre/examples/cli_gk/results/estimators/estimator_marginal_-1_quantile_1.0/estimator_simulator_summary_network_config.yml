@@ -6,20 +6,22 @@ network:
   network_args:
     activation: elu
     use_layer_norm: true
-    dropout_rate: 0.0
+    dropout_rate: 0.1
     pooling_type: mean
     phi_hidden_dims:
+    - 128
     - 128
     - 128
     rho_hidden_dims:
     - 128
     - 128
+    - 128
     output_dim: 4
 training:
   learning_rate: 0.001
-  n_samples_per_epoch: 10240
+  n_samples_per_epoch: 20480
   batch_size: 1024
-  num_epochs: 200
+  num_epochs: 500
   validation_split: 0.2
   early_stopping_patience: 10
   optimizer: adamw

@@ -159,8 +159,9 @@ class StatisticalModel(ABC):
     
     def sample_phi(self, key: random.PRNGKey):
         theta = self.sample_theta(key)
-        return self.transform_phi(theta)
-    
+        phi = self.transform_phi(theta)
+        return phi
+
     def sample_phis(self, key: random.PRNGKey, n_samples: int):
         keys = random.split(key, n_samples)
         return vmap(lambda k: self.sample_phi(k))(keys)

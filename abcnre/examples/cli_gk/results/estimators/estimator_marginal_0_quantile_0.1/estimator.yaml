@@ -1,9 +1,9 @@
 is_trained: true
 metadata:
   abcnre_version: 0.1.0
-  created_date: '2025-08-19T04:10:01.476681'
+  created_date: '2025-08-21T08:08:16.782575'
   estimator_type: NeuralRatioEstimator
-  sampler_id: 4d882655c3a7
+  sampler_id: 9bb518a8a77f
 paths:
   classifier_config: estimator_classif_config.yaml
   classifier_params: estimator_classif_params.npz

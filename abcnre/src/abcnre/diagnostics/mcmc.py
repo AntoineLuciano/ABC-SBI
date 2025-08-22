@@ -105,18 +105,17 @@ def run_metropolis(
         key, subkey = random.split(key)
         z = random.normal(subkey, shape=current_state.shape)
         proposal = current_state + chol_cov @ z
-
         # Evaluate proposal
         proposal_log_prob = logpdf_unnorm(proposal)
-
         # Accept/reject
         log_alpha = proposal_log_prob - current_log_prob
-
+        log_alpha = log_alpha.squeeze()
         key, subkey = random.split(key)
         accept = jnp.log(random.uniform(subkey)) < log_alpha
 
         # Update state
         new_state = jnp.where(accept, proposal, current_state)
+        
         new_log_prob = jnp.where(accept, proposal_log_prob, current_log_prob)
 
         return (new_state, new_log_prob), (new_state, new_log_prob, accept)
@@ -202,7 +201,6 @@ def get_tuned_covariance(
     prelim_cov = (initial_scale**2) * jnp.eye(n_dims)
 
     base_covariance = jnp.eye(n_dims)
-    print("Base covariance shape:", base_covariance.shape)
     try:
         prelim_results = run_metropolis(
             key=subkey,
@@ -587,13 +585,10 @@ def adaptive_metropolis_sampler(
         burnin = max(100, n_samples_chain // 10)
 
     n_dims = initial_state.shape[0]  # Use shape instead of len() for JAX compatibility
-
     # Start with tuned covariance
     if verbose:
         logger.info("Initial covariance tuning...")
-
     key, subkey = random.split(key)
-    print(f"Initial state shape: {initial_state.shape}")
     tuning_results = get_tuned_covariance(
         key=subkey,
         logpdf_unnorm=logpdf_unnorm,

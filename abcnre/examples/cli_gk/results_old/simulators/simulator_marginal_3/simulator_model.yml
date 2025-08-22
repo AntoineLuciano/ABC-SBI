@@ -1,0 +1,22 @@
+metadata:
+  saved_at: '2025-08-19T14:13:32.085562'
+model_args:
+  dim: 1
+  marginal_of_interest: 3
+  n_obs: 100
+  parameter_of_interest: k
+  prior_bounds:
+    A:
+    - 0.0
+    - 5.0
+    B:
+    - 0.0010000000474974513
+    - 5.0
+    g:
+    - 0.0
+    - 5.0
+    k:
+    - 0.0
+    - 5.0
+model_class: GAndKModel
+model_type: GAndKModel

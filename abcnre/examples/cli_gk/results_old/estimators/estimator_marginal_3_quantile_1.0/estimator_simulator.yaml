@@ -1,0 +1,18 @@
+epsilon: .inf
+quantile_distance: 1.0
+simulator_config:
+  quantile_n_samples: 10000
+  verbose: true
+  summary_stats_enabled: true
+paths:
+  model: estimator_simulator_model.yml
+  observed_data: estimator_simulator_observed_data.npy
+  summary_network_config: estimator_simulator_summary_network_config.yml
+  summary_network_weights: estimator_simulator_summary_network_weights.npz
+metadata:
+  created_date: '2025-08-19T14:25:54.480713'
+  abcnre_version: 0.1.0
+  simulator_type: ABCSimulator
+observed_data_shape:
+- 100
+- 1

@@ -1,0 +1,20 @@
+=== ABC Simulator Configuration Report ===
+
+Created on: /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss
+Command args: {'command': 'create_simulator', 'model_name': 'gauss_10d_default', 'model_path': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/configs/model_config.yaml', 'output_dir': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results/simulators/simulator_marginal_-1', 'learn_summary_stats': True, 'regressor_config_template_name': 'deepset_default', 'regressor_config_path': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/configs/regressor_config.yaml', 'seed': 123, 'marginal_of_interest': -1, 'true_theta': None, 'observed_data_path': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/data/gauss_xobs.npy', 'epsilon': None, 'quantile_distance': 1.0, 'save': True, 'func': <function create_simulator_command at 0x3032dc700>}
+
+Model Configuration:
+  Model type: GaussGaussMultiDimModel
+  Parameter dimension: Unknown
+
+Observed Data:
+  Shape: (10, 5)
+  Epsilon: inf
+
+Summary Statistics:
+  Enabled: True
+  Network available: True
+
+Files created:
+  - simulator.yaml (main configuration)
+  - simulator_report.txt (this file)

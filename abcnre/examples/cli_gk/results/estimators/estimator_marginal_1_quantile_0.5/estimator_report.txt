@@ -1,12 +1,12 @@
 === Neural Ratio Estimator Training Report ===
 
 Created on: /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk
-Command args: {'command': 'create_estimator', 'simulator_path': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk/results/simulators/simulator_marginal_1/simulator.yaml', 'output_dir': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk/results/estimators/estimator_marginal_1_quantile_0.5', 'classifier_config_template_name': 'mlp_default', 'classifier_config_path': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk/configs/classif_config.yaml', 'epsilon': None, 'quantile_distance': 0.5, 'func': <function create_estimator_command at 0x3072d8e50>}
+Command args: {'command': 'create_estimator', 'simulator_path': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk/results/simulators/simulator_marginal_1/simulator.yaml', 'output_dir': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk/results/estimators/estimator_marginal_1_quantile_0.5', 'classifier_config_template_name': 'mlp_default', 'classifier_config_path': '/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk/configs/classif_config.yaml', 'epsilon': None, 'quantile_distance': 0.5, 'func': <function create_estimator_command at 0x13f9d8dc0>}
 
 Simulator Information:
   Source: /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk/results/simulators/simulator_marginal_1/simulator.yaml
   Model: GAndKModel
-  Epsilon: 1.981082558631897
+  Epsilon: 2.1790788173675537
   Summary stats enabled: True
 
 Network Configuration:
@@ -15,7 +15,7 @@ Network Configuration:
   Task type: classifier
 
 Training Configuration:
-  Epochs: 200
+  Epochs: 500
   Batch size: 1024
   Learning rate: 0.001
   Optimizer: adamw

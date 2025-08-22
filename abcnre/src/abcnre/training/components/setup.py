@@ -139,7 +139,7 @@ def setup_training_components(
     # Generate initialization data
     key, subkey = jax.random.split(key)
     init_data = io_generator(subkey, 10)
-
+    training_config.phi_dim = init_data["phi"].shape[1]
     # Validate io_generator output format
     if not isinstance(init_data, dict):
         raise ValueError("io_generator must return a dictionary")

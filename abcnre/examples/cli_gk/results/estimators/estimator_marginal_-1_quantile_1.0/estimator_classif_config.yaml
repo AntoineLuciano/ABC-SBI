@@ -12,7 +12,9 @@ network:
     phi_hidden_dims:
     - 128
     - 128
+    - 128
     rho_hidden_dims:
+    - 128
     - 128
     - 128
     output_dim: 1
@@ -20,9 +22,9 @@ training:
   learning_rate: 0.001
   n_samples_per_epoch: 20480
   batch_size: 1024
-  num_epochs: 200
+  num_epochs: 500
   validation_split: 0.2
-  early_stopping_patience: 20
+  early_stopping_patience: 10
   optimizer: adamw
   weight_decay: 0.001
   loss_function: default
