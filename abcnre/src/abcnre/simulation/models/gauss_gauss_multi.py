@@ -251,12 +251,15 @@ class GaussGaussMultiDimModel(StatisticalModel):
             ),
         )
 
-    def discrepancy_fn(self, data1: jnp.ndarray, data2: jnp.ndarray) -> float:
+    def discrepancy_fn(self, data1: jnp.ndarray, data2: jnp.ndarray, weights : jnp.array = None) -> float:
         """
         Compute distance between data or summary statistics.
         Uses Frobenius norm for matrices (2D) and L2 norm for vectors (1D).
         """
-        diff = data1 - data2
+        if weights is not None:
+            diff = (data1-data2)*weights
+        else:
+            diff = data1 - data2
         if diff.ndim == 1:
             # For 1D vectors (summary statistics), use L2 norm
             return jnp.linalg.norm(diff)
@@ -505,6 +508,31 @@ class GaussGaussMultiDimModel(StatisticalModel):
             ]
 
             return lambda phi: jax_stats.norm.logpdf(
+                phi, loc=mu_post_marginal, scale=jnp.sqrt(cov_post_marginal)
+            )
+
+    def get_posterior_phi_pdf(self, observed_data: jnp.ndarray):
+        """
+        Get probability density function (PDF) for the posterior distribution.
+
+        Args:
+            observed_data: Observed dataset
+
+        Returns:
+            PDF function for the posterior distribution
+        """
+        stats = self.get_posterior_stats(observed_data)
+        if self.marginal_of_interest == -1:
+            mu_post_marginal = stats["posterior_mean"]
+            cov_post_marginal = stats["posterior_cov"]
+            return lambda phi: jax_stats.multivariate_normal.pdf(phi, mean=mu_post_marginal, cov=cov_post_marginal)
+        else:
+            # Extract marginal of interest from posterior mean and covariance
+            mu_post_marginal = stats["posterior_mean"][self.marginal_of_interest]
+            cov_post_marginal = stats["posterior_cov"][
+                self.marginal_of_interest, self.marginal_of_interest
+            ]
+            return lambda phi: jax_stats.norm.pdf(
                 phi, loc=mu_post_marginal, scale=jnp.sqrt(cov_post_marginal)
             )
 

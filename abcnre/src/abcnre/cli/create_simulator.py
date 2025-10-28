@@ -127,6 +127,11 @@ def create_simulator_command(args):
         )
         logger.info(f"Summary stats correlation: {correlation}")
 
+    if simulator.model.phi_dim > 1:
+        logger.info("--- Step 2.0: Set some distance weights ---")
+        key, key_weights = jax.random.split(key)
+        simulator.set_distance_weights(key_weights)
+        
     # === Step 2.1: Handle observed data ===
     logger.info("--- Step 2.1: Set observed data ---")
 

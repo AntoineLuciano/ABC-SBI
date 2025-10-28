@@ -16,7 +16,7 @@ BURNIN=10000
 eval "$(pyenv init -)"
 pyenv activate jax_env
 
-marginals=(-1 0 1 2 3)
+marginals=(0 1 2 3 -1)
 quantiles_epsilon=(1.0 0.5 0.1 0.05)
 
 

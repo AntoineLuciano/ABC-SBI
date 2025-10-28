@@ -1,0 +1,20 @@
+=== ABC Simulator Configuration Report ===
+
+Created on: /Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gk
+Command args: {'command': 'create_simulator', 'model_name': 'g_and_k_default', 'model_path': './configs/model_config.yaml', 'output_dir': './results_mlp_mlp/simulators/simulator_marginal_3', 'learn_summary_stats': True, 'regressor_config_template_name': 'deepset_default', 'regressor_config_path': './configs/regressor_config_mlp.yaml', 'seed': 123, 'marginal_of_interest': 3, 'true_theta': None, 'observed_data_path': './data/xobs.npy', 'epsilon': None, 'quantile_distance': 1.0, 'save': True, 'func': <function create_simulator_command at 0x307fac940>}
+
+Model Configuration:
+  Model type: GAndKModel
+  Parameter dimension: Unknown
+
+Observed Data:
+  Shape: (100, 1)
+  Epsilon: inf
+
+Summary Statistics:
+  Enabled: True
+  Network available: True
+
+Files created:
+  - simulator.yaml (main configuration)
+  - simulator_report.txt (this file)

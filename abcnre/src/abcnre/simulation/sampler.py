@@ -12,9 +12,14 @@ from functools import partial
 from dataclasses import dataclass
 
 from .base import BaseSampler, ABCSampleResult, ABCTrainingResult, ABCSingleResult
+from flax import struct
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
-@dataclass
+@struct.dataclass
 class RejectionState:
     """JAX-compatible state for rejection sampling loop."""
 
@@ -22,25 +27,25 @@ class RejectionState:
     data: jnp.ndarray
     theta: jnp.ndarray
     summary_stat: Optional[jnp.ndarray]
-    distance: float
-    count: int
-    phi: Optional[jnp.ndarray] = None
+    distance: jnp.ndarray
+    count: jnp.ndarray
+    phi: jnp.ndarray
 
 
-# Register the dataclass as a JAX pytree
-tree_util.register_dataclass(
-    RejectionState,
-    data_fields=[
-        "key",
-        "data",
-        "theta",
-        "summary_stat",
-        "distance",
-        "count",
-        "phi",
-    ],
-    meta_fields=[],
-)
+# # Register the dataclass as a JAX pytree
+# tree_util.register_dataclass(
+#     RejectionState,
+#     data_fields=[
+#         "key",
+#         "data",
+#         "theta",
+#         "summary_stat",
+#         "distance",
+#         "count",
+#         "phi",
+#     ],
+#     meta_fields=[],
+# )
 
 
 # Core ABC sampling function (JIT compiled) - Fixed version
@@ -101,7 +106,7 @@ def get_abc_sample(
 
         # Optimized: choose computation path based on pre-determined flag
         if use_summary_stats:
-            
+
             summary_proposal = summary_stat_fn(data_proposal)
 
             distance = discrepancy_fn(summary_proposal, comparison_target)
@@ -114,8 +119,8 @@ def get_abc_sample(
             data=data_proposal,
             theta=theta_proposal,
             summary_stat=summary_proposal,
-            distance=distance,
-            count=state.count + 1,
+            distance=jnp.asarray(distance, dtype=float),
+            count=jnp.asarray(state.count + 1, dtype=int),
             phi=phi_proposal,
         )
 
@@ -143,8 +148,8 @@ def get_abc_sample(
         data=initial_data,
         theta=initial_theta,
         summary_stat=initial_summary,
-        distance=epsilon + 1.0,
-        count=0,
+        distance=jnp.asarray(epsilon + 1.0, dtype=float),
+        count=jnp.asarray(0, dtype=int),
         phi=initial_phi,
     )
 
@@ -197,7 +202,7 @@ class RejectionSampler(BaseSampler):
         self.discrepancy_fn = discrepancy_fn
         self.summary_stat_fn = summary_stat_fn
         self.transform_fn = transform_fn
-        self.epsilon = epsilon
+        self.epsilon = jnp.asarray(epsilon, dtype=float)
         self.observed_data = observed_data
         self.observed_summary_stats = observed_summary_stats
 
@@ -303,11 +308,9 @@ class RejectionSampler(BaseSampler):
             An ABCTrainingResult named tuple with training features, labels, and metadata.
         """
         half_samples = n_samples // 2
-
+        key, subkey = random.split(key)
         # Generate base ABC samples from the approximate posterior
-        abc_result = self.sample(key, half_samples)
-        key = abc_result.key  # Use the updated key from the result
-
+        abc_result = self.sample(subkey, half_samples)
         key, perm_key = random.split(key)
         data = abc_result.data
         permutation_indices = random.permutation(perm_key, jnp.arange(half_samples))

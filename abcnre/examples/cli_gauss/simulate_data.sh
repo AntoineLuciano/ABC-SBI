@@ -1,18 +1,20 @@
 #!/bin/bash
 
-RESULTS_PATH=/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results
-ESTIMATOR_PATH=/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results/estimators
-SIMULATOR_PATH=/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results/simulators
-PLOT_PATH=/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results/plots
-MCMC_PATH=/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/results/mcmc
-CONFIG_PATH=/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/configs
-XOBS_PATH=/Users/antoineluciano/Documents/Recherche/ABC-SBI-1/abcnre/examples/cli_gauss/data/gk_xobs.npy
+RESULTS_PATH=./results_thesis
+SIMULATOR_PATH=$RESULTS_PATH/simulators
+CONFIG_PATH=./configs
 
-mkdir -p $RESULTS_PATH $ESTIMATOR_PATH $SIMULATOR_PATH $PLOT_PATH $MCMC_PATH
+mkdir -p  $SIMULATOR_PATH 
 
 
 eval "$(pyenv init -)"
 pyenv activate jax_env
+
+mu_1=20.0
+mu_2=15.0
+mu_3=10.0
+mu_4=5.0
+mu_5=0.0
 
 abcnre create_simulator \
         gauss_10d_default \
@@ -20,3 +22,4 @@ abcnre create_simulator \
         --model_path $CONFIG_PATH/model_config.yaml \
         --marginal_of_interest 0 \
         --quantile_distance 1.0 \
+        --true_theta $mu_1 $mu_2 $mu_3 $mu_4 $mu_5

@@ -1,10 +1,10 @@
 metadata:
-  saved_at: '2025-08-22T02:32:13.657399'
+  saved_at: '2025-10-13T23:31:17.092919'
 model_args:
   dim: 5
   marginal_of_interest: 2
   mu0: 0
-  n_obs: 10
+  n_obs: 5
   sigma: 1.0
   sigma0: 10.0
 model_class: GaussGaussMultiDimModel

@@ -44,7 +44,9 @@ def create_estimator_command(args):
 
     # === Step 3.0: Load simulator ===
     logger.info("--- Step 3.0: Load simulator ---")
+    # logger.info(f"\n\nDEBUG: LOADING SIMULATOR... from {simulator_path}")
     simulator = load_simulator_from_yaml(simulator_path)
+    ##logger.info(f"DEBUG: DONE")
     logger.info(f"Loaded simulator from: {simulator_path}")
     logger.info(f"Model: {simulator.model.__class__.__name__}")
     logger.info(f"Observed data shape: {simulator.observed_data.shape}")

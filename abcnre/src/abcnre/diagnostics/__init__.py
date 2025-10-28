@@ -25,6 +25,7 @@ from .posterior import (
     get_normalized_pdf,
     sample_from_pdf,
     get_sampler_from_pdf,
+    get_ratio_unnormalized_pdf
 )
 
 
@@ -70,6 +71,7 @@ __all__ = [
     "get_normalized_pdf",
     "sample_from_pdf",
     "get_sampler_from_pdf",
+    "get_ratio_unnormalized_pdf",
     # Visualization (if available)
     "plot_sbc_ranks",
     "plot_posterior_comparison",

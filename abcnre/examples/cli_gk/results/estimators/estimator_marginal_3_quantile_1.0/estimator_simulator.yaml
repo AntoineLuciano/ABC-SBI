@@ -9,8 +9,9 @@ paths:
   observed_data: estimator_simulator_observed_data.npy
   summary_network_config: estimator_simulator_summary_network_config.yml
   summary_network_weights: estimator_simulator_summary_network_weights.npz
+  summary_training_history: estimator_simulator_summary_training_history.npz
 metadata:
-  created_date: '2025-08-21T04:07:07.893689'
+  created_date: '2025-09-01T23:16:56.840031'
   abcnre_version: 0.1.0
   simulator_type: ABCSimulator
 observed_data_shape:

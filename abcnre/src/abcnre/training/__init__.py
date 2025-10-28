@@ -55,6 +55,8 @@ from .components import (
     run_training_epoch,
     initialize_phi_storage,
     finalize_phi_storage,
+    BatchData, 
+    Inputs
 )
 
 # Main interfaces - recommended usage

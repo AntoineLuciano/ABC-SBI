@@ -148,6 +148,8 @@ class TrainingMetrics:
         Returns:
             Dictionary with final training summary
         """
+        
+        
         final_loss = self.get_latest("train_loss")
         final_simulations = self.get_latest("total_simulations")
 
@@ -398,8 +400,8 @@ def evaluate_batch_metrics(
         return {}
 
     # Compute accuracy for classifier
-    batch_input = batch_data["input"]
-    batch_output = batch_data["output"]
+    batch_input = batch_data.inputs
+    batch_output = batch_data.outputs
 
     try:
         logits = network.apply(params, batch_input, training=False)

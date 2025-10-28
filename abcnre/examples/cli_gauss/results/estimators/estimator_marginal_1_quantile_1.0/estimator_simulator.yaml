@@ -7,12 +7,13 @@ simulator_config:
 paths:
   model: estimator_simulator_model.yml
   observed_data: estimator_simulator_observed_data.npy
-  summary_network_config: estimator_simulator_summary_network_config.yml
-  summary_network_weights: estimator_simulator_summary_network_weights.npz
+  summary_network_config: null
+  summary_network_weights: null
+  summary_training_history: null
 metadata:
-  created_date: '2025-08-22T01:27:37.468929'
+  created_date: '2025-10-13T23:11:52.854409'
   abcnre_version: 0.1.0
   simulator_type: ABCSimulator
 observed_data_shape:
-- 10
+- 5
 - 5

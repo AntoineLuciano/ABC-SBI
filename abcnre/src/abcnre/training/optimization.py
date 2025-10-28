@@ -3,7 +3,9 @@ import jax
 import jax.numpy as jnp
 from typing import Callable, Union
 import numpy as np
-
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def create_loss_function(
     task_type: str, network, loss_name: str = "default", loss_args: dict = None
@@ -21,7 +23,6 @@ def create_loss_function(
     """
     import logging
 
-    logger = logging.getLogger(__name__)
 
     if loss_args is None:
         loss_args = {}
@@ -45,6 +46,7 @@ def create_loss_function(
     elif task_type == "regressor":
         # Determine which regression loss to use
         if loss_name == "default" or loss_name == "mse":
+            logger.info("Using Mean Squared Error Loss")
             return _create_mse_loss(network)
         elif loss_name == "huber":
             delta = loss_args.get("delta", 1.0)
@@ -67,8 +69,8 @@ def _create_binary_crossentropy_loss(network) -> Callable:
     """Standard Binary Cross-Entropy loss for classification."""
 
     def binary_crossentropy_loss(params, batch_data, rng_key=None):
-        batch_input = batch_data["input"]
-        batch_output = batch_data["output"]
+        batch_input = batch_data.inputs
+        batch_output = batch_data.outputs
         # Use RNG key for dropout if provided, and set training mode accordingly
         if rng_key is not None:
             rngs = {"dropout": rng_key}
@@ -93,8 +95,8 @@ def _create_focal_loss(network, alpha: float = 0.25, gamma: float = 2.0) -> Call
     """Focal Loss for handling class imbalance."""
 
     def focal_loss(params, batch_data, rng_key=None):
-        batch_input = batch_data["input"]
-        batch_output = batch_data["output"]
+        batch_input = batch_data
+        batch_output = batch_data.outputs
         if rng_key is not None:
             rngs = {"dropout": rng_key}
             training = True
@@ -119,8 +121,8 @@ def _create_label_smoothing_bce(network, epsilon: float = 0.1) -> Callable:
     """Binary Cross-Entropy with Label Smoothing."""
 
     def label_smoothing_bce(params, batch_data, rng_key=None):
-        batch_input = batch_data["input"]
-        batch_output = batch_data["output"]
+        batch_input = batch_data.inputs
+        batch_output = batch_data.outputs
         if rng_key is not None:
             rngs = {"dropout": rng_key}
             training = True
@@ -145,8 +147,8 @@ def _create_mse_loss(network) -> Callable:
     """Standard Mean Squared Error loss for regression."""
 
     def mse_loss(params, batch_data, rng_key=None):
-        batch_input = batch_data["input"]
-        batch_output = batch_data["output"]
+        batch_input = batch_data.inputs
+        batch_output = batch_data.outputs
         # Use RNG key for dropout if provided, and set training mode accordingly
         if rng_key is not None:
             rngs = {"dropout": rng_key}
@@ -155,6 +157,7 @@ def _create_mse_loss(network) -> Callable:
             rngs = None
             training = False
         predictions = network.apply(params, batch_input, training=training, rngs=rngs)
+        # logger.info(f"Output: min = {jnp.min(predictions)}, max = {jnp.max(predictions)} mean = {jnp.mean(predictions)}\nTrue: min = {jnp.min(batch_output)}, max = {jnp.max(batch_output)} mean = {jnp.mean(batch_output)}")
         return jnp.mean((batch_output - predictions) ** 2)
 
     return mse_loss
@@ -164,8 +167,8 @@ def _create_huber_loss(network, delta: float = 1.0) -> Callable:
     """Huber Loss for robust regression."""
 
     def huber_loss(params, batch_data, rng_key=None):
-        batch_input = batch_data["input"]
-        batch_output = batch_data["output"]
+        batch_input = batch_data.inputs
+        batch_output = batch_data.outputs
         if rng_key is not None:
             rngs = {"dropout": rng_key}
             training = True
@@ -186,8 +189,8 @@ def _create_mae_loss(network) -> Callable:
     """Mean Absolute Error loss for regression."""
 
     def mae_loss(params, batch_data, rng_key=None):
-        batch_input = batch_data["input"]
-        batch_output = batch_data["output"]
+        batch_input = batch_data.inputs
+        batch_output = batch_data.outputs
         if rng_key is not None:
             rngs = {"dropout": rng_key}
             training = True
@@ -209,8 +212,8 @@ def _create_pinball_loss(network, tau: float = 0.5) -> Callable:
     """
 
     def pinball_loss(params, batch_data, rng_key=None):
-        batch_input = batch_data["input"]
-        batch_output = batch_data["output"]
+        batch_input = batch_data.inputs
+        batch_output = batch_data.outputs
         if rng_key is not None:
             rngs = {"dropout": rng_key}
             training = True

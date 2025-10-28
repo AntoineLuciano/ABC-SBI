@@ -3,6 +3,7 @@ import jax.numpy as jnp
 import flax.linen as nn
 from typing import Optional, List, Tuple, Any
 import logging
+from ..components.loop import Inputs
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +23,17 @@ class MLP(nn.Module):
         activation: Activation function to use
         use_layer_norm: Use LayerNorm after each layer
         dropout_rate: Dropout rate (0.0 = no dropout)
+        sequence_pooling: How to handle 3D inputs ('flatten', 'mean', 'max', 'sum')
+        flatten_threshold: Max features before switching to pooling (default: 1000)
     """
 
     output_dim: int = 1
     hidden_dims: Optional[List[int]] = None
     activation: Any = nn.relu
+    use_layer_norm: bool = True
+    dropout_rate: float = 0.0
+    sequence_pooling: str = "adaptive"  # 'flatten', 'mean', 'max', 'sum', 'adaptive'
+    flatten_threshold: int = 1000
     use_layer_norm: bool = True
     dropout_rate: float = 0.0
 
@@ -75,7 +82,7 @@ class MLP(nn.Module):
         # Output layer
         self.output_layer = nn.Dense(self.output_dim, name="output")
 
-    def __call__(self, x: jnp.ndarray, training: bool = True) -> jnp.ndarray:
+    def __call__(self, inputs: Inputs, training: bool = True) -> jnp.ndarray:
         """
         Forward pass of the MLP.
 
@@ -87,17 +94,68 @@ class MLP(nn.Module):
         Returns:
             output: Summary statistics, shape (batch_size, output_dim)
         """
+        x = inputs.raw
         if debug:
             print(f"DEBUG MLP.__call__: input x.shape={x.shape}")
         if debug:
             print(f"DEBUG MLP.__call__: input x.ndim={x.ndim}")
 
-        # Flatten if necessary (sequence handling)
-        if x.ndim > 2:
+        # Handle sequence data with configurable pooling strategy
+        if x.ndim == 3:
+            batch_size, n_samples, feature_dim = x.shape
+            total_features = n_samples * feature_dim
+
+            if debug:
+                print(
+                    f"DEBUG MLP.__call__: 3D input detected: batch_size={batch_size}, n_samples={n_samples}, feature_dim={feature_dim}"
+                )
+                print(
+                    f"DEBUG MLP.__call__: total_features={total_features}, threshold={self.flatten_threshold}"
+                )
+
+            # Decide pooling strategy
+            if self.sequence_pooling == "adaptive":
+                use_pooling = total_features > self.flatten_threshold
+                pooling_method = "mean"
+            elif self.sequence_pooling == "flatten":
+                use_pooling = False
+                pooling_method = None
+            else:
+                use_pooling = True
+                pooling_method = self.sequence_pooling
+
+            if use_pooling:
+                if debug:
+                    print(f"DEBUG MLP.__call__: Using {pooling_method} pooling")
+
+                if pooling_method == "mean":
+                    x = jnp.mean(x, axis=1)  # (B, n, d) -> (B, d)
+                elif pooling_method == "max":
+                    x = jnp.max(x, axis=1)  # (B, n, d) -> (B, d)
+                elif pooling_method == "sum":
+                    x = jnp.sum(x, axis=1)  # (B, n, d) -> (B, d)
+                else:
+                    raise ValueError(f"Unknown pooling method: {pooling_method}")
+
+                if debug:
+                    print(
+                        f"DEBUG MLP.__call__: after {pooling_method} pooling x.shape={x.shape}"
+                    )
+            else:
+                # Standard flattening
+                x = x.reshape(batch_size, -1)
+                if debug:
+                    print(f"DEBUG MLP.__call__: flattened x.shape={x.shape}")
+        elif x.ndim > 3:
+            # For higher dimensions, always flatten
             batch_size = x.shape[0]
             x = x.reshape(batch_size, -1)
             if debug:
-                print(f"DEBUG MLP.__call__: flattened x.shape={x.shape}")
+                print(f"DEBUG MLP.__call__: >3D input flattened x.shape={x.shape}")
+        elif x.ndim == 2:
+            # Already in correct format (B, features)
+            if debug:
+                print(f"DEBUG MLP.__call__: 2D input, no reshaping needed")
 
         for i, layer in enumerate(self.layers):
             if isinstance(layer, nn.Dense):

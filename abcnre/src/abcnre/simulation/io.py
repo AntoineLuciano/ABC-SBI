@@ -135,8 +135,7 @@ def _save_observed_data(
 
     observed_data_filename = f"{output_path.stem}_observed_data.npy"
     observed_data_path = output_path.parent / observed_data_filename
-
-    if _should_save_file(observed_data_path, overwrite):
+    if not observed_data_path.exists() or overwrite:
         np.save(observed_data_path, simulator.observed_data)
         logger.info(f"Saved observed data to: {observed_data_path}")
         simulator_config["paths"]["observed_data"] = observed_data_filename
@@ -156,6 +155,7 @@ def _save_summary_statistics(
     if not simulator.trained_summary_stats:
         simulator_config["paths"]["summary_network_config"] = None
         simulator_config["paths"]["summary_network_weights"] = None
+        simulator_config["paths"]["summary_training_history"] = None
         return
 
     # Save summary network config
@@ -166,7 +166,8 @@ def _save_summary_statistics(
 
     # Save summary network weights
     _save_summary_weights(simulator, simulator_config, output_path, overwrite)
-
+    # logger.info(f"DEBUG: SUMMARY NETWORK WEIGHTS PATH: {output_path}")
+    _save_summary_training_history(simulator, simulator_config, output_path, overwrite)
 
 def _save_summary_weights(
     simulator: "ABCSimulator",
@@ -179,7 +180,7 @@ def _save_summary_weights(
     summary_params_filename = f"{output_path.stem}_summary_network_weights.npz"
     summary_params_path = output_path.parent / summary_params_filename
 
-    if _should_save_file(summary_params_path, overwrite):
+    if not summary_params_path.exists() or overwrite:
         try:
             import flax.serialization
 
@@ -200,11 +201,29 @@ def _save_summary_weights(
         logger.info(
             f"Summary network weights file already exists and overwrite is False: {summary_params_path}"
         )
+def _save_summary_training_history(
+    simulator: "ABCSimulator",
+    simulator_config: Dict[str, Any],
+    output_path: Path,
+    overwrite: bool,
+) -> None:
+    """Save summary training history if available."""
 
 
-def _should_save_file(file_path: Path, overwrite: bool) -> bool:
-    """Check if a file should be saved based on existence and overwrite flag."""
-    return not file_path.exists() or overwrite
+    if hasattr(simulator, "_summary_training_history") and simulator._summary_training_history is not None:
+        training_history_filename = f"{output_path.stem}_summary_training_history.npz"
+        training_history_path = output_path.parent / training_history_filename
+
+        if not training_history_path.exists() or overwrite:
+            np.savez(training_history_path, simulator._summary_training_history)
+            simulator_config["paths"]["summary_training_history"] = training_history_filename
+            logger.info(f"Saved summary training history to: {training_history_path}")
+        else:
+            logger.info(
+                f"Summary training history file already exists and overwrite is False: {training_history_path}"
+            )
+    else:
+        logger.info("No summary training history available to save.")
 
 
 def _save_main_config(simulator_config: Dict[str, Any], output_path: Path) -> None:
@@ -243,13 +262,15 @@ def load_simulator_from_yaml(yaml_path: Union[str, Path]) -> "ABCSimulator":
 
     # Load observed data if present
     observed_data = _load_observed_data_from_config(config, yaml_path.parent)
-
+    # logger.info("DEBUG: Creating simulator...")
     # Create simulator instance
     simulator = _create_simulator_instance(config, model, observed_data)
-
+    # logger.info("DEBUG: DONE")
+    # logger.info(f"Created ABCSimulator instance of type: {type(simulator).__name__}")
+    # logger.info(f"DEBUG: Loading summary statistics...")
     # Load summary statistics if available
     _load_summary_statistics(config, yaml_path.parent, simulator)
-
+    # logger.info("DEBUG: DONE")
     return simulator
 
 
@@ -310,20 +331,36 @@ def _create_simulator_instance(config: Dict[str, Any], model, observed_data):
 def _load_summary_statistics(config: Dict[str, Any], yaml_dir: Path, simulator) -> None:
     """Load summary statistics configuration and weights if available."""
     summary_config_path_str = config["paths"].get("summary_network_config")
+    # logger.info(f"DEBUG : SUMMARY CONFIG PATH: {summary_config_path_str}")
     summary_weights_path_str = config["paths"].get("summary_network_weights")
+    # logger.info(f"DEBUG : SUMMARY WEIGHTS PATH: {summary_weights_path_str}")
+    summary_training_history_path_str = config["paths"].get("summary_training_history")
+    # logger.info(f"DEBUG : SUMMARY TRAINING HISTORY PATH: {summary_training_history_path_str}")
 
     if not summary_config_path_str or not summary_weights_path_str:
         return
 
+    
     summary_config_path = yaml_dir / summary_config_path_str
     summary_params_path = yaml_dir / summary_weights_path_str
+    summary_training_history_path = yaml_dir / summary_training_history_path_str
 
     if not (summary_config_path.exists() and summary_params_path.exists()):
         logger.warning("Summary statistics files not found, skipping...")
         return
 
     _apply_summary_statistics(simulator, summary_config_path, summary_params_path)
+    _load_summary_training_history(simulator, summary_training_history_path)
 
+def _load_summary_training_history(simulator, summary_training_history_path: Path) -> Optional[np.ndarray]:
+    """Load summary training history from file if it exists."""
+    if not summary_training_history_path.exists():
+        logger.warning(f"Summary training history file not found: {summary_training_history_path}")
+        return None
+    # logger.info(f"DEBUG: LOADING SUMMARY TRAINING HISTORY... from {summary_training_history_path}")
+    training_history = np.load(summary_training_history_path)
+    logger.info(f"Loaded summary training history from: {summary_training_history_path}")
+    simulator._summary_training_history = training_history
 
 def _apply_summary_statistics(
     simulator, summary_config_path: Path, summary_params_path: Path

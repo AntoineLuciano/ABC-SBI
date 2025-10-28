@@ -34,12 +34,12 @@ def validate_training_config(config: NNConfig):
     """
     training_config = config.training
     # Basic parameter validation
-    if training_config.n_samples_per_epoch is None:
-        raise ValueError("n_samples_per_epoch must be specified in the config")
+    if training_config.n_samples_per_epoch < 0:
+        raise ValueError("n_samples_per_epoch must be non-negative")
 
-    if training_config.batch_size <= 0:
-        raise ValueError("batch_size must be positive")
-    
+    if training_config.batch_size < 0:
+        raise ValueError("batch_size must be non-negative")
+
     if training_config.num_epochs <= 0:
         
         raise ValueError("num_epochs must be positive")
@@ -51,13 +51,13 @@ def validate_training_config(config: NNConfig):
         raise ValueError("validation_split must be between 0 and 1")
 
     # Check if n_samples_per_epoch is divisible by batch_size
-    if training_config.n_samples_per_epoch % training_config.batch_size != 0:
+    # if training_config.n_samples_per_epoch % training_config.batch_size != 0:
         
-        logger.warning(
-            f"n_samples_per_epoch ({training_config.n_samples_per_epoch}) "
-            f"not divisible by batch_size ({training_config.batch_size}). "
-            f"Some samples may be unused."
-        )
+    #     logger.warning(
+    #         f"n_samples_per_epoch ({training_config.n_samples_per_epoch}) "
+    #         f"not divisible by batch_size ({training_config.batch_size}). "
+    #         f"Some samples may be unused."
+    #     )
 
     # Validate task type
     if config.task_type not in ["classifier", "regressor"]:
@@ -120,16 +120,33 @@ def setup_training_components(
     """
     training_config = config.training
     task_type = config.task_type
+    num_epochs = training_config.num_epochs
 
     # Validate configuration first
     validate_training_config(config)
 
-    # Calculate derived parameters
-    batch_size = training_config.batch_size
-    n_samples_per_epoch = training_config.n_samples_per_epoch
-    num_epochs = training_config.num_epochs
-    n_batch = n_samples_per_epoch // batch_size
-
+    # Calculate derived parametersi like n_batch
+    if training_config.n_samples_per_epoch != 0:
+        if training_config.batch_size != 0:
+            batch_size = training_config.batch_size
+            n_samples_per_epoch = training_config.n_samples_per_epoch
+            n_batch = n_samples_per_epoch // batch_size
+        elif training_config.n_batch != 0:
+            n_batch = training_config.n_batch
+            n_samples_per_epoch = training_config.n_samples_per_epoch
+            batch_size = n_samples_per_epoch // n_batch
+        else:
+            raise ValueError(
+                "Either batch_size or n_batch must be specified in the config"
+            )
+    elif training_config.n_batch != 0 and training_config.batch_size != 0:
+        n_batch = training_config.n_batch
+        batch_size = training_config.batch_size
+        n_samples_per_epoch = n_batch * batch_size
+    else:
+        raise ValueError(
+            "n_samples_per_epoch must be specified, along with either batch_size or n_batch"
+        )
     if training_config.verbose:
         logger.info(f"Setting up {task_type} training")
         logger.info(
@@ -139,19 +156,9 @@ def setup_training_components(
     # Generate initialization data
     key, subkey = jax.random.split(key)
     init_data = io_generator(subkey, 10)
-    training_config.phi_dim = init_data["phi"].shape[1]
-    # Validate io_generator output format
-    if not isinstance(init_data, dict):
-        raise ValueError("io_generator must return a dictionary")
+    training_config.phi_dim = init_data.phi.shape[1]
 
-    required_keys = ["input", "output", "n_simulations"]
-    for req_key in required_keys:
-        if req_key not in init_data:
-            raise ValueError(f"io_generator output missing required key: '{req_key}'")
-
-    init_input = init_data["input"]
-    init_output = init_data["output"]
-
+    init_input = init_data.inputs
     # Create or use provided network
     if network is None:
         from ..registry import create_network_from_config
@@ -192,12 +199,6 @@ def setup_training_components(
     key, val_key = jax.random.split(key)
     val_data = val_io_generator(val_key, val_batch_size)
 
-    # Validate validation data format
-    for req_key in required_keys:
-        if req_key not in val_data:
-            raise ValueError(
-                f"val_io_generator output missing required key: '{req_key}'"
-            )
 
     # Setup learning rate schedule
     lr_schedule = create_learning_rate_schedule(
@@ -236,12 +237,12 @@ def setup_training_components(
     train_step = create_training_step_function(optimizer, loss_fn)
 
     # Initialize counters
-    total_simulations = init_data["n_simulations"] + val_data["n_simulations"]
+    total_simulations = init_data.num_simulations + val_data.num_simulations
     total_samples = 10 + val_batch_size
 
     if training_config.verbose:
         logger.info(f"Setup complete. Initial simulations: {total_simulations}")
-
+    
     return {
         "network": network,
         "params": params,
@@ -270,8 +271,8 @@ def create_validation_function(task_type: str, network, loss_fn):
         val_loss = loss_fn(params, val_data, rng_key=None)
 
         if task_type == "classifier":
-            val_input = val_data["input"]
-            val_output = val_data["output"]
+            val_input = val_data.inputs
+            val_output = val_data.outputs
             logits = network.apply(params, val_input, training=False)
             probs = jax.nn.sigmoid(logits.squeeze(-1))
             predictions = (probs > 0.5).astype(jnp.float32)
@@ -290,6 +291,7 @@ def create_training_step_function(optimizer, loss_fn):
     def train_step(params, opt_state, batch_data, rng_key):
         # Generate RNG key for dropout
         dropout_key = jax.random.fold_in(rng_key, 0)
+        
         loss, grads = jax.value_and_grad(lambda p, b: loss_fn(p, b, dropout_key))(
             params, batch_data
         )
@@ -298,62 +300,6 @@ def create_training_step_function(optimizer, loss_fn):
         return params, opt_state, loss
 
     return train_step
-
-
-def validate_io_generator_compatibility(io_generator: Callable, config: NNConfig):
-    """
-    Validate that io_generator is compatible with the task type and config.
-
-    Args:
-        io_generator: The data generator function
-        config: NNConfig with task configuration
-
-    Raises:
-        ValueError: If io_generator is incompatible
-    """
-    try:
-        # Test with a small batch
-        test_key = jax.random.PRNGKey(0)
-        test_data = io_generator(test_key, 4)
-
-        # Check basic format
-        if not isinstance(test_data, dict):
-            raise ValueError("io_generator must return a dictionary")
-
-        required_keys = ["input", "output", "n_simulations"]
-        for key in required_keys:
-            if key not in test_data:
-                raise ValueError(f"io_generator output missing key: '{key}'")
-
-        # Check data types and shapes
-        input_data = test_data["input"]
-        output_data = test_data["output"]
-        n_sims = test_data["n_simulations"]
-
-        if not isinstance(input_data, (jnp.ndarray, dict)):
-            raise ValueError("Input data must be jnp.ndarray or dict")
-
-        if not isinstance(output_data, jnp.ndarray):
-            raise ValueError("Output data must be jnp.ndarray")
-
-        if not isinstance(n_sims, (int, jnp.ndarray)):
-            raise ValueError("n_simulations must be int or jnp.ndarray")
-
-        # Task-specific validation
-        if config.task_type == "classifier":
-            if output_data.ndim != 1:
-                raise ValueError("Classifier output must be 1D (labels)")
-            if not jnp.all((output_data == 0) | (output_data == 1)):
-                logger.warning("Classifier output should be binary (0/1)")
-
-        elif config.task_type == "regressor":
-            if output_data.ndim != 2:
-                raise ValueError("Regressor output must be 2D (batch, features)")
-
-        logger.debug("io_generator validation passed")
-
-    except Exception as e:
-        raise ValueError(f"io_generator validation failed: {e}")
 
 
 # Utility functions

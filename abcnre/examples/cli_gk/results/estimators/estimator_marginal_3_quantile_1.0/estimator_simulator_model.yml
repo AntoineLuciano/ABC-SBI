@@ -1,5 +1,5 @@
 metadata:
-  saved_at: '2025-08-21T04:07:07.909396'
+  saved_at: '2025-09-01T23:16:56.855145'
 model_args:
   dim: 1
   marginal_of_interest: 3
@@ -8,15 +8,15 @@ model_args:
   prior_bounds:
     A:
     - 0.0
-    - 5.0
+    - 10.0
     B:
     - 0.0010000000474974513
-    - 5.0
+    - 10.0
     g:
     - 0.0
-    - 5.0
+    - 10.0
     k:
     - 0.0
-    - 5.0
+    - 10.0
 model_class: GAndKModel
 model_type: GAndKModel

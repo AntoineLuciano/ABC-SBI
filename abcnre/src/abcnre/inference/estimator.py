@@ -22,6 +22,8 @@ from ..training import (
     get_nn_config,
     train_classifier,
     TrainingResult,
+    BatchData,
+    Inputs,
     create_network_from_nn_config,
 )
 from ..simulation.base import ABCTrainingResult
@@ -33,8 +35,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def reshape_input(network_type : str, x: jnp.ndarray, phi: jnp.ndarray, s_x: Optional[jnp.ndarray] = None) -> Union[jnp.ndarray, Dict[str, jnp.ndarray]]:
-    
+
+def create_input(network_type : str, x: jnp.ndarray, phi: jnp.ndarray, s_x: Optional[jnp.ndarray] = None) -> Inputs:
     if phi.ndim == 1:
         phi = phi[:, jnp.newaxis]
     if s_x is not None and s_x.ndim == 1:
@@ -48,7 +50,8 @@ def reshape_input(network_type : str, x: jnp.ndarray, phi: jnp.ndarray, s_x: Opt
         else:
             theta = phi
 
-        return {"theta": theta, "x": x}
+        return Inputs(permutation_invariant = x,
+                      conditioning = theta)
     
     elif network_type == "DeepSet":
         # DeepSet: concatenated input theta and data
@@ -60,20 +63,17 @@ def reshape_input(network_type : str, x: jnp.ndarray, phi: jnp.ndarray, s_x: Opt
             inputs = jnp.concatenate(
                 [inputs, jnp.repeat(s_x[:, None, :], repeats=n_obs, axis=1)], axis=2
             )
-        return inputs
+        return Inputs(permutation_invariant = inputs)
     
     elif network_type == "MLP":
         # MLP: flattened concatenated input
         inputs = jnp.concatenate([x.reshape(x.shape[0], -1), phi], axis=1)
         if s_x is not None:
             inputs = jnp.concatenate([inputs, s_x], axis=1)
-        return inputs
+        return Inputs(raw = inputs)
     
     else:
         raise ValueError(f"Unknown network type: {network_type}")
-    
-    
-
 
 def create_log_ratio_function(
     network, params, network_type: str, summary_as_input: bool = False
@@ -108,7 +108,7 @@ def create_log_ratio_function(
             Log-ratio estimates, shape (batch,)
         """
 
-        network_input = reshape_input(network_type, x, phi, s_x if summary_as_input else None)
+        network_input = create_input(network_type, x, phi, s_x if summary_as_input else None)
         # Forward pass through network
         logits = network.apply(params, network_input, training=False)
 
@@ -204,8 +204,6 @@ class NeuralRatioEstimator:
     def train(
         self,
         key: jax.random.PRNGKey,
-        n_samples_max: Optional[int] = None,
-        n_sim_max: Optional[int] = None,
         n_phi_to_store: Optional[int] = 0,
         **kwargs,
     ) -> TrainingResult:
@@ -220,71 +218,7 @@ class NeuralRatioEstimator:
         Returns:
             ClassifierResult containing trained network and training history
         """
-        if n_sim_max is not None:
-            if hasattr(self.nn_config.training, "stopping_rules"):
-                # Check if stopping_rules is a dict or StoppingRulesConfig object
-                if isinstance(self.nn_config.training.stopping_rules, dict):
-                    if (
-                        "simulation_stopping"
-                        not in self.nn_config.training.stopping_rules
-                    ):
-                        self.nn_config.training.stopping_rules[
-                            "simulation_stopping"
-                        ] = {}
-
-                    self.nn_config.training.stopping_rules["simulation_stopping"][
-                        "enabled"
-                    ] = True
-                    self.nn_config.training.stopping_rules["simulation_stopping"][
-                        "max_simulations"
-                    ] = n_sim_max
-
-                elif hasattr(
-                    self.nn_config.training.stopping_rules, "simulation_stopping"
-                ):
-                    self.nn_config.training.stopping_rules.simulation_stopping.enabled = (
-                        True
-                    )
-                    self.nn_config.training.stopping_rules.simulation_stopping.max_simulations = (
-                        n_sim_max
-                    )
-            else:
-                # Create stopping rules if they don't exist
-                self.nn_config.training.stopping_rules = {
-                    "simulation_stopping": {
-                        "enabled": True,
-                        "max_simulations": n_sim_max,
-                    }
-                }
-        if n_samples_max is not None:
-            if hasattr(self.nn_config.training, "stopping_rules"):
-                # Check if stopping_rules is a dict or StoppingRulesConfig object
-                if isinstance(self.nn_config.training.stopping_rules, dict):
-                    if "sample_stopping" not in self.nn_config.training.stopping_rules:
-                        self.nn_config.training.stopping_rules["sample_stopping"] = {}
-
-                    self.nn_config.training.stopping_rules["sample_stopping"][
-                        "enabled"
-                    ] = True
-                    self.nn_config.training.stopping_rules["sample_stopping"][
-                        "max_samples"
-                    ] = n_samples_max
-
-                elif hasattr(self.nn_config.training.stopping_rules, "sample_stopping"):
-                    self.nn_config.training.stopping_rules.sample_stopping.enabled = (
-                        True
-                    )
-                    self.nn_config.training.stopping_rules.sample_stopping.max_samples = (
-                        n_samples_max
-                    )
-            else:
-                # Create stopping rules if they don't exist
-                self.nn_config.training.stopping_rules = {
-                    "sample_stopping": {
-                        "enabled": True,
-                        "max_samples": n_samples_max,
-                    }
-                }
+       
 
         def create_io_generator(network_type: str, use_summary: bool):
             """Create IO generator based on network type and summary usage."""
@@ -294,27 +228,23 @@ class NeuralRatioEstimator:
                 training_result = self.simulator.generate_training_samples(
                     key, batch_size
                 )
-                
-         
-                training_inputs = reshape_input(network_type=network_type,
+                training_inputs = create_input(network_type=network_type,
                                                    x=training_result.data,
                                                    phi=training_result.phi,
                                                    s_x=training_result.summary_stats if use_summary else None)
 
-                return {
-                    "input": training_inputs,
-                    "output": training_result.labels,
-                    "n_simulations": training_result.total_sim_count,
-                    "phi": training_result.phi
-                }
-
+                return BatchData(inputs = training_inputs,
+                                 outputs = training_result.labels,
+                                 num_simulations = training_result.total_sim_count,
+                                 num_samples = batch_size, 
+                                 phi = training_result.phi)
+   
             return io_generator
 
         network_type = self.nn_config.network.network_type
         io_generator = create_io_generator(network_type, self.summary_as_input)
 
-        key, key_test = jax.random.split(key)
-        io = io_generator(key_test, 10000)
+
 
         logger.info(
             f"Using {network_type} {'with' if self.summary_as_input else 'without'} summary statistics"
@@ -323,8 +253,8 @@ class NeuralRatioEstimator:
         if n_phi_to_store is not None and n_phi_to_store > 0:
             logger.info(f"Storing {n_phi_to_store} phi during training")
             self.nn_config.training.n_phi_to_store = n_phi_to_store
+            
         # Train using the unified system
-        
         key, train_key = random.split(key)
         self.classifier_result = train_classifier(
             key=train_key, config=self.nn_config, io_generator=io_generator

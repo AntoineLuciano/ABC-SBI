@@ -18,6 +18,7 @@ DEFAULT_FILENAMES = {
     "plot_2d": "comparison_2d.png",
     "mcmc_output": "mcmc_output.png",
     "posterior_comparison": "posterior_comparison.png",
+    "grid": "grid.npz", 
 }
 
 

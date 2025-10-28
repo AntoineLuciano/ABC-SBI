@@ -9,7 +9,6 @@ train.py function with clean separation of concerns.
 from .setup import (
     setup_training_components,
     validate_training_config,
-    validate_io_generator_compatibility,
     get_parameter_count,
     log_setup_summary,
     create_validation_function,
@@ -57,6 +56,8 @@ from .loop import (
     estimate_training_time,
     check_training_health,
     log_epoch_summary,
+    BatchData,
+    Inputs
 )
 
 # Main public API - most commonly used functions
@@ -72,7 +73,6 @@ __all__ = [
     # === VALIDATION ===
     "validate_training_config",
     "validate_scheduler_config",
-    "validate_io_generator_compatibility",
     "validate_training_components",
     # === METRICS & LOGGING ===
     "evaluate_batch_metrics",
@@ -103,6 +103,8 @@ __all__ = [
     "validate_stopping_rules_consistency",
     "log_setup_summary",
     "log_epoch_summary",
+    "BatchData",
+    "Inputs"
 ]
 
 # Package metadata

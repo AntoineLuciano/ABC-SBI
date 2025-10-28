@@ -3,6 +3,7 @@ import jax.numpy as jnp
 import flax.linen as nn
 from typing import Optional, List, Tuple, Any
 import logging
+from ..components.loop import Inputs
 
 logger = logging.getLogger(__name__)
 
@@ -11,15 +12,15 @@ debug = False
 
 class ConditionedDeepSet(nn.Module):
     """
-    Conditioned Deep Set Network with flexible conditioning modes.
+    Conditioned Deep Set Network with flexible theta modes.
 
     This module implements a Deep Set architecture that can condition on
     additional parameters (theta) using different modes:
-    - "concat": Concatenates theta with observations
+    - "concat": Concatenates theta with x
     - "film": Uses FiLM layers to modulate the network based on theta
     """
 
-    output_dim: int 
+    output_dim: int
     phi_hidden_dims: Optional[List[int]] = None
     rho_hidden_dims: Optional[List[int]] = None
     pooling_type: str = "mean"
@@ -111,19 +112,19 @@ class ConditionedDeepSet(nn.Module):
         self.output_layer = nn.Dense(self.output_dim, name="output")
 
     def _apply_conditioned_phi(
-        self, theta: jnp.ndarray, observations: jnp.ndarray, training: bool
+        self, theta: jnp.ndarray, x: jnp.ndarray, training: bool
     ) -> jnp.ndarray:
-        """Apply conditioned φ network - VERSION CORRIGÉE."""
+        """Apply conditioned φ network"""
         if debug:
             print(
                 f"DEBUG ConditionedDeepSetFixed._apply_conditioned_phi: theta.shape={theta.shape}"
             )
         if debug:
             print(
-                f"DEBUG ConditionedDeepSetFixed._apply_conditioned_phi: observations.shape={observations.shape}"
+                f"DEBUG ConditionedDeepSetFixed._apply_conditioned_phi: x.shape={x.shape}"
             )
 
-        batch_size, n_samples, feature_dim = observations.shape
+        batch_size, n_samples, feature_dim = x.shape
         theta_dim = theta.shape[1]
 
         if debug:
@@ -138,7 +139,7 @@ class ConditionedDeepSet(nn.Module):
         if self.conditioning_mode == "concat":
             theta_expanded = jnp.expand_dims(theta, axis=1)
             theta_expanded = jnp.tile(theta_expanded, (1, n_samples, 1))
-            conditioned_input = jnp.concatenate([theta_expanded, observations], axis=-1)
+            conditioned_input = jnp.concatenate([theta_expanded, x], axis=-1)
             phi_output = conditioned_input.reshape(-1, theta_dim + feature_dim)
             if debug:
                 print(
@@ -146,13 +147,13 @@ class ConditionedDeepSet(nn.Module):
                 )
 
         elif self.conditioning_mode == "film":
-            phi_output = observations.reshape(-1, feature_dim)
+            phi_output = x.reshape(-1, feature_dim)
             if debug:
                 print(
                     f"DEBUG ConditionedDeepSetFixed._apply_conditioned_phi: film mode, phi_input.shape={phi_output.shape}"
                 )
         else:
-            raise ValueError(f"Unsupported conditioning mode: {self.conditioning_mode}")
+            raise ValueError(f"Unsupported theta mode: {self.conditioning_mode}")
 
         film_layer_idx = 0
         for i, layer in enumerate(self.phi_layers.layers):
@@ -216,16 +217,19 @@ class ConditionedDeepSet(nn.Module):
                         )
                     film_layer_idx += 1
 
-            elif isinstance(layer, nn.LayerNorm):
-                phi_output = layer(phi_output)
-                if debug:
-                    print(
-                        f"DEBUG ConditionedDeepSetFixed._apply_conditioned_phi: after_layernorm_{i}.shape={phi_output.shape}"
-                    )
+                # Apply activation immediately after Dense and FiLM (like MLP)
                 phi_output = self.activation_fn(phi_output)
                 if debug:
                     print(
                         f"DEBUG ConditionedDeepSetFixed._apply_conditioned_phi: after_activation_{i}.shape={phi_output.shape}"
+                    )
+
+            elif isinstance(layer, nn.LayerNorm):
+                # LayerNorm comes after activation (like MLP)
+                phi_output = layer(phi_output)
+                if debug:
+                    print(
+                        f"DEBUG ConditionedDeepSetFixed._apply_conditioned_phi: after_layernorm_{i}.shape={phi_output.shape}"
                     )
 
             elif isinstance(layer, nn.Dropout):
@@ -270,16 +274,18 @@ class ConditionedDeepSet(nn.Module):
                     print(
                         f"DEBUG ConditionedDeepSetFixed._apply_conditioned_rho: after_dense_{i}.shape={rho_output.shape}"
                     )
-            elif isinstance(layer, nn.LayerNorm):
-                rho_output = layer(rho_output)
-                if debug:
-                    print(
-                        f"DEBUG ConditionedDeepSetFixed._apply_conditioned_rho: after_layernorm_{i}.shape={rho_output.shape}"
-                    )
+                # Apply activation immediately after Dense (like MLP)
                 rho_output = self.activation_fn(rho_output)
                 if debug:
                     print(
                         f"DEBUG ConditionedDeepSetFixed._apply_conditioned_rho: after_activation_{i}.shape={rho_output.shape}"
+                    )
+            elif isinstance(layer, nn.LayerNorm):
+                # LayerNorm comes after activation (like MLP)
+                rho_output = layer(rho_output)
+                if debug:
+                    print(
+                        f"DEBUG ConditionedDeepSetFixed._apply_conditioned_rho: after_layernorm_{i}.shape={rho_output.shape}"
                     )
             elif isinstance(layer, nn.Dropout):
                 rho_output = layer(rho_output, deterministic=not training)
@@ -320,31 +326,18 @@ class ConditionedDeepSet(nn.Module):
             )
         return result
 
-    def __call__(self, inputs, training: bool = True) -> jnp.ndarray:
+    def __call__(self, inputs: Inputs, training: bool = True) -> jnp.ndarray:
         """Forward pass"""
-        if debug:
-            print(f"DEBUG ConditionedDeepSetFixed.__call__: inputs type={type(inputs)}")
 
-        if isinstance(inputs, dict):
-            theta = inputs["theta"]
-            observations = inputs["x"]
-
-            if debug:
-                print(
-                    f"DEBUG ConditionedDeepSetFixed.__call__: flattened parsing - theta.shape={theta.shape}, observations.shape={observations.shape}"
-                )
-        else:
-            raise ValueError(f"Unsupported input format: {type(inputs)}")
+        theta = inputs.conditioning
+        x = inputs.permutation_invariant
 
         if debug:
             print(f"DEBUG ConditionedDeepSetFixed.__call__: theta.shape={theta.shape}")
-        if debug:
-            print(
-                f"DEBUG ConditionedDeepSetFixed.__call__: observations.shape={observations.shape}"
-            )
+            print(f"DEBUG ConditionedDeepSetFixed.__call__: x.shape={x.shape}")
 
         # Apply conditioned phi network
-        phi_outputs = self._apply_conditioned_phi(theta, observations, training)
+        phi_outputs = self._apply_conditioned_phi(theta, x, training)
 
         # Apply pooling
         pooled_features = self._apply_pooling(phi_outputs, self.pooling_type)

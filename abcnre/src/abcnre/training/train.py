@@ -1,18 +1,3 @@
-"""
-Refactored training interface using modular components.
-
-This module provides a cleaner, more testabl    # 4. Initialize phi storage
-    stored_phi = initialize_phi_storage(training_config)
-
-    # 5. Initialize counters and state
-    total_simulations = training_components["total_simulations"]
-    total_samples = training_components["total_samples"]
-    step_counter = 0
-    epoch_times = []
-    epoch_timing_data = []  # Store detailed timing for each epochn of the training system
-while maintaining backward compatibility with the existing train.py.
-"""
-
 import jax
 import jax.numpy as jnp
 import time
@@ -21,8 +6,6 @@ from typing import Optional, Any, Callable, Dict, NamedTuple, Union
 
 # Import from existing modules
 from .config import NNConfig
-
-# from .train_old import TrainingResult
 
 # Import new modular components
 from .components import (
@@ -83,6 +66,7 @@ def train_nn(
     Returns:
         TrainingResult with trained parameters and inference function
     """
+    # logger.info("DEBUG: TRAINING THE NN...")
     training_config = config.training
     task_type = config.task_type
     # Comprehensive validation using proper config structure
@@ -98,7 +82,6 @@ def train_nn(
     training_components = setup_training_components(
         key, config, io_generator, network, val_io_generator
     )
-
 
     # 2. Initialize managers using proper config structures
     stopping_manager = StoppingRulesManager(training_config)
@@ -120,6 +103,30 @@ def train_nn(
     epoch_times = []
     epoch_timing_data = []  # Store detailed timing for each epoch
 
+    # Record global start time for comprehensive timing analysis
+    global_start_time = time.time()
+
+    # Initialize comprehensive training history storage
+    training_history_detailed = {
+        "global_start_time": global_start_time,
+        "epochs": [],
+        "train_losses": [],
+        "val_losses": [],
+        "learning_rates": [],
+        "total_simulations": [],
+        "total_samples": [],
+        "epoch_times": [],
+        "simulation_times": [],
+        "training_times": [],
+        "overhead_times": [],
+        "sim_to_train_ratios": [],
+        "train_accuracies": [],  # For classifiers
+        "val_accuracies": [],  # For classifiers
+        "elapsed_times": [],
+        "health_checks": [],
+        "metrics_times": [],  # Time spent on metrics calculation
+    }
+
     # 6. Log training start with stopping rules info
     training_logger.log_training_start(
         task_type,
@@ -135,24 +142,24 @@ def train_nn(
     # 7. Main training loop
     start_time = time.time()
 
+    # Calculate initialization time (time spent before first epoch)
+    initialization_time = start_time - training_history_detailed["global_start_time"]
+
     # Initialize pre-simulated training data if enabled
     if training_config.use_presimulated_data:
         training_set_size = training_config.training_set_size
         key, key_io = jax.random.split(key)
         training_set = io_generator(key_io, training_set_size)
-        training_set["training_set_size"] = training_set_size
-        total_samples = training_set_size
-        total_simulations = training_set["n_simulations"]
+        total_samples += training_set_size
+        total_simulations += training_set.num_simulations
         sim_time = time.time() - start_time
         if training_config.verbose:
             logger.info(
                 f"Pre-simulated training set created: {training_set_size} samples in {sim_time:.2f} seconds"
             )
-        # print("Training set phi minimum:", jnp.min(training_set["input"]["theta"]))
-        # print("Training set phi maximum:", jnp.max(training_set["input"]["theta"]))
     else:
         training_set = None
-
+    # logger.info(f"DEBUG: STARTING EPOCH LOOP...")
     for epoch in range(training_config.num_epochs):
         epoch_start_time = time.time()
 
@@ -165,6 +172,7 @@ def train_nn(
             break
         # Run training epoch
         try:
+            # logger.info(f"DEBUG: STARTING EPOCH {epoch}...")
             (
                 epoch_losses,
                 batch_count,
@@ -179,6 +187,7 @@ def train_nn(
                 stored_phi,
                 training_set,
             )
+            # logger.info(f"DEBUG: EPOCH {epoch} DONE.")
         except Exception as e:
             logger.error(f"Training epoch {epoch} failed: {e}")
             raise
@@ -205,7 +214,8 @@ def train_nn(
             }
         )
 
-        # Calculate epoch metrics
+        # Calculate epoch metrics - START TIMING METRICS
+        metrics_start_time = time.time()
         if epoch_losses:
             epoch_stats = compute_epoch_statistics(epoch_losses)
             mean_loss = epoch_stats["mean"]
@@ -213,9 +223,7 @@ def train_nn(
             # Evaluate validation metrics
             val_loss, val_metrics = training_components["evaluate_val"](
                 training_components["params"], training_components["val_data"]
-            )
-
-            # Handle LR scheduling using proper config structure
+            )  # Handle LR scheduling using proper config structure
             if plateau_manager:
                 early_stop, training_components = handle_lr_scheduling(
                     training_config.lr_scheduler,
@@ -264,10 +272,54 @@ def train_nn(
             # Store metrics
             metrics_manager.add_epoch_metrics(epoch_data)
 
+            # Calculate metrics time - END TIMING METRICS
+            metrics_time = time.time() - metrics_start_time
+
+            # Store detailed epoch data in comprehensive history
+            elapsed_time = time.time() - start_time
+            latest_timing = epoch_timing_data[-1]
+
+            training_history_detailed["epochs"].append(epoch)
+            training_history_detailed["train_losses"].append(float(mean_loss))
+            training_history_detailed["val_losses"].append(float(val_loss))
+            training_history_detailed["learning_rates"].append(effective_lr)
+            training_history_detailed["total_simulations"].append(total_simulations)
+            training_history_detailed["total_samples"].append(total_samples)
+            training_history_detailed["epoch_times"].append(epoch_time)
+            training_history_detailed["simulation_times"].append(
+                latest_timing["simulation_time"]
+            )
+            training_history_detailed["training_times"].append(
+                latest_timing["training_time"]
+            )
+            training_history_detailed["overhead_times"].append(
+                latest_timing["overhead_time"]
+            )
+            training_history_detailed["sim_to_train_ratios"].append(
+                latest_timing["sim_to_train_ratio"]
+            )
+            training_history_detailed["elapsed_times"].append(elapsed_time)
+            training_history_detailed["metrics_times"].append(metrics_time)
+
+            # Add accuracies for classifier
+            if task_type == "classifier":
+                training_history_detailed["train_accuracies"].append(
+                    float(epoch_data.get("train_accuracy", 0))
+                )
+                training_history_detailed["val_accuracies"].append(
+                    float(epoch_data.get("val_accuracy", 0))
+                )
+            else:
+                training_history_detailed["train_accuracies"].append(None)
+                training_history_detailed["val_accuracies"].append(None)
+
             # Health check
             health_check = check_training_health(
                 epoch_losses, float(val_loss), effective_lr
             )
+
+            # Store health check in detailed history
+            training_history_detailed["health_checks"].append(health_check)
 
             if health_check["status"] == "error":
                 error_msg = f"Training health check failed at epoch {epoch}: {health_check['warnings']}"
@@ -308,11 +360,11 @@ def train_nn(
 
                 # Enhanced timing breakdown
                 latest_timing = epoch_timing_data[-1]
-                
+
                 data_mode = (
                     "Pre-sim" if training_config.use_presimulated_data else "On-the-fly"
                 )
-                
+
                 sim_times = [t["simulation_time"] for t in epoch_timing_data]
                 train_times = [t["training_time"] for t in epoch_timing_data]
                 total_sim_time = sum(sim_times)
@@ -328,7 +380,9 @@ def train_nn(
                 )
 
                 if time_estimate["eta_minutes"] > 1 and epoch >= 10:
-                    logger.info(f"ETA: {time_estimate['eta_minutes']:.1f} minutes")
+                    logger.info(
+                        f"ETA (for {training_config.num_epochs} epochs): {time_estimate['eta_minutes']:.1f} minutes"
+                    )
 
         else:
             logger.warning(f"No losses computed for epoch {epoch}")
@@ -397,6 +451,9 @@ def train_nn(
     # 9. Prepare results
     training_history = metrics_manager.get_final_summary(total_time)
 
+    # Add our comprehensive detailed history
+    training_history["detailed_history"] = training_history_detailed
+
     # Add additional training statistics
     if epoch_times:
         training_history["avg_epoch_time"] = sum(epoch_times) / len(epoch_times)
@@ -410,13 +467,20 @@ def train_nn(
         train_times = [t["training_time"] for t in epoch_timing_data]
         ratios = [t["sim_to_train_ratio"] for t in epoch_timing_data]
 
+        # Calculate total metrics time
+        metrics_times = [t.get("metrics_time", 0) for t in epoch_timing_data]
+        total_metrics_time = sum(metrics_times)
+
         training_history.update(
             {
                 "timing_per_epoch": epoch_timing_data,
+                "initialization_time": initialization_time,
                 "total_simulation_time": sum(sim_times),
                 "total_training_time": sum(train_times),
+                "total_metrics_time": total_metrics_time,
                 "avg_simulation_time": np.mean(sim_times),
                 "avg_training_time": np.mean(train_times),
+                "avg_metrics_time": np.mean(metrics_times) if metrics_times else 0,
                 "avg_sim_to_train_ratio": np.mean(ratios),
                 "simulation_time_percentage": (
                     sum(sim_times) / sum([t["total_time"] for t in epoch_timing_data])
@@ -426,6 +490,15 @@ def train_nn(
                     sum(train_times) / sum([t["total_time"] for t in epoch_timing_data])
                 )
                 * 100,
+                "metrics_time_percentage": (
+                    (
+                        total_metrics_time
+                        / sum([t["total_time"] for t in epoch_timing_data])
+                    )
+                    * 100
+                    if total_metrics_time > 0
+                    else 0
+                ),
             }
         )
 

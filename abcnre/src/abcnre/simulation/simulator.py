@@ -11,7 +11,7 @@ from typing import Callable, Tuple, Any, Dict, Optional, Union
 from jax import numpy as jnp
 from pathlib import Path
 import yaml
-
+from scipy.stats import median_abs_deviation
 from .sampler import RejectionSampler
 from .base import ABCSampleResult, ABCTrainingResult, ABCSingleResult
 from functools import cached_property
@@ -27,6 +27,8 @@ from ..training import (
     train_regressor,
     TrainingConfig,
     NetworkConfig,
+    Inputs,
+    BatchData
 )
 
 logger = logging.getLogger(__name__)
@@ -61,7 +63,9 @@ def create_summary_stats_fn(
         """
         if x.ndim == 2:
             x = x[None, :, :]  # (1, n, d)
-        summary_stats = network.apply(params, x, training=False)
+        input = Inputs(raw = x, permutation_invariant = x)
+
+        summary_stats = network.apply(params, input, training=False)
 
         return summary_stats  # (batch, summary_dim)
 
@@ -126,6 +130,7 @@ class ABCSimulator:
 
         self.quantile_distance = quantile_distance
         self.trained_summary_stats = False
+        
         # Initialize observed summary statistics if applicable
         self._init_summary_stats()
         # Initialize the underlying sampler (always create it)
@@ -418,7 +423,6 @@ class ABCSimulator:
         self,
         key: random.PRNGKey,
         nn_config: Optional[Union[NNConfig, Dict[str, Any]]] = None,
-        n_samples_max: int = jnp.inf,
         override_model_summary_stats: bool = True,
     ):
         """
@@ -455,39 +459,14 @@ class ABCSimulator:
         # Ensure task_type is correct
         if nn_config.task_type != "regressor":
             raise ValueError("nn_config.task_type must be 'regressor'")
-
-        # Configure sample stopping rule based on n_samples_max
-        if hasattr(nn_config.training, "stopping_rules"):
-            # Check if stopping_rules is a dict or StoppingRulesConfig object
-            if isinstance(nn_config.training.stopping_rules, dict):
-                # Working with dictionary format - need to modify it
-                if "sample_stopping" not in nn_config.training.stopping_rules:
-                    nn_config.training.stopping_rules["sample_stopping"] = {}
-
-                nn_config.training.stopping_rules["sample_stopping"]["enabled"] = True
-                nn_config.training.stopping_rules["sample_stopping"][
-                    "max_samples"
-                ] = n_samples_max
-
-            elif hasattr(nn_config.training.stopping_rules, "sample_stopping"):
-                # Working with StoppingRulesConfig object
-                nn_config.training.stopping_rules.sample_stopping.enabled = True
-                nn_config.training.stopping_rules.sample_stopping.max_samples = (
-                    n_samples_max
-                )
-        else:
-            # Create stopping rules if they don't exist
-            nn_config.training.stopping_rules = {
-                "sample_stopping": {"enabled": True, "max_samples": n_samples_max}
-            }
-
+        
+        from abcnre.training import Inputs, BatchData
         # Create data generator that matches the expected interface
-        def io_generator(key: random.PRNGKey, batch_size: int):
+        def io_generator(key: random.PRNGKey, batch_size: int) -> BatchData:
             """Adapter for the unified training interface."""
-            results = self.model.sample_phis_xs(key, batch_size)
-            phi, x = results
-            
-            return {"input": x, "output": phi, "n_simulations": batch_size, "phi": phi}
+            phi, x  = self.model.sample_phis_xs(key, batch_size)
+            # print(f"Generated samples - phi: {phi.shape}, x: {x.shape}")
+            return BatchData(inputs=Inputs(raw = x, permutation_invariant = x), outputs = phi, phi = phi, num_samples = batch_size, num_simulations = batch_size)
 
         nn_config.network.network_args["output_dim"] = self.model.phi_dim
 
@@ -513,7 +492,7 @@ class ABCSimulator:
             self._summary_config = summary_results.config
             self._summary_network = summary_results.network
             self._summary_training_history = summary_results.training_history
-
+            self.model.summary_stat_fn = summary_fn
             if self.observed_data is not None:
                 self.observed_summary_stats = self.summary_stat_fn(self.observed_data)
 
@@ -522,24 +501,22 @@ class ABCSimulator:
             self._init_sampler()
 
         self.trained_summary_stats = True
+        self.summary_stats_correlation = None
 
         if nn_config.training.verbose:
             logger.info(f"Summary statistics learned and updated successfully!\n    - Original data dimension: {self.model.data_shape}\n    - Learned summary statistics dimension: {self.observed_summary_stats.shape if self.observed_summary_stats is not None else 'None'}")
             
-        # key, subkey_theta, subkey_x = random.split(key, 3)
-        # theta = self.model.get_prior_sample(subkey_theta)   
-        # x = self.model.sample_x(subkey_x, theta)
-        # s_x = self.summary_stat_fn(x)
-        # print(f"FOR ONE DATASET:Sampled theta: {theta.shape}, x: {x.shape}, summary stats: {s_x.shape}")
 
-        # n_sample = 50
-        # key, key_x, key_theta = random.split(key, 3)
-        # thetas = self.model.sample_thetas(key_theta, n_samples=n_sample)
-        # xs = self.model.sample_xs(key_x, thetas)
-        # summary_stats = self.summary_stat_fn(xs)
-        # print(f"FOR {n_sample} DATASETS: Sampled thetas: {thetas.shape}, xs: {xs.shape}, summary stats: {summary_stats.shape}")
-        
         return summary_results
+    
+    def set_distance_weights(self, key: random.PRNGKey, n_samples: int = 10000):
+        _, xs = self.model.sample_thetas_xs(key, n_samples)
+        summary_xs = self.summary_stat_fn(xs)
+        mads = median_abs_deviation(summary_xs, axis = 0)
+        weights = 1/mads
+        weights = weights/jnp.sum(weights)
+        self.model.discrpency_fn = lambda d1, d2: self.model.discrpency_fn(data1= d1, data2 = d2, weights = weights) 
+        logger.info(f"We set the weights distance to {weights}.")
 
     def check_summary_stats_correlation(
         self, key: random.PRNGKey, n_samples: int = 10000
@@ -578,7 +555,7 @@ class ABCSimulator:
                 )[0, 1])
             if self.config.get("verbose", False):
                 logger.info(f"Correlation between summary statistic {i} and model parameter {i}: {correlations[i]}")
-
+        self.summary_stats_correlation = correlations
         return correlations
 
     def get_true_posterior_samples(

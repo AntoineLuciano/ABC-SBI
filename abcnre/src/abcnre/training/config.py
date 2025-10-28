@@ -252,8 +252,9 @@ class TrainingConfig:
     """Configuration for training parameters."""
 
     learning_rate: float = 1e-3
-    n_samples_per_epoch: int = 10240
-    batch_size: int = 256
+    n_samples_per_epoch: int = 0
+    batch_size: int = 0 
+    n_batch: int = 0  # If set, overrides batch_size and n_samples_per_epoch
     num_epochs: int = 100
     validation_split: float = 0.2
     early_stopping_patience: int = 10

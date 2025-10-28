@@ -9,6 +9,7 @@ from ..training import NNConfig
 from .estimator import NeuralRatioEstimator
 
 # Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -50,7 +51,8 @@ def save_estimator_to_yaml(
     if estimator.is_trained:
         _save_trained_parameters(estimator, estimator_config, output_path, overwrite)
         _save_stored_phis(estimator, estimator_config, output_path, overwrite)
-
+        logger.info("Saving training history...")
+        _save_training_history(estimator, estimator_config, output_path, overwrite)
     # Save main estimator configuration file
     _save_main_estimator_config(estimator_config, output_path)
 
@@ -87,6 +89,23 @@ def _save_simulator_config(estimator, output_path: Path, overwrite: bool) -> Non
 
     save_simulator_to_yaml(simulator, simulator_path, overwrite=overwrite)
     logger.info(f"Saved simulator config to: {simulator_path}")
+
+def _save_training_history(
+    estimator, estimator_config: Dict[str, Any], output_path: Path, overwrite: bool
+) -> None:
+    """Save training history if available."""
+    if hasattr(estimator, "_training_history") and estimator._training_history is not None:
+        training_history_filename = f"{output_path.stem}_training_history.npy"
+        training_history_path = output_path.parent / training_history_filename
+
+        if not training_history_path.exists() or overwrite:
+            np.save(training_history_path, estimator._training_history)
+            estimator_config["paths"]["training_history"] = training_history_filename
+            logger.info(f"Saved training history to: {training_history_path}")
+        else:
+            logger.info(
+                f"Training history file already exists and overwrite is False: {training_history_path}"
+            )
 
 
 def _create_estimator_config(estimator, output_path: Path) -> Dict[str, Any]:
@@ -190,12 +209,11 @@ def load_estimator_from_yaml(input_path: Union[str, Path]) -> NNConfig:
 
     # Load simulator
     simulator = _load_simulator_for_estimator(config, input_path.parent)
-
     # Create estimator instance
     estimator = _create_estimator_instance(config, nn_config, simulator)
-
     # Load trained parameters if available
     if config.get("is_trained", False):
+        logger.info("Loading trained components...")
         _load_trained_components(config, input_path.parent, estimator)
 
     return estimator
@@ -246,14 +264,21 @@ def _load_trained_components(
 ) -> None:
     """Load trained parameters and stored phis if available."""
     estimator.is_trained = True
-
+    logger.info("Estimator marked as trained.")
+    logger.info(f'Paths: {list(config["paths"].values())}')
     # Load classifier parameters
     if "classifier_params" in config["paths"]:
+        logger.info("Loading classifier parameters...")
         _load_classifier_params(config, input_dir, estimator)
 
     # Load stored phis
     if "stored_phis" in config["paths"]:
+        logger.info("Loading stored phis...")
         _load_stored_phis(config, input_dir, estimator)
+
+    if "training_history" in config["paths"]:
+        logger.info("Loading training history...")
+        _load_training_history(config, input_dir, estimator)
 
     # Set defaults if not trained
     if not hasattr(estimator, "trained_params") or estimator.trained_params is None:
@@ -261,6 +286,7 @@ def _load_trained_components(
         estimator.trained_params = None
         estimator.log_ratio_fn = None
         estimator.stored_phis = None
+        estimator._training_history = None
 
 
 def _load_classifier_params(config: Dict[str, Any], input_dir: Path, estimator) -> None:
@@ -304,3 +330,12 @@ def _load_stored_phis(config: Dict[str, Any], input_dir: Path, estimator) -> Non
         logger.info(f"Loaded stored phis from: {stored_phis_path}")
     else:
         logger.warning(f"Stored phis file {stored_phis_path} does not exist")
+
+def _load_training_history(config: Dict[str, Any], input_dir: Path, estimator) -> None:
+    """Load training history."""
+    training_history_path = input_dir / config["paths"]["training_history"]
+    if training_history_path.exists():
+        estimator._training_history = np.load(training_history_path, allow_pickle=True).item()
+        logger.info(f"Loaded training history from: {training_history_path}")
+    else:
+        logger.warning(f"Training history file {training_history_path} does not exist")

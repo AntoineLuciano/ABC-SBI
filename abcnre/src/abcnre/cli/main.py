@@ -23,6 +23,7 @@ from .plot_mcmc_output import setup_plot_mcmc_output_parser
 from .compute_metrics import setup_compute_metrics_parser
 from .run_sbc import setup_run_sbc_parser
 from .run_mcmc import setup_run_mcmc_parser
+from .run_grid import setup_run_grid_parser
 from .interactive import setup_interactive_parsers
 
 
@@ -91,6 +92,7 @@ def main():
     setup_compute_metrics_parser(subparsers)
     setup_run_sbc_parser(subparsers)
     setup_run_mcmc_parser(subparsers)
+    setup_run_grid_parser(subparsers)
     setup_interactive_parsers(subparsers)
 
     # Parse arguments

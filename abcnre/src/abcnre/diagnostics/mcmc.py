@@ -197,7 +197,7 @@ def get_tuned_covariance(
 
     # Initial covariance estimate using short preliminary run
     key, subkey = random.split(key)
-    preliminary_samples = min(500, n_tuning_samples // 4)
+    preliminary_samples = min(1000, n_tuning_samples // 4)
     prelim_cov = (initial_scale**2) * jnp.eye(n_dims)
 
     base_covariance = jnp.eye(n_dims)
@@ -210,7 +210,6 @@ def get_tuned_covariance(
             covariance_matrix=prelim_cov,
             verbose=False,
         )
-
         if len(prelim_results.samples) > 10:
             empirical_cov = jnp.cov(prelim_results.samples.T)
             base_covariance = empirical_cov + epsilon_regularization * jnp.eye(n_dims)
@@ -231,7 +230,7 @@ def get_tuned_covariance(
     tuning_samples_list = []
 
     # Adaptation phases with diminishing step sizes
-    n_adaptation_phases = min(10, max(1, n_tuning_samples // adaptation_window))
+    n_adaptation_phases = min(20, max(1, n_tuning_samples // adaptation_window))
     samples_per_phase = max(1, n_tuning_samples // n_adaptation_phases)
 
     for phase in range(n_adaptation_phases):
